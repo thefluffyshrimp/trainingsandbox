@@ -18,7 +18,7 @@ $CFG->dboptions = array (
   'dbcollation' => 'utf8_general_ci',
 );
 
-$CFG->wwwroot   = 'https://miss.moe/missmoedemo';
+$CFG->wwwroot   = 'https://miss.moe/trainingsandbox';
 $CFG->dataroot  = '/home/admin/web/miss.moe/public_html/missmoesandbox/moodledatasandbox';
 //$CFG->dataroot  = '/home/admin/web/miss.moe/moodledata11123';
 $CFG->admin     = 'admin';
