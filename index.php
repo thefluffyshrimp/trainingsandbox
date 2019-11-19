@@ -55,6 +55,9 @@ if (!empty($CFG->maintenance_enabled) and !$hasmaintenanceaccess) {
     print_maintenance_message();
 }
 
+
+
+
 $hassiteconfig = has_capability('moodle/site:config', context_system::instance());
 
 if ($hassiteconfig && moodle_needs_upgrading()) {
