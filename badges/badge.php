@@ -70,8 +70,9 @@ if (!empty($badge->recipient->id)) {
 
     echo $OUTPUT->header();
 
-      $url = new moodle_url('/badges/badge.php', array('hash' => $id));
-    $sb_title=$PAGE->title;
+    $url = new moodle_url('/badges/badge.php', array('hash' => $id));
+
+    $sb_title='I just earned this digital badge on MISS.MOE!';
     $twitterURL = 'https://twitter.com/intent/tweet?text='.$sb_title.'&amp;url='.$url.'';
     $facebookURL = 'https://www.facebook.com/sharer/sharer.php?u='.$url;
     $linkedInURL = 'https://www.linkedin.com/shareArticle?mini=true&url='.$url.'&amp;title='.$sb_title;

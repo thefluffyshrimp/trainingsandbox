@@ -320,8 +320,18 @@ function theme_moove_rebuildcoursesections(\flat_navigation $flatnav) {
     $badges = $flatnav->find('participants',\navigation_node::TYPE_CONTAINER);
     $course = $DB->get_record('course', array('id' => $COURSE->id), 'id, category');
     $categoryid = $course->category;
-    //die();
 
+    //die();
+   $context = context_course::instance($COURSE->id);
+
+    $roles = get_user_roles($context, $USER->id);
+
+   foreach ($roles as $role) {
+    //echo $role->roleid.'<br />';
+    }
+
+    $role->roleid;
+    if ($role->roleid !='5'){
     if (!$participantsitem) {
         return;
     }
@@ -337,9 +347,8 @@ function theme_moove_rebuildcoursesections(\flat_navigation $flatnav) {
         ];
 
         $createbadges = [
-            'text' => 'Badges',
-            'text' => 'Badges',
-            'shorttext' => 'Badges',
+            'text' => 'Manage Badges',
+            'shorttext' => 'Manage Badges',
             'icon' => new pix_icon('t/passwordunmask-edit', ''),
             'type' => \navigation_node::COURSE_CURRENT,
             'key' => 'badgesview',
@@ -370,7 +379,7 @@ function theme_moove_rebuildcoursesections(\flat_navigation $flatnav) {
                 //'type' => $item->type,
                 'key' => 'badges',
                 'parent' => $createbadges,
-                'action' => 'https://miss.moe/training/badges/index.php?type='.$categoryid .'&id='.$COURSE->id.''
+                'action' => 'https://miss.moe/training/badges/view.php?type=2&id='.$COURSE->id.''
             ]));
 
         
@@ -395,8 +404,6 @@ function theme_moove_rebuildcoursesections(\flat_navigation $flatnav) {
         $flatnav->add($coursesections, $participantsitem->key);
         $flatnav->add($createbadges,$badges->key );
         //$flatnav->add($managebadges,$badges->key );
-        
-
 
     }
 
@@ -404,7 +411,8 @@ function theme_moove_rebuildcoursesections(\flat_navigation $flatnav) {
 
     if ($mycourses) {
         $flatnav->remove($mycourses->key);
-
         $flatnav->add($mycourses, 'privatefiles');
     }
+
+  }
 }
