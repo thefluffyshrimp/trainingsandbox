@@ -28,6 +28,7 @@ if (empty($CFG->enableportfolios)) {
     print_error('disabled', 'portfolio');
 }
 
+
 require_once($CFG->libdir . '/portfoliolib.php');
 require_once($CFG->libdir . '/portfolio/exporter.php');
 
