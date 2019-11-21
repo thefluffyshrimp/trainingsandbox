@@ -58,7 +58,6 @@
 
     require_login($course);
    $badges = badges_get_user_badges($USER->id, $COURSE->id, 0, 0);
-  
    $coursefullname = format_string($course->fullname, true, $COURSE->id);
    //print_r($badges);
    if($badges && $coursefullname=='MISS.MOE Verified Trainer'){
@@ -66,11 +65,21 @@
 
 
     $contextid=$context->id;
+    $dataobjects=array();
+    $getUserrole=$DB->get_record('role_assignments', array('roleid' => '2','contextid' => '1','userid'=>$USER->id));
+
+    if($getUserrole==''){
+    $dataobjects = array('roleid' => '2','contextid' => '1','userid'=>$USER->id,'modifierid'=>'2', 'timemodified'=>time());
+
     //echo "<pre>";
     //print_r($context);
-    $sql='UPDATE mdl_role_assignments set roleid=5 WHERE contextid ="'.$contextid.'" AND userid='.$USER->id.'';
-    $DB->execute('UPDATE {role_assignments} set roleid=3 WHERE contextid ="'.$contextid.'" AND userid='.$USER->id.'');
+    /*$sql='UPDATE mdl_role_assignments set roleid=5 WHERE contextid ="'.$contextid.'" AND userid='.$USER->id.'';*/
+    //role_assign($roleid, $adduser->id, $context->id);
+    /*$DB->execute('UPDATE {role_assignments} set roleid=2  AND contextid=10 WHERE contextid ="'.$contextid.'" AND userid='.$USER->id.'');*/
 
+    $DB->insert_record('role_assignments', $dataobjects);
+
+  }
    }
 
     // Switchrole - sanity check in cost-order...
