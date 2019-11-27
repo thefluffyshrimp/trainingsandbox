@@ -6,6 +6,7 @@
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
+
 // Moodle is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -138,3 +139,5 @@ if ($editing && has_capability('moodle/course:create', context_system::instance(
     echo $courserenderer->add_new_course_button();
 }
 echo $OUTPUT->footer();
+echo 'test';
+
