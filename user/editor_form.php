@@ -28,7 +28,6 @@ if (!defined('MOODLE_INTERNAL')) {
 
 require_once($CFG->dirroot.'/lib/formslib.php');
 
-
 /**
  * Class user_edit_editor_form.
  *
