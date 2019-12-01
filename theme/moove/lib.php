@@ -314,10 +314,24 @@ function theme_moove_delete_menuitems(\flat_navigation $flatnav) {
  * @param flat_navigation $flatnav
  */
 function theme_moove_rebuildcoursesections(\flat_navigation $flatnav) {
-    global $PAGE;
+    global $PAGE,$COURSE,$DB;
 
     $participantsitem = $flatnav->find('participants', \navigation_node::TYPE_CONTAINER);
+    $badges = $flatnav->find('participants',\navigation_node::TYPE_CONTAINER);
+    $course = $DB->get_record('course', array('id' => $COURSE->id), 'id, category');
+    $categoryid = $course->category;
 
+    //die();
+   $context = context_course::instance($COURSE->id);
+
+    $roles = get_user_roles($context, $USER->id);
+
+   foreach ($roles as $role) {
+    //echo $role->roleid.'<br />';
+    }
+
+    $role->roleid;
+    if ($role->roleid !='5'){
     if (!$participantsitem) {
         return;
     }
@@ -332,7 +346,43 @@ function theme_moove_rebuildcoursesections(\flat_navigation $flatnav) {
             'parent' => $participantsitem->parent
         ];
 
+        $createbadges = [
+            'text' => 'Manage Badges',
+            'shorttext' => 'Manage Badges',
+            'icon' => new pix_icon('t/passwordunmask-edit', ''),
+            'type' => \navigation_node::COURSE_CURRENT,
+            'key' => 'badgesview',
+            'parent' => $badges->parent
+        ];
+       
         $coursesections = new \flat_navigation_node($coursesectionsoptions, 0);
+        $createbadges = new \flat_navigation_node($createbadges, 0);
+        $managebadges = new \flat_navigation_node($createbadges, 0);
+        
+
+       $createbadges->add_node(new \navigation_node([
+                'text' => 'Add Badges',
+                'shorttext' => 'Add Badges',
+                'icon' => new pix_icon('t/editinline', ''),
+                //'icon' => $item->icon,
+                //'type' => $item->type,
+                'key' => 'addbadges',
+                'parent' => $createbadges,
+                'action' => 'https://miss.moe/training/badges/newbadge.php?type='.$categoryid .''
+            ] ));
+
+        $managebadges->add_node(new \navigation_node([
+                'text' => 'Manage Badges',
+                'shorttext' => 'Manage Badges',
+                'icon' => new pix_icon('t/editinline', ''),
+                //'icon' => $item->icon,
+                //'type' => $item->type,
+                'key' => 'badges',
+                'parent' => $createbadges,
+                'action' => 'https://miss.moe/training/badges/view.php?type=2&id='.$COURSE->id.''
+            ]));
+
+        
 
         foreach ($flatnav as $item) {
             if ($item->type == \navigation_node::TYPE_SECTION) {
@@ -345,17 +395,24 @@ function theme_moove_rebuildcoursesections(\flat_navigation $flatnav) {
                     'parent' => $coursesections,
                     'action' => $item->action
                 ]));
+
             }
+
+            
         }
 
         $flatnav->add($coursesections, $participantsitem->key);
+        $flatnav->add($createbadges,$badges->key );
+        //$flatnav->add($managebadges,$badges->key );
+
     }
 
     $mycourses = $flatnav->find('mycourses', \navigation_node::NODETYPE_LEAF);
 
     if ($mycourses) {
         $flatnav->remove($mycourses->key);
-
         $flatnav->add($mycourses, 'privatefiles');
     }
+
+  }
 }

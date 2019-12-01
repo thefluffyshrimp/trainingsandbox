@@ -6,6 +6,7 @@
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
+
 // Moodle is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -90,6 +91,18 @@ if (get_home_page() != HOMEPAGE_SITE) {
 
 // Trigger event.
 course_view(context_course::instance(SITEID));
+
+// If the hub plugin is installed then we let it take over the homepage here.
+if (file_exists($CFG->dirroot.'/local/hub/lib.php') and get_config('local_hub', 'hubenabled')) {
+    require_once($CFG->dirroot.'/local/hub/lib.php');
+    $hub = new local_hub();
+    $continue = $hub->display_homepage();
+    // Function display_homepage() returns true if the hub home page is not displayed
+    // ...mostly when search form is not displayed for not logged users.
+    if (empty($continue)) {
+        exit;
+    }
+}
 
 $PAGE->set_pagetype('site-index');
 $PAGE->set_docs_path('');
