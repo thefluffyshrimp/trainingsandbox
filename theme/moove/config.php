@@ -36,7 +36,7 @@ $THEME->name = 'moove';
 // This setting list the style sheets we want to include in our theme. Because we want to use SCSS instead of CSS - we won't
 // list any style sheets. If we did we would list the name of a file in the /styles/ folder for our theme without any css file
 // extensions.
-$THEME->sheets = [];
+$THEME->sheets = ['style'];
 // This is a setting that can be used to provide some styling to the content in the TinyMCE text editor. This is no longer the
 // default text editor and "Atto" does not need this setting so we won't provide anything. If we did it would work the same
 // as the previous setting - listing a file in the /styles/ folder.
@@ -88,48 +88,12 @@ $THEME->prescsscallback = 'theme_moove_get_pre_scss';
 $THEME->iconsystem = '\theme_moove\util\icon_system';
 
 $THEME->layouts = [
-    // Most backwards compatible layout without the blocks - this is the layout used by default.
-    'base' => array(
-        'file' => 'columns2.php',
-        'regions' => array(),
-    ),
-    // Standard layout with blocks, this is recommended for most pages with general information.
-    'standard' => array(
-        'file' => 'columns2.php',
-        'regions' => array('side-pre'),
-        'defaultregion' => 'side-pre',
-    ),
-    // Main course page.
-    'course' => array(
-        'file' => 'course.php',
-        'regions' => array('side-pre'),
-        'defaultregion' => 'side-pre',
-        'options' => array('nonavbar' => false, 'langmenu' => true),
-    ),
-    'coursecategory' => array(
-        'file' => 'columns2.php',
-        'regions' => array('side-pre'),
-        'defaultregion' => 'side-pre',
-    ),
-    // Part of course, typical for modules - default page layout if $cm specified in require_login().
-    'incourse' => array(
-        'file' => 'incourse.php',
-        'regions' => array('side-pre'),
-        'defaultregion' => 'side-pre',
-        'options' => array('nonavbar' => false, 'langmenu' => true),
-    ),
     // The site home page.
     'frontpage' => array(
         'file' => 'frontpage.php',
         'regions' => array('side-pre'),
         'defaultregion' => 'side-pre',
         'options' => array('nonavbar' => true),
-    ),
-    // Server administration scripts.
-    'admin' => array(
-        'file' => 'columns2.php',
-        'regions' => array('side-pre'),
-        'defaultregion' => 'side-pre',
     ),
     // My dashboard page.
     'mydashboard' => array(
@@ -138,35 +102,19 @@ $THEME->layouts = [
         'defaultregion' => 'side-pre',
         'options' => array('nonavbar' => true, 'langmenu' => true),
     ),
-    // My public page.
-    'mypublic' => array(
-        'file' => 'mypublic.php',
+    // Course page.
+    'course' => array(
+        'file' => 'course.php',
         'regions' => array('side-pre'),
         'defaultregion' => 'side-pre',
         'options' => array('nonavbar' => false, 'langmenu' => true),
     ),
-    'login' => array(
-        'file' => 'login.php',
-        'regions' => array(),
-        'options' => array('langmenu' => true),
-    ),
-
-    // Pages that appear in pop-up windows - no navigation, no blocks, no header.
-    'popup' => array(
-        'file' => 'columns1.php',
-        'regions' => array(),
-        'options' => array('nofooter' => true, 'nonavbar' => true),
-    ),
-    // No blocks and minimal footer - used for legacy frame layouts only!
-    'frametop' => array(
-        'file' => 'columns1.php',
-        'regions' => array(),
-        'options' => array('nofooter' => true, 'nocoursefooter' => true),
-    ),
-    // Embeded pages, like iframe/object embeded in moodleform - it needs as much space as possible.
-    'embedded' => array(
-        'file' => 'embedded.php',
-        'regions' => array()
+    // Internal course modules page.
+    'incourse' => array(
+        'file' => 'incourse.php',
+        'regions' => array('side-pre'),
+        'defaultregion' => 'side-pre',
+        'options' => array('nonavbar' => false, 'langmenu' => true),
     ),
     // Used during upgrade and install, and for the 'This site is undergoing maintenance' message.
     // This must not have any blocks, links, or API calls that would lead to database or cache interaction.
@@ -175,27 +123,10 @@ $THEME->layouts = [
         'file' => 'maintenance.php',
         'regions' => array(),
     ),
-    // Should display the content and basic headers only.
-    'print' => array(
-        'file' => 'columns1.php',
-        'regions' => array(),
-        'options' => array('nofooter' => true, 'nonavbar' => false),
-    ),
-    // The pagelayout used when a redirection is occuring.
-    'redirect' => array(
-        'file' => 'embedded.php',
-        'regions' => array(),
-    ),
-    // The pagelayout used for reports.
-    'report' => array(
-        'file' => 'columns2.php',
+    'mypublic' => array(
+        'file' => 'mypublic.php',
         'regions' => array('side-pre'),
         'defaultregion' => 'side-pre',
+        'options' => array('nonavbar' => false, 'langmenu' => true),
     ),
-    // The pagelayout used for safebrowser and securewindow.
-    'secure' => array(
-        'file' => 'secure.php',
-        'regions' => array('side-pre'),
-        'defaultregion' => 'side-pre'
-    )
 ];
