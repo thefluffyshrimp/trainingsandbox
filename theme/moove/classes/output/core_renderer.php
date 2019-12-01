@@ -194,17 +194,23 @@ class core_renderer extends \theme_boost\output\core_renderer {
     }
 
     /**
-     * Outputs the favicon urlbase.
+     * Returns the moodle_url for the favicon.
      *
-     * @return string an url
+     * @since Moodle 2.5.1 2.6
+     * @return moodle_url The moodle_url for the favicon
      */
     public function favicon() {
+        global $CFG;
+
         $theme = theme_config::load('moove');
 
         $favicon = $theme->setting_file_url('favicon', 'favicon');
 
         if (!empty(($favicon))) {
-            return $favicon;
+            $urlreplace = preg_replace('|^https?://|i', '//', $CFG->wwwroot);
+            $favicon = str_replace($urlreplace, '', $favicon);
+
+            return new moodle_url($favicon);
         }
 
         return parent::favicon();
@@ -297,17 +303,32 @@ class core_renderer extends \theme_boost\output\core_renderer {
         if (!isloggedin()) {
             $returnstr = '';
             if (!$loginpage) {
-                $returnstr .= "<a class='btn btn-login-top d-lg-none' href=\"$loginurl\">" . get_string('login') . '</a>';
+                $returnstr .= "<a class='btn btn-login-top' href=\"$loginurl\">" . get_string('login') . '</a>';
             }
 
-            return html_writer::tag(
-                'li',
-                html_writer::span(
-                    $returnstr,
-                    'login'
-                ),
-                array('class' => $usermenuclasses)
-            );
+            $theme = theme_config::load('moove');
+
+            if (!$theme->settings->disablefrontpageloginbox) {
+                return html_writer::tag(
+                    'li',
+                    html_writer::span(
+                        $returnstr,
+                        'login'
+                    ),
+                    array('class' => $usermenuclasses)
+                );
+            }
+
+            $context = [
+                'loginurl' => $loginurl,
+                'logintoken' => \core\session\manager::get_login_token(),
+                'canloginasguest' => $CFG->guestloginbutton and !isguestuser(),
+                'canloginbyemail' => !empty($CFG->authloginviaemail),
+                'cansignup' => $CFG->registerauth == 'email' || !empty($CFG->registerauth)
+
+            ];
+
+            return $this->render_from_template('theme_moove/frontpage_guest_loginbtn', $context);
         }
 
         // If logged in as a guest user, show a string to that effect.
