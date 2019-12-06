@@ -35,6 +35,7 @@ require_once($CFG->libdir . '/filestorage/file_system.php');
  * @category  phpunit
  * @copyright 2017 Andrew Nicols <andrew@nicols.co.uk>
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @coversDefaultClass file_system
  */
 class core_files_file_system_testcase extends advanced_testcase {
 
@@ -107,6 +108,7 @@ class core_files_file_system_testcase extends advanced_testcase {
 
     /**
      * Ensure that the file system is not clonable.
+     *
      */
     public function test_not_cloneable() {
         $reflection = new ReflectionClass('file_system');
@@ -115,6 +117,7 @@ class core_files_file_system_testcase extends advanced_testcase {
 
     /**
      * Ensure that the filedir file_system extension is used by default.
+     *
      */
     public function test_default_class() {
         $this->resetAfterTest();
@@ -131,6 +134,7 @@ class core_files_file_system_testcase extends advanced_testcase {
 
     /**
      * Ensure that the specified file_system extension class is used.
+     *
      */
     public function test_supplied_class() {
         global $CFG;
@@ -151,6 +155,8 @@ class core_files_file_system_testcase extends advanced_testcase {
 
     /**
      * Test that the readfile function outputs content to disk.
+     *
+     * @covers ::readfile
      */
     public function test_readfile_remote() {
         global $CFG;
@@ -182,6 +188,8 @@ class core_files_file_system_testcase extends advanced_testcase {
 
     /**
      * Test that the readfile function outputs content to disk.
+     *
+     * @covers ::readfile
      */
     public function test_readfile_local() {
         global $CFG;
@@ -218,6 +226,8 @@ class core_files_file_system_testcase extends advanced_testcase {
      * @dataProvider get_local_path_from_storedfile_provider
      * @param   array   $args The additional args to pass to get_local_path_from_storedfile
      * @param   bool    $fetch Whether the combination of args should have caused a fetch
+     *
+     * @covers ::get_local_path_from_storedfile
      */
     public function test_get_local_path_from_storedfile($args, $fetch) {
         $filepath = '/path/to/file';
@@ -234,9 +244,7 @@ class core_files_file_system_testcase extends advanced_testcase {
 
         $file = $this->get_stored_file($filecontent);
 
-        $method = new ReflectionMethod(file_system::class, 'get_local_path_from_storedfile');
-        $method->setAccessible(true);
-        $result = $method->invokeArgs($fs, array_merge([$file], $args));
+        $result = $fs->get_local_path_from_storedfile($file, $fetch);
 
         $this->assertEquals($filepath, $result);
     }
@@ -245,6 +253,8 @@ class core_files_file_system_testcase extends advanced_testcase {
      * Ensure that the default implementation of get_remote_path_from_storedfile
      * simply calls get_local_path_from_storedfile without requiring a
      * fetch.
+     *
+     * @covers ::get_remote_path_from_storedfile
      */
     public function test_get_remote_path_from_storedfile() {
         $filepath = '/path/to/file';
@@ -261,9 +271,7 @@ class core_files_file_system_testcase extends advanced_testcase {
 
         $file = $this->get_stored_file($filecontent);
 
-        $method = new ReflectionMethod(file_system::class, 'get_remote_path_from_storedfile');
-        $method->setAccessible(true);
-        $result = $method->invokeArgs($fs, [$file]);
+        $result = $fs->get_remote_path_from_storedfile($file);
 
         $this->assertEquals($filepath, $result);
     }
@@ -275,6 +283,8 @@ class core_files_file_system_testcase extends advanced_testcase {
      * of the file.
      *
      * Fetching the file is optional.
+     *
+     * @covers ::is_file_readable_locally_by_hash
      */
     public function test_is_file_readable_locally_by_hash() {
         $filecontent = 'example content';
@@ -294,6 +304,8 @@ class core_files_file_system_testcase extends advanced_testcase {
 
     /**
      * Test the stock implementation of is_file_readable_locally_by_hash with an empty file.
+     *
+     * @covers ::is_file_readable_locally_by_hash
      */
     public function test_is_file_readable_locally_by_hash_empty() {
         $filecontent = '';
@@ -311,6 +323,8 @@ class core_files_file_system_testcase extends advanced_testcase {
 
     /**
      * Test the stock implementation of is_file_readable_remotely_by_storedfile with a valid file.
+     *
+     * @covers ::is_file_readable_remotely_by_hash
      */
     public function test_is_file_readable_remotely_by_hash() {
         $filecontent = 'example content';
@@ -329,6 +343,8 @@ class core_files_file_system_testcase extends advanced_testcase {
 
     /**
      * Test the stock implementation of is_file_readable_remotely_by_storedfile with a valid file.
+     *
+     * @covers ::is_file_readable_remotely_by_hash
      */
     public function test_is_file_readable_remotely_by_hash_empty() {
         $filecontent = '';
@@ -346,6 +362,8 @@ class core_files_file_system_testcase extends advanced_testcase {
 
     /**
      * Test the stock implementation of is_file_readable_remotely_by_storedfile with a valid file.
+     *
+     * @covers ::is_file_readable_remotely_by_hash
      */
     public function test_is_file_readable_remotely_by_hash_not_found() {
         $filecontent = 'example content';
@@ -364,6 +382,8 @@ class core_files_file_system_testcase extends advanced_testcase {
 
     /**
      * Test the stock implementation of is_file_readable_remotely_by_storedfile with a valid file.
+     *
+     * @covers ::is_file_readable_remotely_by_storedfile
      */
     public function test_is_file_readable_remotely_by_storedfile() {
         $file = $this->get_stored_file('example content');
@@ -380,6 +400,8 @@ class core_files_file_system_testcase extends advanced_testcase {
 
     /**
      * Test the stock implementation of is_file_readable_remotely_by_storedfile with a valid file.
+     *
+     * @covers ::is_file_readable_remotely_by_storedfile
      */
     public function test_is_file_readable_remotely_by_storedfile_empty() {
         $fs = $this->get_testable_mock([
@@ -395,6 +417,8 @@ class core_files_file_system_testcase extends advanced_testcase {
 
     /**
      * Test the stock implementation of is_file_readable_locally_by_storedfile with an empty file.
+     *
+     * @covers ::is_file_readable_locally_by_storedfile
      */
     public function test_is_file_readable_locally_by_storedfile_empty() {
         $fs = $this->get_testable_mock([
@@ -410,6 +434,8 @@ class core_files_file_system_testcase extends advanced_testcase {
 
     /**
      * Test the stock implementation of is_file_readable_remotely_by_storedfile with a valid file.
+     *
+     * @covers ::is_file_readable_locally_by_storedfile
      */
     public function test_is_file_readable_remotely_by_storedfile_not_found() {
         $file = $this->get_stored_file('example content');
@@ -426,6 +452,8 @@ class core_files_file_system_testcase extends advanced_testcase {
 
     /**
      * Test the stock implementation of is_file_readable_locally_by_storedfile with a valid file.
+     *
+     * @covers ::is_file_readable_locally_by_storedfile
      */
     public function test_is_file_readable_locally_by_storedfile_unreadable() {
         $fs = $this->get_testable_mock([
@@ -442,6 +470,8 @@ class core_files_file_system_testcase extends advanced_testcase {
 
     /**
      * Test the stock implementation of is_file_readable_locally_by_storedfile with a valid file should pass fetch.
+     *
+     * @covers ::is_file_readable_locally_by_storedfile
      */
     public function test_is_file_readable_locally_by_storedfile_passes_fetch() {
         $fs = $this->get_testable_mock([
@@ -458,6 +488,8 @@ class core_files_file_system_testcase extends advanced_testcase {
 
     /**
      * Ensure that is_file_removable returns correctly for an empty file.
+     *
+     * @covers ::is_file_removable
      */
     public function test_is_file_removable_empty() {
         $filecontent = '';
@@ -471,6 +503,8 @@ class core_files_file_system_testcase extends advanced_testcase {
 
     /**
      * Ensure that is_file_removable returns false if the file is still in use.
+     *
+     * @covers ::is_file_removable
      */
     public function test_is_file_removable_in_use() {
         $this->resetAfterTest();
@@ -493,6 +527,8 @@ class core_files_file_system_testcase extends advanced_testcase {
 
     /**
      * Ensure that is_file_removable returns false if the file is not in use.
+     *
+     * @covers ::is_file_removable
      */
     public function test_is_file_removable_not_in_use() {
         $this->resetAfterTest();
@@ -515,6 +551,8 @@ class core_files_file_system_testcase extends advanced_testcase {
 
     /**
      * Test the stock implementation of get_content.
+     *
+     * @covers ::get_content
      */
     public function test_get_content() {
         global $CFG;
@@ -538,6 +576,8 @@ class core_files_file_system_testcase extends advanced_testcase {
 
     /**
      * Test the stock implementation of get_content.
+     *
+     * @covers ::get_content
      */
     public function test_get_content_empty() {
         global $CFG;
@@ -559,6 +599,8 @@ class core_files_file_system_testcase extends advanced_testcase {
     /**
      * Ensure that the list_files function requires a local copy of the
      * file, and passes the path to the packer.
+     *
+     * @covers ::list_files
      */
     public function test_list_files() {
         $filecontent = 'example content';
@@ -589,6 +631,8 @@ class core_files_file_system_testcase extends advanced_testcase {
     /**
      * Ensure that the extract_to_pathname function requires a local copy of the
      * file, and passes the path to the packer.
+     *
+     * @covers ::extract_to_pathname
      */
     public function test_extract_to_pathname() {
         $filecontent = 'example content';
@@ -620,6 +664,8 @@ class core_files_file_system_testcase extends advanced_testcase {
     /**
      * Ensure that the extract_to_storage function requires a local copy of the
      * file, and passes the path to the packer.
+     *
+     * @covers ::extract_to_storage
      */
     public function test_extract_to_storage() {
         $filecontent = 'example content';
@@ -660,6 +706,7 @@ class core_files_file_system_testcase extends advanced_testcase {
     /**
      * Ensure that the add_storedfile_to_archive function requires a local copy of the
      * file, and passes the path to the archive.
+     *
      */
     public function test_add_storedfile_to_archive_directory() {
         $file = $this->get_stored_file('', '.');
@@ -695,6 +742,7 @@ class core_files_file_system_testcase extends advanced_testcase {
     /**
      * Ensure that the add_storedfile_to_archive function requires a local copy of the
      * file, and passes the path to the archive.
+     *
      */
     public function test_add_storedfile_to_archive_file() {
         $file = $this->get_stored_file('example content');
@@ -734,6 +782,8 @@ class core_files_file_system_testcase extends advanced_testcase {
     /**
      * Ensure that the add_to_curl_request function requires a local copy of the
      * file, and passes the path to curl_file_create.
+     *
+     * @covers ::add_to_curl_request
      */
     public function test_add_to_curl_request() {
         $file = $this->get_stored_file('example content');
@@ -756,6 +806,8 @@ class core_files_file_system_testcase extends advanced_testcase {
     /**
      * Ensure that test_get_imageinfo_not_image returns false if the file
      * passed was deemed to not be an image.
+     *
+     * @covers ::get_imageinfo
      */
     public function test_get_imageinfo_not_image() {
         $filecontent = 'example content';
@@ -775,6 +827,8 @@ class core_files_file_system_testcase extends advanced_testcase {
 
     /**
      * Ensure that test_get_imageinfo_not_image returns imageinfo.
+     *
+     * @covers ::get_imageinfo
      */
     public function test_get_imageinfo() {
         $filepath = '/path/to/file';
@@ -809,6 +863,8 @@ class core_files_file_system_testcase extends advanced_testcase {
     /**
      * Ensure that is_image_from_storedfile always returns false for an
      * empty file size.
+     *
+     * @covers ::is_image_from_storedfile
      */
     public function test_is_image_empty_filesize() {
         $filecontent = 'example content';
@@ -829,6 +885,7 @@ class core_files_file_system_testcase extends advanced_testcase {
      * @dataProvider is_image_from_storedfile_provider
      * @param   string  $mimetype Mimetype to test
      * @param   bool    $isimage Whether this mimetype should be detected as an image
+     * @covers ::is_image_from_storedfile
      */
     public function test_is_image_from_storedfile_mimetype($mimetype, $isimage) {
         $filecontent = 'example content';
@@ -845,6 +902,8 @@ class core_files_file_system_testcase extends advanced_testcase {
     /**
      * Test that get_imageinfo_from_path returns an appropriate response
      * for an image.
+     *
+     * @covers ::get_imageinfo_from_path
      */
     public function test_get_imageinfo_from_path() {
         $filepath = __DIR__ . "/fixtures/testimage.jpg";
@@ -865,6 +924,8 @@ class core_files_file_system_testcase extends advanced_testcase {
     /**
      * Test that get_imageinfo_from_path returns an appropriate response
      * for a file which is not an image.
+     *
+     * @covers ::get_imageinfo_from_path
      */
     public function test_get_imageinfo_from_path_no_image() {
         $filepath = __FILE__;
@@ -881,6 +942,8 @@ class core_files_file_system_testcase extends advanced_testcase {
 
     /**
      * Ensure that get_content_file_handle returns a valid file handle.
+     *
+     * @covers ::get_content_file_handle
      */
     public function test_get_content_file_handle_default() {
         $filecontent = 'example content';
@@ -899,6 +962,8 @@ class core_files_file_system_testcase extends advanced_testcase {
 
     /**
      * Ensure that get_content_file_handle returns a valid file handle for a gz file.
+     *
+     * @covers ::get_content_file_handle
      */
     public function test_get_content_file_handle_gz() {
         $filecontent = 'example content';
@@ -916,6 +981,8 @@ class core_files_file_system_testcase extends advanced_testcase {
 
     /**
      * Ensure that get_content_file_handle returns an exception when calling for a invalid file handle type.
+     *
+     * @covers ::get_content_file_handle
      */
     public function test_get_content_file_handle_invalid() {
         $filecontent = 'example content';
@@ -932,6 +999,8 @@ class core_files_file_system_testcase extends advanced_testcase {
     /**
      * Test that mimetype_from_hash returns the correct mimetype with
      * a file whose filename suggests mimetype.
+     *
+     * @covers ::mimetype_from_hash
      */
     public function test_mimetype_from_hash_using_filename() {
         $filepath = '/path/to/file/not/currently/on/disk';
@@ -949,6 +1018,8 @@ class core_files_file_system_testcase extends advanced_testcase {
     /**
      * Test that mimetype_from_hash returns the correct mimetype with
      * a locally available file whose filename does not suggest mimetype.
+     *
+     * @covers ::mimetype_from_hash
      */
     public function test_mimetype_from_hash_using_file_content() {
         $filecontent = 'example content';
@@ -966,6 +1037,8 @@ class core_files_file_system_testcase extends advanced_testcase {
     /**
      * Test that mimetype_from_hash returns the correct mimetype with
      * a remotely available file whose filename does not suggest mimetype.
+     *
+     * @covers ::mimetype_from_hash
      */
     public function test_mimetype_from_hash_using_file_content_remote() {
         $filepath = '/path/to/file/not/currently/on/disk';
@@ -992,6 +1065,8 @@ class core_files_file_system_testcase extends advanced_testcase {
     /**
      * Test that mimetype_from_storedfile returns the correct mimetype with
      * a file whose filename suggests mimetype.
+     *
+     * @covers ::mimetype_from_storedfile
      */
     public function test_mimetype_from_storedfile_empty() {
         $file = $this->get_stored_file('');
@@ -1004,6 +1079,8 @@ class core_files_file_system_testcase extends advanced_testcase {
     /**
      * Test that mimetype_from_storedfile returns the correct mimetype with
      * a file whose filename suggests mimetype.
+     *
+     * @covers ::mimetype_from_storedfile
      */
     public function test_mimetype_from_storedfile_using_filename() {
         $filepath = '/path/to/file/not/currently/on/disk';
@@ -1019,6 +1096,8 @@ class core_files_file_system_testcase extends advanced_testcase {
     /**
      * Test that mimetype_from_storedfile returns the correct mimetype with
      * a locally available file whose filename does not suggest mimetype.
+     *
+     * @covers ::mimetype_from_storedfile
      */
     public function test_mimetype_from_storedfile_using_file_content() {
         $filepath = __DIR__ . "/fixtures/testimage.jpg";
@@ -1034,6 +1113,8 @@ class core_files_file_system_testcase extends advanced_testcase {
     /**
      * Test that mimetype_from_storedfile returns the correct mimetype with
      * a remotely available file whose filename does not suggest mimetype.
+     *
+     * @covers ::mimetype_from_storedfile
      */
     public function test_mimetype_from_storedfile_using_file_content_remote() {
         $filepath = __DIR__ . "/fixtures/testimage.jpg";
@@ -1086,3 +1167,4 @@ class core_files_file_system_testcase extends advanced_testcase {
         ];
     }
 }
+

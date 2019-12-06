@@ -64,10 +64,20 @@ function(
         COURSES_CARDS: 'block_myoverview/view-cards',
         COURSES_LIST: 'block_myoverview/view-list',
         COURSES_SUMMARY: 'block_myoverview/view-summary',
-        NOCOURSES: 'block_myoverview/no-courses'
+        NOCOURSES: 'core_course/no-courses'
     };
 
-    var NUMCOURSES_PERPAGE = [12, 24, 48];
+    var GROUPINGS = {
+        GROUPING_ALLINCLUDINGHIDDEN: 'allincludinghidden',
+        GROUPING_ALL: 'all',
+        GROUPING_INPROGRESS: 'inprogress',
+        GROUPING_FUTURE: 'future',
+        GROUPING_PAST: 'past',
+        GROUPING_FAVOURITES: 'favourites',
+        GROUPING_HIDDEN: 'hidden'
+    };
+
+    var NUMCOURSES_PERPAGE = [12, 24, 48, 96, 0];
 
     var loadedPages = [];
 
@@ -90,7 +100,10 @@ function(
         return {
             display: courseRegion.attr('data-display'),
             grouping: courseRegion.attr('data-grouping'),
-            sort: courseRegion.attr('data-sort')
+            sort: courseRegion.attr('data-sort'),
+            displaycategories: courseRegion.attr('data-displaycategories'),
+            customfieldname: courseRegion.attr('data-customfieldname'),
+            customfieldvalue: courseRegion.attr('data-customfieldvalue'),
         };
     };
 
@@ -115,7 +128,9 @@ function(
             offset: courseOffset,
             limit: limit,
             classification: filters.grouping,
-            sort: filters.sort
+            sort: filters.sort,
+            customfieldname: filters.customfieldname,
+            customfieldvalue: filters.customfieldvalue
         });
     };
 
@@ -217,7 +232,7 @@ function(
 
         setCourseFavouriteState(courseId, true).then(function(success) {
             if (success) {
-                PubSub.publish(CourseEvents.favourited);
+                PubSub.publish(CourseEvents.favourited, courseId);
                 removeAction.removeClass('hidden');
                 addAction.addClass('hidden');
                 showFavouriteIcon(root, courseId);
@@ -240,7 +255,7 @@ function(
 
         setCourseFavouriteState(courseId, false).then(function(success) {
             if (success) {
-                PubSub.publish(CourseEvents.unfavorited);
+                PubSub.publish(CourseEvents.unfavorited, courseId);
                 removeAction.addClass('hidden');
                 addAction.removeClass('hidden');
                 hideFavouriteIcon(root, courseId);
@@ -252,14 +267,103 @@ function(
     };
 
     /**
+     * Get the action menu item
+     *
+     * @param {Object} root  root The course overview container
+     * @param {Number} courseId Course id.
+     * @return {Object} The hide course menu item.
+     */
+    var getHideCourseMenuItem = function(root, courseId) {
+        return root.find('[data-action="hide-course"][data-course-id="' + courseId + '"]');
+    };
+
+    /**
+     * Get the action menu item
+     *
+     * @param {Object} root  root The course overview container
+     * @param {Number} courseId Course id.
+     * @return {Object} The show course menu item.
+     */
+    var getShowCourseMenuItem = function(root, courseId) {
+        return root.find('[data-action="show-course"][data-course-id="' + courseId + '"]');
+    };
+
+    /**
+     * Hide course
+     *
+     * @param  {Object} root The course overview container
+     * @param  {Number} courseId Course id number
+     */
+    var hideCourse = function(root, courseId) {
+        var hideAction = getHideCourseMenuItem(root, courseId);
+        var showAction = getShowCourseMenuItem(root, courseId);
+        var filters = getFilterValues(root);
+
+        setCourseHiddenState(courseId, true);
+
+        // Remove the course from this view as it is now hidden and thus not covered by this view anymore.
+        // Do only if we are not in "All" view mode where really all courses are shown.
+        if (filters.grouping != GROUPINGS.GROUPING_ALLINCLUDINGHIDDEN) {
+            hideElement(root, courseId);
+        }
+
+        hideAction.addClass('hidden');
+        showAction.removeClass('hidden');
+    };
+
+    /**
+     * Show course
+     *
+     * @param  {Object} root The course overview container
+     * @param  {Number} courseId Course id number
+     */
+    var showCourse = function(root, courseId) {
+        var hideAction = getHideCourseMenuItem(root, courseId);
+        var showAction = getShowCourseMenuItem(root, courseId);
+        var filters = getFilterValues(root);
+
+        setCourseHiddenState(courseId, null);
+
+        // Remove the course from this view as it is now shown again and thus not covered by this view anymore.
+        // Do only if we are not in "All" view mode where really all courses are shown.
+        if (filters.grouping != GROUPINGS.GROUPING_ALLINCLUDINGHIDDEN) {
+            hideElement(root, courseId);
+        }
+
+        hideAction.removeClass('hidden');
+        showAction.addClass('hidden');
+    };
+
+    /**
+     * Set the courses hidden status and push to repository
+     *
+     * @param  {Number} courseId Course id to favourite.
+     * @param  {Bool} status new hidden status.
+     * @return {Promise} Repository promise.
+     */
+    var setCourseHiddenState = function(courseId, status) {
+
+        // If the given status is not hidden, the preference has to be deleted with a null value.
+        if (status === false) {
+            status = null;
+        }
+        return Repository.updateUserPreferences({
+            preferences: [
+                {
+                    type: 'block_myoverview_hidden_course_' + courseId,
+                    value: status
+                }
+            ]
+        });
+    };
+
+    /**
      * Reset the loadedPages dataset to take into account the hidden element
      *
      * @param {Object} root The course overview container
-     * @param {Object} target The course that you want to hide
+     * @param {Number} id The course id number
      */
-    var hideElement = function(root, target) {
-        var id = getCourseId(target);
-
+    var hideElement = function(root, id) {
         var pagingBar = root.find('[data-region="paging-bar"]');
         var jumpto = parseInt(pagingBar.attr('data-active-page-number'));
 
@@ -362,7 +466,7 @@ function(
         var filters = getFilterValues(root);
 
         var currentTemplate = '';
-        if (filters.display == 'cards') {
+        if (filters.display == 'card') {
             currentTemplate = TEMPLATES.COURSES_CARDS;
         } else if (filters.display == 'list') {
             currentTemplate = TEMPLATES.COURSES_LIST;
@@ -370,9 +474,15 @@ function(
             currentTemplate = TEMPLATES.COURSES_SUMMARY;
         }
 
+        // Whether the course category should be displayed in the course item.
+        coursesData.courses = coursesData.courses.map(function(course) {
+            course.showcoursecategory = filters.displaycategories == 'on' ? true : false;
+            return course;
+        });
+
         if (coursesData.courses.length) {
             return Templates.render(currentTemplate, {
-                courses: coursesData.courses
+                courses: coursesData.courses,
             });
         } else {
             var nocoursesimg = root.find(Selectors.courseView.region).attr('data-nocoursesimg');
@@ -412,19 +522,24 @@ function(
     var initializePagedContent = function(root) {
         namespace = "block_myoverview_" + root.attr('id') + "_" + Math.random();
 
-        var itemsPerPage = NUMCOURSES_PERPAGE;
         var pagingLimit = parseInt(root.find(Selectors.courseView.region).attr('data-paging'), 10);
-        if (pagingLimit) {
-            itemsPerPage = NUMCOURSES_PERPAGE.map(function(value) {
-                var active = false;
-                if (value == pagingLimit) {
-                    active = true;
-                }
+        var itemsPerPage = NUMCOURSES_PERPAGE.map(function(value) {
+            var active = false;
+            if (value == pagingLimit) {
+                active = true;
+            }
 
-                return {
-                    value: value,
-                    active: active
-                };
+            return {
+                value: value,
+                active: active
+            };
+        });
+
+        // Filter out all pagination options which are too large for the amount of courses user is enrolled in.
+        var totalCourseCount = parseInt(root.find(Selectors.courseView.region).attr('data-totalcoursecount'), 10);
+        if (totalCourseCount) {
+            itemsPerPage = itemsPerPage.filter(function(pagingOption) {
+                return pagingOption.value < totalCourseCount;
             });
         }
 
@@ -439,7 +554,7 @@ function(
 
                 pagesData.forEach(function(pageData) {
                     var currentPage = pageData.pageNumber;
-                    var limit = pageData.limit;
+                    var limit = (pageData.limit > 0) ? pageData.limit : 0;
 
                     // Reset local variables if limits have changed
                     if (lastLimit != limit) {
@@ -482,7 +597,7 @@ function(
                             }
                         } else {
                             nextPageStart = pageData.limit;
-                            pageCourses = courses.slice(0, pageData.limit);
+                            pageCourses = (pageData.limit > 0) ? courses.slice(0, pageData.limit) : courses;
                         }
 
                         // Finished setting up the current page
@@ -491,7 +606,7 @@ function(
                         };
 
                         // Set up the next page
-                        var remainingCourses = courses.slice(nextPageStart, courses.length);
+                        var remainingCourses = nextPageStart ? courses.slice(nextPageStart, courses.length) : [];
                         if (remainingCourses.length) {
                             loadedPages[currentPage + 1] = {
                                 courses: remainingCourses
@@ -556,38 +671,15 @@ function(
 
         root.on(CustomEvents.events.activate, SELECTORS.ACTION_HIDE_COURSE, function(e, data) {
             var target = $(e.target).closest(SELECTORS.ACTION_HIDE_COURSE);
-            var id = getCourseId(target);
-
-            var request = {
-                preferences: [
-                    {
-                        type: 'block_myoverview_hidden_course_' + id,
-                        value: true
-                    }
-                ]
-            };
-            Repository.updateUserPreferences(request);
-
-            hideElement(root, target);
+            var courseId = getCourseId(target);
+            hideCourse(root, courseId);
             data.originalEvent.preventDefault();
         });
 
         root.on(CustomEvents.events.activate, SELECTORS.ACTION_SHOW_COURSE, function(e, data) {
             var target = $(e.target).closest(SELECTORS.ACTION_SHOW_COURSE);
-            var id = getCourseId(target);
-
-            var request = {
-                preferences: [
-                    {
-                        type: 'block_myoverview_hidden_course_' + id,
-                        value: null
-                    }
-                ]
-            };
-
-            Repository.updateUserPreferences(request);
-
-            hideElement(root, target);
+            var courseId = getCourseId(target);
+            showCourse(root, courseId);
             data.originalEvent.preventDefault();
         });
     };

@@ -400,41 +400,6 @@ function chat_print_recent_activity($course, $viewfullnames, $timestart) {
 }
 
 /**
- * Function to be run periodically according to the moodle cron
- * This function searches for things that need to be done, such
- * as sending out mail, toggling flags etc ...
- *
- * @global object
- * @return bool
- */
-function chat_cron () {
-    global $DB;
-
-    chat_update_chat_times();
-
-    chat_delete_old_users();
-
-    // Delete old messages with a single SQL query.
-    $subselect = "SELECT c.keepdays
-                    FROM {chat} c
-                   WHERE c.id = {chat_messages}.chatid";
-
-    $sql = "DELETE
-              FROM {chat_messages}
-             WHERE ($subselect) > 0 AND timestamp < ( ".time()." -($subselect) * 24 * 3600)";
-
-    $DB->execute($sql);
-
-    $sql = "DELETE
-              FROM {chat_messages_current}
-             WHERE timestamp < ( ".time()." - 8 * 3600)";
-
-    $DB->execute($sql);
-
-    return true;
-}
-
-/**
  * This standard function will check all instances of this module
  * and make sure there are up-to-date events created for each of them.
  * If courseid = 0, then every chat event in the site is checked, else
@@ -1171,44 +1136,10 @@ function chat_get_post_actions() {
 }
 
 /**
- * @deprecated since 3.3
- * @todo The final deprecation of this function will take place in Moodle 3.7 - see MDL-57487.
- * @global object
- * @global object
- * @param array $courses
- * @param array $htmlarray Passed by reference
+ * @deprecated since Moodle 3.3, when the block_course_overview block was removed.
  */
-function chat_print_overview($courses, &$htmlarray) {
-    global $USER, $CFG;
-
-    debugging('The function chat_print_overview() is now deprecated.', DEBUG_DEVELOPER);
-
-    if (empty($courses) || !is_array($courses) || count($courses) == 0) {
-        return array();
-    }
-
-    if (!$chats = get_all_instances_in_courses('chat', $courses)) {
-        return;
-    }
-
-    $strchat = get_string('modulename', 'chat');
-    $strnextsession  = get_string('nextsession', 'chat');
-
-    foreach ($chats as $chat) {
-        if ($chat->chattime and $chat->schedule) {  // A chat is scheduled.
-            $str = '<div class="chat overview"><div class="name">'.
-                   $strchat.': <a '.($chat->visible ? '' : ' class="dimmed"').
-                   ' href="'.$CFG->wwwroot.'/mod/chat/view.php?id='.$chat->coursemodule.'">'.
-                   $chat->name.'</a></div>';
-            $str .= '<div class="info">'.$strnextsession.': '.userdate($chat->chattime).'</div></div>';
-
-            if (empty($htmlarray[$chat->course]['chat'])) {
-                $htmlarray[$chat->course]['chat'] = $str;
-            } else {
-                $htmlarray[$chat->course]['chat'] .= $str;
-            }
-        }
-    }
+function chat_print_overview() {
+    throw new coding_exception('chat_print_overview() can not be used any more and is obsolete.');
 }
 
 

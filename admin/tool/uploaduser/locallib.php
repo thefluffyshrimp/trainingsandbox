@@ -56,7 +56,13 @@ define('UU_PWRESET_ALL', 2);
  */
 class uu_progress_tracker {
     private $_row;
-    public $columns = array('status', 'line', 'id', 'username', 'firstname', 'lastname', 'email', 'password', 'auth', 'enrolments', 'suspended', 'deleted');
+
+    /**
+     * The columns shown on the table.
+     * @var array
+     */
+    public $columns = array('status', 'line', 'id', 'username', 'firstname', 'lastname', 'email',
+                            'password', 'auth', 'enrolments', 'suspended', 'theme', 'deleted');
 
     /**
      * Print table header.
@@ -77,6 +83,7 @@ class uu_progress_tracker {
         echo '<th class="header c'.$ci++.'" scope="col">'.get_string('authentication').'</th>';
         echo '<th class="header c'.$ci++.'" scope="col">'.get_string('enrolments', 'enrol').'</th>';
         echo '<th class="header c'.$ci++.'" scope="col">'.get_string('suspended', 'auth').'</th>';
+        echo '<th class="header c'.$ci++.'" scope="col">'.get_string('theme').'</th>';
         echo '<th class="header c'.$ci++.'" scope="col">'.get_string('delete').'</th>';
         echo '</tr>';
         $this->_row = null;
@@ -197,7 +204,7 @@ function uu_validate_user_upload_columns(csv_import_reader $cir, $stdfields, $pr
             // hack: somebody wrote uppercase in csv file, but the system knows only lowercase profile field
             $newfield = $lcfield;
 
-        } else if (preg_match('/^(sysrole|cohort|course|group|type|role|enrolperiod|enrolstatus)\d+$/', $lcfield)) {
+        } else if (preg_match('/^(sysrole|cohort|course|group|type|role|enrolperiod|enrolstatus|enroltimestart)\d+$/', $lcfield)) {
             // special fields for enrolments
             $newfield = $lcfield;
 

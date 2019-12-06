@@ -321,6 +321,7 @@ class page_requirements_manager {
             $this->M_cfg = array(
                 'wwwroot'             => $CFG->wwwroot,
                 'sesskey'             => sesskey(),
+                'sessiontimeout'      => $CFG->sessiontimeout,
                 'themerev'            => theme_get_revision(),
                 'slasharguments'      => (int)(!empty($CFG->slasharguments)),
                 'theme'               => $page->theme->name,
@@ -330,6 +331,8 @@ class page_requirements_manager {
                 'svgicons'            => $page->theme->use_svg_icons(),
                 'usertimezone'        => usertimezone(),
                 'contextid'           => $contextid,
+                'langrev'             => get_string_manager()->get_revision(),
+                'templaterev'         => $this->get_templaterev()
             );
             if ($CFG->debugdeveloper) {
                 $this->M_cfg['developerdebug'] = true;
@@ -409,6 +412,25 @@ class page_requirements_manager {
         }
 
         return $jsrev;
+    }
+
+    /**
+     * Determine the correct Template revision to use for this load.
+     *
+     * @return int the templaterev to use.
+     */
+    protected function get_templaterev() {
+        global $CFG;
+
+        if (empty($CFG->cachetemplates)) {
+            $templaterev = -1;
+        } else if (empty($CFG->templaterev)) {
+            $templaterev = 1;
+        } else {
+            $templaterev = $CFG->templaterev;
+        }
+
+        return $templaterev;
     }
 
     /**
@@ -795,7 +817,7 @@ class page_requirements_manager {
                                                         array('dndenabled_inbox', 'moodle'), array('fileexists', 'moodle'), array('maxbytesfile', 'error'),
                                                         array('sizegb', 'moodle'), array('sizemb', 'moodle'), array('sizekb', 'moodle'), array('sizeb', 'moodle'),
                                                         array('maxareabytesreached', 'moodle'), array('serverconnection', 'error'),
-                                                        array('changesmadereallygoaway', 'moodle')
+                                                        array('changesmadereallygoaway', 'moodle'), array('complete', 'moodle')
                                                     ));
                     break;
             }
@@ -999,45 +1021,51 @@ class page_requirements_manager {
     }
 
     /**
-     * This function creates a minimal JS script that requires and calls a single function from an AMD module with arguments.
-     * If it is called multiple times, it will be executed multiple times.
+     * Load an AMD module and eventually call its method.
      *
-     * @param string $fullmodule The format for module names is <component name>/<module name>.
-     * @param string $func The function from the module to call
-     * @param array $params The params to pass to the function. They will be json encoded, so no nasty classes/types please.
+     * This function creates a minimal inline JS snippet that requires an AMD module and eventually calls a single
+     * function from the module with given arguments. If it is called multiple times, it will be create multiple
+     * snippets.
+     *
+     * @param string $fullmodule The name of the AMD module to load, formatted as <component name>/<module name>.
+     * @param string $func Optional function from the module to call, defaults to just loading the AMD module.
+     * @param array $params The params to pass to the function (will be serialized into JSON).
      */
-    public function js_call_amd($fullmodule, $func, $params = array()) {
+    public function js_call_amd($fullmodule, $func = null, $params = array()) {
         global $CFG;
 
         list($component, $module) = explode('/', $fullmodule, 2);
 
         $component = clean_param($component, PARAM_COMPONENT);
         $module = clean_param($module, PARAM_ALPHANUMEXT);
-        $func = clean_param($func, PARAM_ALPHANUMEXT);
-
         $modname = "{$component}/{$module}";
 
-        $jsonparams = array();
-        foreach ($params as $param) {
-            $jsonparams[] = json_encode($param);
-        }
-        $strparams = implode(', ', $jsonparams);
-        if ($CFG->debugdeveloper) {
-            $toomanyparamslimit = 1024;
-            if (strlen($strparams) > $toomanyparamslimit) {
-                debugging('Too much data passed as arguments to js_call_amd("' . $fullmodule . '", "' . $func .
-                        '"). Generally there are better ways to pass lots of data from PHP to JavaScript, for example via Ajax, data attributes, ... . ' .
-                        'This warning is triggered if the argument string becomes longer than ' . $toomanyparamslimit . ' characters.', DEBUG_DEVELOPER);
+        $functioncode = [];
+        if ($func !== null) {
+            $func = clean_param($func, PARAM_ALPHANUMEXT);
+
+            $jsonparams = array();
+            foreach ($params as $param) {
+                $jsonparams[] = json_encode($param);
+            }
+            $strparams = implode(', ', $jsonparams);
+            if ($CFG->debugdeveloper) {
+                $toomanyparamslimit = 1024;
+                if (strlen($strparams) > $toomanyparamslimit) {
+                    debugging('Too much data passed as arguments to js_call_amd("' . $fullmodule . '", "' . $func .
+                        '"). Generally there are better ways to pass lots of data from PHP to JavaScript, for example via Ajax, ' .
+                        'data attributes, ... . This warning is triggered if the argument string becomes longer than ' .
+                        $toomanyparamslimit . ' characters.', DEBUG_DEVELOPER);
+                }
             }
 
+            $functioncode[] = "amd.{$func}({$strparams});";
         }
-        $js = <<<EOF
-M.util.js_pending('{$modname}');
-require(['{$modname}'], function(amd) {
-    amd.{$func}({$strparams});
-    M.util.js_complete('{$modname}');
-});
-EOF;
+
+        $functioncode[] = "M.util.js_complete('{$modname}');";
+
+        $initcode = implode(' ', $functioncode);
+        $js = "M.util.js_pending('{$modname}'); require(['{$modname}'], function(amd) {{$initcode}});";
 
         $this->js_amd_inline($js);
     }
@@ -1324,6 +1352,9 @@ EOF;
     protected function get_amd_footercode() {
         global $CFG;
         $output = '';
+
+        // We will cache JS if cachejs is not set, or it is true.
+        $cachejs = !isset($CFG->cachejs) || $CFG->cachejs;
         $jsrev = $this->get_jsrev();
 
         $jsloader = new moodle_url('/lib/javascript.php');
@@ -1339,15 +1370,21 @@ EOF;
             $jsextension = '';
         }
 
+        $minextension = '.min';
+        if (!$cachejs) {
+            $minextension = '';
+        }
+
         $requirejsconfig = str_replace('[BASEURL]', $requirejsloader, $requirejsconfig);
         $requirejsconfig = str_replace('[JSURL]', $jsloader, $requirejsconfig);
+        $requirejsconfig = str_replace('[JSMIN]', $minextension, $requirejsconfig);
         $requirejsconfig = str_replace('[JSEXT]', $jsextension, $requirejsconfig);
 
         $output .= html_writer::script($requirejsconfig);
-        if ($CFG->debugdeveloper) {
-            $output .= html_writer::script('', $this->js_fix_url('/lib/requirejs/require.js'));
-        } else {
+        if ($cachejs) {
             $output .= html_writer::script('', $this->js_fix_url('/lib/requirejs/require.min.js'));
+        } else {
+            $output .= html_writer::script('', $this->js_fix_url('/lib/requirejs/require.js'));
         }
 
         // First include must be to a module with no dependencies, this prevents multiple requests.
@@ -1558,8 +1595,21 @@ EOF;
      * @return string the HTML code to go at the start of the <body> tag.
      */
     public function get_top_of_body_code(renderer_base $renderer) {
+        global $CFG;
+
         // First the skip links.
         $output = $renderer->render_skip_links($this->skiplinks);
+
+        // The polyfill needs to load before the other JavaScript in order to make sure
+        // that we have access to the functions it provides.
+        if (empty($CFG->cachejs)) {
+            $output .= html_writer::script('', $this->js_fix_url('/lib/babel-polyfill/polyfill.js'));
+        } else {
+            $output .= html_writer::script('', $this->js_fix_url('/lib/babel-polyfill/polyfill.min.js'));
+        }
+
+        // Include the MDN Polyfill.
+        $output .= html_writer::script('', $this->js_fix_url('/lib/mdn-polyfills/polyfill.js'));
 
         // YUI3 JS needs to be loaded early in the body. It should be cached well by the browser.
         $output .= $this->get_yui3lib_headcode();
@@ -1629,7 +1679,16 @@ EOF;
             'areyousure',
             'closebuttontitle',
             'unknownerror',
+            'error',
+            'file',
+            'url',
         ), 'moodle');
+        $this->strings_for_js(array(
+            'debuginfo',
+            'line',
+            'stacktrace',
+        ), 'debug');
+        $this->string_for_js('labelsep', 'langconfig');
         if (!empty($this->stringsforjs)) {
             $strings = array();
             foreach ($this->stringsforjs as $component=>$v) {
@@ -2072,6 +2131,23 @@ class YUI_config {
             }
         }
     }
+}
+
+/**
+ * Invalidate all server and client side template caches.
+ */
+function template_reset_all_caches() {
+    global $CFG;
+
+    $next = time();
+    if (isset($CFG->templaterev) and $next <= $CFG->templaterev and $CFG->templaterev - $next < 60 * 60) {
+        // This resolves problems when reset is requested repeatedly within 1s,
+        // the < 1h condition prevents accidental switching to future dates
+        // because we might not recover from it.
+        $next = $CFG->templaterev + 1;
+    }
+
+    set_config('templaterev', $next);
 }
 
 /**

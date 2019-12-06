@@ -25,7 +25,6 @@ if ($hassiteconfig or has_any_capability($capabilities, $systemcontext)) { // sp
     $temp->add(new admin_setting_configcheckbox('allowcohortthemes',  new lang_string('allowcohortthemes', 'admin'), new lang_string('configallowcohortthemes', 'admin'), 0));
     $temp->add(new admin_setting_configcheckbox('allowthemechangeonurl',  new lang_string('allowthemechangeonurl', 'admin'), new lang_string('configallowthemechangeonurl', 'admin'), 0));
     $temp->add(new admin_setting_configcheckbox('allowuserblockhiding', new lang_string('allowuserblockhiding', 'admin'), new lang_string('configallowuserblockhiding', 'admin'), 1));
-    $temp->add(new admin_setting_configcheckbox('allowblockstodock', new lang_string('allowblockstodock', 'admin'), new lang_string('configallowblockstodock', 'admin'), 1));
     $temp->add(new admin_setting_configtextarea('custommenuitems', new lang_string('custommenuitems', 'admin'),
         new lang_string('configcustommenuitems', 'admin'), '', PARAM_RAW, '50', '10'));
     $temp->add(new admin_setting_configtextarea(
@@ -74,6 +73,24 @@ preferences,moodle|/user/preferences.php|t/preferences',
         ['maxfiles' => 1, 'accepted_types' => ['.jpg', '.png']]);
     $setting->set_updatedcallback('theme_reset_all_caches');
     $temp->add($setting);
+
+    $ADMIN->add('appearance', $temp);
+
+    // Course colours section.
+    $temp = new admin_settingpage('coursecolors', new lang_string('coursecolorsettings', 'admin'));
+    $temp->add(new admin_setting_heading('coursecolorheading', '',
+        new lang_string('coursecolorheading_desc', 'admin')));
+
+    $basecolors = ['#81ecec', '#74b9ff', '#a29bfe', '#dfe6e9', '#00b894',
+            '#0984e3', '#b2bec3', '#fdcb6e', '#fd79a8', '#6c5ce7'];
+
+    foreach ($basecolors as $key => $color) {
+        $number = $key + 1;
+        $name = 'core_admin/coursecolor' . $number;
+        $title = get_string('coursecolor', 'admin', $number);
+        $setting = new admin_setting_configcolourpicker($name, $title, '', $color);
+        $temp->add($setting);
+    }
 
     $ADMIN->add('appearance', $temp);
 
@@ -180,6 +197,10 @@ preferences,moodle|/user/preferences.php|t/preferences',
         'idnumber' => new lang_string('sort_idnumber', 'admin'),
     );
     $temp->add(new admin_setting_configselect('navsortmycoursessort', new lang_string('navsortmycoursessort', 'admin'), new lang_string('navsortmycoursessort_help', 'admin'), 'sortorder', $sortoptions));
+    $temp->add(new admin_setting_configcheckbox('navsortmycourseshiddenlast',
+            new lang_string('navsortmycourseshiddenlast', 'admin'),
+            new lang_string('navsortmycourseshiddenlast_help', 'admin'),
+            1));
     $temp->add(new admin_setting_configtext('navcourselimit', new lang_string('navcourselimit', 'admin'),
         new lang_string('confignavcourselimit', 'admin'), 10, PARAM_INT));
     $temp->add(new admin_setting_configcheckbox('usesitenameforsitepages', new lang_string('usesitenameforsitepages', 'admin'), new lang_string('configusesitenameforsitepages', 'admin'), 0));
@@ -258,4 +279,10 @@ preferences,moodle|/user/preferences.php|t/preferences',
     $temp->add(new admin_setting_configtextarea('additionalhtmlfooter', new lang_string('additionalhtmlfooter', 'admin'), new lang_string('additionalhtmlfooter_desc', 'admin'), '', PARAM_RAW));
     $ADMIN->add('appearance', $temp);
 
+    $setting = new admin_setting_configcheckbox('cachetemplates', new lang_string('cachetemplates', 'admin'),
+        new lang_string('cachetemplates_help', 'admin'), 1);
+    $setting->set_updatedcallback('template_reset_all_caches');
+    $temp = new admin_settingpage('templates', new lang_string('templates', 'admin'));
+    $temp->add($setting);
+    $ADMIN->add('appearance', $temp);
 } // end of speedup

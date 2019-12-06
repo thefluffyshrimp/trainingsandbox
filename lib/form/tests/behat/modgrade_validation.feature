@@ -92,7 +92,7 @@ Feature: Using the activity grade form element
     And I log in as "student1"
     And I am on "Course 1" course homepage
     And I follow "Test forum name"
-    And I press "Add a new discussion topic"
+    And I click on "Add a new discussion topic" "link"
     And I set the following fields to these values:
       | Subject  | Discussion subject |
       | Message | Discussion message |
@@ -170,7 +170,7 @@ Feature: Using the activity grade form element
     And I log in as "student1"
     And I am on "Course 1" course homepage
     And I follow "Test forum name"
-    And I press "Add a new discussion topic"
+    And I click on "Add a new discussion topic" "link"
     And I set the following fields to these values:
       | Subject  | Discussion subject |
       | Message | Discussion message |
@@ -186,7 +186,7 @@ Feature: Using the activity grade form element
     And I navigate to "Edit settings" in current page administration
     When I expand all fieldsets
     Then I should see "You cannot change the type, as grades already exist for this item."
-    And I set the field "Maximum grade" to "50"
+    And I set the field "Ratings > Maximum grade" to "50"
     And I press "Save and display"
     And I should see "You cannot change the maximum grade when grades already exist for an activity with ratings"
 

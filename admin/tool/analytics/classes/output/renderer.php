@@ -81,7 +81,7 @@ class renderer extends plugin_renderer_base {
         foreach ($results as $timesplittingid => $result) {
 
             if (!CLI_SCRIPT) {
-                $output .= $OUTPUT->box_start('generalbox m-b-3');
+                $output .= $OUTPUT->box_start('generalbox mb-3');
             }
 
             // Check that the array key is a string, not all results depend on time splitting methods (e.g. general errors).
@@ -90,9 +90,9 @@ class renderer extends plugin_renderer_base {
                 $langstrdata = (object)array('name' => $timesplitting->get_name(), 'id' => $timesplittingid);
 
                 if (CLI_SCRIPT) {
-                    $output .= $OUTPUT->heading(get_string('getpredictionsresultscli', 'tool_analytics', $langstrdata), 3);
+                    $output .= $OUTPUT->heading(get_string('scheduledanalysisresultscli', 'tool_analytics', $langstrdata), 3);
                 } else {
-                    $output .= $OUTPUT->heading(get_string('getpredictionsresults', 'tool_analytics', $langstrdata), 3);
+                    $output .= $OUTPUT->heading(get_string('scheduledanalysisresults', 'tool_analytics', $langstrdata), 3);
                 }
             }
 
@@ -177,7 +177,7 @@ class renderer extends plugin_renderer_base {
         }
 
         if ($predictresults || (!empty($predictlogs) && debugging())) {
-            $output .= $OUTPUT->heading(get_string('predictionresults', 'tool_analytics'), 3, 'main m-t-3');
+            $output .= $OUTPUT->heading(get_string('predictionresults', 'tool_analytics'), 3, 'main mt-3');
         }
 
         if ($predictresults) {
@@ -211,6 +211,17 @@ class renderer extends plugin_renderer_base {
     /**
      * Defer to template.
      *
+     * @param \tool_analytics\output\insights_report $insightsreport
+     * @return string HTML
+     */
+    protected function render_insights_report(\tool_analytics\output\insights_report $insightsreport): string {
+        $data = $insightsreport->export_for_template($this);
+        return parent::render_from_template('tool_analytics/insights_report', $data);
+    }
+
+    /**
+     * Defer to template.
+     *
      * @param \tool_analytics\output\invalid_analysables $invalidanalysables
      * @return string HTML
      */
@@ -218,4 +229,26 @@ class renderer extends plugin_renderer_base {
         $data = $invalidanalysables->export_for_template($this);
         return parent::render_from_template('tool_analytics/invalid_analysables', $data);
     }
+
+    /**
+     * Renders an analytics disabled notification.
+     *
+     * @return string HTML
+     */
+    public function render_analytics_disabled() {
+        global $OUTPUT, $PAGE, $FULLME;
+
+        $PAGE->set_url($FULLME);
+        $PAGE->set_title(get_string('pluginname', 'tool_analytics'));
+        $PAGE->set_heading(get_string('pluginname', 'tool_analytics'));
+
+        $output = $OUTPUT->header();
+        $output .= $OUTPUT->notification(get_string('analyticsdisabled', 'analytics'), \core\output\notification::NOTIFY_INFO);
+        $output .= \html_writer::tag('a', get_string('continue'), ['class' => 'btn btn-primary',
+            'href' => (new \moodle_url('/'))->out()]);
+        $output .= $OUTPUT->footer();
+
+        return $output;
+    }
+
 }

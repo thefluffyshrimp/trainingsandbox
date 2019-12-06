@@ -32,6 +32,8 @@ require_once($CFG->dirroot.'/group/lib.php');
 require_once($CFG->dirroot.'/cohort/lib.php');
 require_once('locallib.php');
 require_once('user_form.php');
+require_once('classes/local/field_value_validators.php');
+use tool_uploaduser\local\field_value_validators;
 
 $iid         = optional_param('iid', '', PARAM_INT);
 $previewrows = optional_param('previewrows', 10, PARAM_INT);
@@ -84,7 +86,7 @@ $today = time();
 $today = make_timestamp(date('Y', $today), date('m', $today), date('d', $today), 0, 0, 0);
 
 // array of all valid fields for validation
-$STD_FIELDS = array('id', 'username', 'email',
+$STD_FIELDS = array('id', 'username', 'email', 'emailstop',
         'city', 'country', 'lang', 'timezone', 'mailformat',
         'maildisplay', 'maildigest', 'htmleditor', 'autosubscribe',
         'institution', 'department', 'idnumber', 'skype',
@@ -93,6 +95,7 @@ $STD_FIELDS = array('id', 'username', 'email',
         'auth',        // watch out when changing auth type or using external auth plugins!
         'oldusername', // use when renaming users - this is the original username
         'suspended',   // 1 means suspend user account, 0 means activate user account, nothing means keep as is for existing users
+        'theme',       // Define a theme for user when 'allowuserthemes' is enabled.
         'deleted',     // 1 means delete user
         'mnethostid',  // Can not be used for adding, updating or deleting of users - only for enrolments, groups, cohorts and suspending.
         'interests',
@@ -101,7 +104,6 @@ $STD_FIELDS = array('id', 'username', 'email',
 $STD_FIELDS = array_merge($STD_FIELDS, get_all_user_name_fields());
 
 $PRF_FIELDS = array();
-
 if ($proffields = $DB->get_records('user_info_field')) {
     foreach ($proffields as $key => $proffield) {
         $profilefieldname = 'profile_field_'.$proffield->shortname;
@@ -353,6 +355,16 @@ if ($formdata = $mform2->is_cancelled()) {
             $upt->track('username', s($originalusername).'-->'.s($user->username), 'info');
         } else {
             $upt->track('username', s($user->username), 'normal', false);
+        }
+
+        // Verify if the theme is valid and allowed to be set.
+        if (isset($user->theme)) {
+            list($status, $message) = field_value_validators::validate_theme($user->theme);
+            if ($status !== 'normal' && !empty($message)) {
+                $upt->track('status', $message, $status);
+                // Unset the theme when validation fails.
+                unset($user->theme);
+            }
         }
 
         // add default values for remaining fields
@@ -656,7 +668,7 @@ if ($formdata = $mform2->is_cancelled()) {
                     // Check for passwords that we want to force users to reset next
                     // time they log in.
                     $errmsg = null;
-                    $weak = !check_password_policy($user->password, $errmsg);
+                    $weak = !check_password_policy($user->password, $errmsg, $user);
                     if ($resetpasswords == UU_PWRESET_ALL or ($resetpasswords == UU_PWRESET_WEAK and $weak)) {
                         if ($weak) {
                             $weakpasswords++;
@@ -797,7 +809,7 @@ if ($formdata = $mform2->is_cancelled()) {
                     }
                 } else {
                     $errmsg = null;
-                    $weak = !check_password_policy($user->password, $errmsg);
+                    $weak = !check_password_policy($user->password, $errmsg, $user);
                     if ($resetpasswords == UU_PWRESET_ALL or ($resetpasswords == UU_PWRESET_WEAK and $weak)) {
                         if ($weak) {
                             $weakpasswords++;
@@ -1027,6 +1039,7 @@ if ($formdata = $mform2->is_cancelled()) {
                 if ($roleid) {
                     // Find duration and/or enrol status.
                     $timeend = 0;
+                    $timestart = $today;
                     $status = null;
 
                     if (isset($user->{'enrolstatus'.$i})) {
@@ -1042,16 +1055,23 @@ if ($formdata = $mform2->is_cancelled()) {
                         }
                     }
 
+                    if (!empty($user->{'enroltimestart'.$i})) {
+                        $parsedtimestart = strtotime($user->{'enroltimestart'.$i});
+                        if ($parsedtimestart !== false) {
+                            $timestart = $parsedtimestart;
+                        }
+                    }
+
                     if (!empty($user->{'enrolperiod'.$i})) {
                         $duration = (int)$user->{'enrolperiod'.$i} * 60*60*24; // convert days to seconds
                         if ($duration > 0) { // sanity check
-                            $timeend = $today + $duration;
+                            $timeend = $timestart + $duration;
                         }
                     } else if ($manualcache[$courseid]->enrolperiod > 0) {
-                        $timeend = $today + $manualcache[$courseid]->enrolperiod;
+                        $timeend = $timestart + $manualcache[$courseid]->enrolperiod;
                     }
 
-                    $manual->enrol_user($manualcache[$courseid], $user->id, $roleid, $today, $timeend, $status);
+                    $manual->enrol_user($manualcache[$courseid], $user->id, $roleid, $timestart, $timeend, $status);
 
                     $a = new stdClass();
                     $a->course = $shortname;
@@ -1211,6 +1231,14 @@ while ($linenum <= $previewrows and $fields = $cir->next()) {
     if (isset($rowcols['city'])) {
         $rowcols['city'] = $rowcols['city'];
     }
+
+    if (isset($rowcols['theme'])) {
+        list($status, $message) = field_value_validators::validate_theme($rowcols['theme']);
+        if ($status !== 'normal' && !empty($message)) {
+            $rowcols['status'][] = $message;
+        }
+    }
+
     // Check if rowcols have custom profile field with correct data and update error state.
     $noerror = uu_check_custom_profile_data($rowcols) && $noerror;
     $rowcols['status'] = implode('<br />', $rowcols['status']);
@@ -1243,4 +1271,3 @@ if ($noerror) {
 }
 echo $OUTPUT->footer();
 die;
-

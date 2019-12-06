@@ -758,6 +758,53 @@ class auth_plugin_base {
         }
         return $data;
     }
+
+    /**
+     * Returns information on how the specified user can change their password.
+     *
+     * @param stdClass $user A user object
+     * @return string[] An array of strings with keys subject and message
+     */
+    public function get_password_change_info(stdClass $user) : array {
+
+        global $USER;
+
+        $site = get_site();
+        $systemcontext = context_system::instance();
+
+        $data = new stdClass();
+        $data->firstname = $user->firstname;
+        $data->lastname  = $user->lastname;
+        $data->username  = $user->username;
+        $data->sitename  = format_string($site->fullname);
+        $data->admin     = generate_email_signoff();
+
+        // This is a workaround as change_password_url() is designed to allow
+        // use of the $USER global. See MDL-66984.
+        $olduser = $USER;
+        $USER = $user;
+        if ($this->can_change_password() and $this->change_password_url()) {
+            // We have some external url for password changing.
+            $data->link = $this->change_password_url();
+        } else {
+            // No way to change password, sorry.
+            $data->link = '';
+        }
+        $USER = $olduser;
+
+        if (!empty($data->link) and has_capability('moodle/user:changeownpassword', $systemcontext, $user->id)) {
+            $subject = get_string('emailpasswordchangeinfosubject', '', format_string($site->fullname));
+            $message = get_string('emailpasswordchangeinfo', '', $data);
+        } else {
+            $subject = get_string('emailpasswordchangeinfosubject', '', format_string($site->fullname));
+            $message = get_string('emailpasswordchangeinfofail', '', $data);
+        }
+
+        return [
+            'subject' => $subject,
+            'message' => $message
+        ];
+    }
 }
 
 /**
@@ -1005,8 +1052,16 @@ function signup_validate_data($data, $files) {
         }
     }
 
+    // Construct fake user object to check password policy against required information.
+    $tempuser = new stdClass();
+    $tempuser->id = 1;
+    $tempuser->username = $data['username'];
+    $tempuser->firstname = $data['firstname'];
+    $tempuser->lastname = $data['lastname'];
+    $tempuser->email = $data['email'];
+
     $errmsg = '';
-    if (!check_password_policy($data['password'], $errmsg)) {
+    if (!check_password_policy($data['password'], $errmsg, $tempuser)) {
         $errors['password'] = $errmsg;
     }
 

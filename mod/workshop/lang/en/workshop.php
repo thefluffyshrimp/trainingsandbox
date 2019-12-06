@@ -94,6 +94,7 @@ $string['configgradinggrade'] = 'Default maximum grade for assessment in worksho
 $string['configmaxbytes'] = 'Default maximum submission file size for all workshops on the site (subject to course limits and other local settings)';
 $string['configstrategy'] = 'Default grading strategy for workshops';
 $string['createsubmission'] = 'Start preparing your submission';
+$string['crontask'] = 'Background processing for workshop module';
 $string['daysago'] = '{$a} days ago';
 $string['daysleft'] = '{$a} days left';
 $string['daystoday'] = 'today';
@@ -156,6 +157,8 @@ $string['formatpeergradeover'] = '<span class="grade">{$a->grade}</span> <span c
 $string['formatpeergradeoverweighted'] = '<span class="grade">{$a->grade}</span> <span class="gradinggrade">(<del>{$a->gradinggrade}</del> / <ins>{$a->gradinggradeover}</ins>)</span> @ <span class="weight">{$a->weight}</span>';
 $string['formatpeergradeweighted'] = '<span class="grade">{$a->grade}</span> <span class="gradinggrade">({$a->gradinggrade})</span> @ <span class="weight">{$a->weight}</span>';
 $string['givengrades'] = 'Grades given';
+$string['grade_submission_name'] = 'Submission';
+$string['grade_grading_name'] = 'Assessment';
 $string['gradecalculated'] = 'Calculated grade for submission';
 $string['gradedecimals'] = 'Decimal places in grades';
 $string['gradegivento'] = '&gt;';
@@ -178,8 +181,14 @@ $string['chooseuser'] = 'Choose user...';
 $string['iamsure'] = 'Yes, I am sure';
 $string['indicator:cognitivedepth'] = 'Workshop cognitive';
 $string['indicator:cognitivedepth_help'] = 'This indicator is based on the cognitive depth reached by the student in a Workshop activity.';
+$string['indicator:cognitivedepthdef'] = 'Workshop cognitive';
+$string['indicator:cognitivedepthdef_help'] = 'The participant has reached this percentage of the cognitive engagement offered by the Workshop activities during this analysis interval (Levels = No view, View, Submit, View feedback, Comment on feedback, Resubmit after viewing feedback)';
+$string['indicator:cognitivedepthdef_link'] = 'Learning_analytics_indicators#Cognitive_depth';
 $string['indicator:socialbreadth'] = 'Workshop social';
 $string['indicator:socialbreadth_help'] = 'This indicator is based on the social breadth reached by the student in a Workshop activity.';
+$string['indicator:socialbreadthdef'] = 'Workshop social';
+$string['indicator:socialbreadthdef_help'] = 'The participant has reached this percentage of the social engagement offered by the Workshop activities during this analysis interval (Levels = No participation, Participant alone, Participant with others)';
+$string['indicator:socialbreadthdef_link'] = 'Learning_analytics_indicators#Social_breadth';
 $string['info'] = 'Info';
 $string['instructauthors'] = 'Instructions for submission';
 $string['instructreviewers'] = 'Instructions for assessment';
@@ -188,6 +197,7 @@ $string['latesubmissions'] = 'Late submissions';
 $string['latesubmissions_desc'] = 'Allow submissions after the deadline';
 $string['latesubmissions_help'] = 'If enabled, an author may submit their work after the submissions deadline or during the assessment phase. Late submissions cannot be edited though.';
 $string['latesubmissionsallowed'] = 'Late submissions are allowed';
+$string['legacyallocationplugincron'] = 'Legacy cron workshop allocation';
 $string['maxbytes'] = 'Maximum submission attachment size';
 $string['modulename'] = 'Workshop';
 $string['modulename_help'] = 'The workshop activity module enables the collection, review and peer assessment of students\' work.
@@ -419,7 +429,3 @@ $string['workshop:viewreviewernames'] = 'View reviewer names';
 $string['yourassessmentfor'] = 'Your assessment for {$a}';
 $string['yourgrades'] = 'Your grades';
 $string['yoursubmission'] = 'Your submission';
-
-// Deprecated since Moodle 3.4.
-$string['err_unknownfileextension'] = 'Unknown file extension: {$a}';
-$string['err_wrongfileextension'] = 'Some files ({$a->wrongfiles}) cannot be uploaded. Only file types {$a->whitelist} are allowed.';

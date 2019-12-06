@@ -586,10 +586,11 @@ function feedback_cron () {
 }
 
 /**
- * @return bool false
+ * @deprecated since Moodle 3.8
  */
-function feedback_scale_used ($feedbackid, $scaleid) {
-    return false;
+function feedback_scale_used() {
+    throw new coding_exception('feedback_scale_used() can not be used anymore. Plugins can implement ' .
+        '<modname>_scale_used_anywhere, all implementations of <modname>_scale_used are now ignored');
 }
 
 /**
@@ -2563,7 +2564,7 @@ function feedback_print_numeric_option_list() {
  * @return void
  */
 function feedback_send_email($cm, $feedback, $course, $user, $completed = null) {
-    global $CFG, $DB;
+    global $CFG, $DB, $PAGE;
 
     if ($feedback->email_notification == 0) {  // No need to do anything
         return;
@@ -2630,6 +2631,10 @@ function feedback_send_email($cm, $feedback, $course, $user, $completed = null) 
                 $posthtml = '';
             }
 
+            $customdata = [
+                'cmid' => $cm->id,
+                'instance' => $feedback->id,
+            ];
             if ($feedback->anonymous == FEEDBACK_ANONYMOUS_NO) {
                 $eventdata = new \core\message\message();
                 $eventdata->courseid         = $course->id;
@@ -2645,6 +2650,12 @@ function feedback_send_email($cm, $feedback, $course, $user, $completed = null) 
                 $eventdata->courseid         = $course->id;
                 $eventdata->contexturl       = $info->url;
                 $eventdata->contexturlname   = $info->feedback;
+                // User image.
+                $userpicture = new user_picture($user);
+                $userpicture->size = 1; // Use f1 size.
+                $userpicture->includetoken = $teacher->id; // Generate an out-of-session token for the user receiving the message.
+                $customdata['notificationiconurl'] = $userpicture->get_url($PAGE)->out(false);
+                $eventdata->customdata = $customdata;
                 message_send($eventdata);
             } else {
                 $eventdata = new \core\message\message();
@@ -2661,6 +2672,9 @@ function feedback_send_email($cm, $feedback, $course, $user, $completed = null) 
                 $eventdata->courseid         = $course->id;
                 $eventdata->contexturl       = $info->url;
                 $eventdata->contexturlname   = $info->feedback;
+                // Feedback icon if can be easily reachable.
+                $customdata['notificationiconurl'] = ($cm instanceof cm_info) ? $cm->get_icon_url()->out() : '';
+                $eventdata->customdata = $customdata;
                 message_send($eventdata);
             }
         }
@@ -2723,6 +2737,12 @@ function feedback_send_email_anonym($cm, $feedback, $course) {
             $eventdata->courseid         = $course->id;
             $eventdata->contexturl       = $info->url;
             $eventdata->contexturlname   = $info->feedback;
+            $eventdata->customdata       = [
+                'cmid' => $cm->id,
+                'instance' => $feedback->id,
+                'notificationiconurl' => ($cm instanceof cm_info) ? $cm->get_icon_url()->out() : '',  // Performance wise.
+            ];
+
             message_send($eventdata);
         }
     }

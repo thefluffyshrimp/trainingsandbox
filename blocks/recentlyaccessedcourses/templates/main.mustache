@@ -22,12 +22,12 @@
     Example context (json):
     {
         "userid": 2,
-        "nocoursesimgurl": "https://moodlesite/theme/image.php/boost/block_recentlyaccessedcourses/1535727318/courses"
+        "nocoursesimg": "https://moodlesite/theme/image.php/boost/block_recentlyaccessedcourses/1535727318/courses"
     }
 }}
 
 <div id="block-recentlyaccessedcourses-{{uniqid}}" class="block-recentlyaccessedcourses block-cards" data-region="recentlyaccessedcourses"
-     data-userid="{{userid}}">
+        data-userid="{{userid}}" data-displaycoursecategory="{{displaycategories}}">
     <div class="container-fluid p-0">
         {{> block_recentlyaccessedcourses/recentlyaccessedcourses-view }}
     </div>

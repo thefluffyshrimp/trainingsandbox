@@ -425,7 +425,7 @@ class core_enrol_externallib_testcase extends externallib_advanced_testcase {
 
         $this->setUser($student);
         // Call the external function.
-        $enrolledincourses = core_enrol_external::get_users_courses($student->id);
+        $enrolledincourses = core_enrol_external::get_users_courses($student->id, true);
 
         // We need to execute the return values cleaning process to simulate the web service server.
         $enrolledincourses = external_api::clean_returnvalue(core_enrol_external::get_users_courses_returns(), $enrolledincourses);
@@ -453,8 +453,10 @@ class core_enrol_externallib_testcase extends externallib_advanced_testcase {
                 $this->assertEquals(100.0, $courseenrol['progress']);
                 $this->assertEquals(true, $courseenrol['completed']);
                 $this->assertTrue($courseenrol['completionhascriteria']);
+                $this->assertTrue($courseenrol['completionusertracked']);
                 $this->assertTrue($courseenrol['hidden']);
                 $this->assertTrue($courseenrol['isfavourite']);
+                $this->assertEquals(2, $courseenrol['enrolledusercount']);
             } else {
                 // Check language pack. Should be empty since an incorrect one was used when creating the course.
                 $this->assertEmpty($courseenrol['lang']);
@@ -464,15 +466,24 @@ class core_enrol_externallib_testcase extends externallib_advanced_testcase {
                 $this->assertEquals(0, $courseenrol['progress']);
                 $this->assertEquals(false, $courseenrol['completed']);
                 $this->assertFalse($courseenrol['completionhascriteria']);
+                $this->assertFalse($courseenrol['completionusertracked']);
                 $this->assertFalse($courseenrol['hidden']);
                 $this->assertFalse($courseenrol['isfavourite']);
+                $this->assertEquals(1, $courseenrol['enrolledusercount']);
             }
+        }
+
+        // Check that returnusercount works correctly.
+        $enrolledincourses = core_enrol_external::get_users_courses($student->id, false);
+        $enrolledincourses = external_api::clean_returnvalue(core_enrol_external::get_users_courses_returns(), $enrolledincourses);
+        foreach ($enrolledincourses as $courseenrol) {
+            $this->assertFalse(isset($courseenrol['enrolledusercount']));
         }
 
         // Now check that admin users can see all the info.
         $this->setAdminUser();
 
-        $enrolledincourses = core_enrol_external::get_users_courses($student->id);
+        $enrolledincourses = core_enrol_external::get_users_courses($student->id, true);
         $enrolledincourses = external_api::clean_returnvalue(core_enrol_external::get_users_courses_returns(), $enrolledincourses);
         $this->assertEquals(2, count($enrolledincourses));
         foreach ($enrolledincourses as $courseenrol) {
@@ -480,11 +491,13 @@ class core_enrol_externallib_testcase extends externallib_advanced_testcase {
                 $this->assertEquals($timenow, $courseenrol['lastaccess']);
                 $this->assertEquals(100.0, $courseenrol['progress']);
                 $this->assertTrue($courseenrol['completionhascriteria']);
+                $this->assertTrue($courseenrol['completionusertracked']);
                 $this->assertFalse($courseenrol['isfavourite']);    // This always false.
                 $this->assertFalse($courseenrol['hidden']); // This always false.
             } else {
                 $this->assertEquals(0, $courseenrol['progress']);
                 $this->assertFalse($courseenrol['completionhascriteria']);
+                $this->assertFalse($courseenrol['completionusertracked']);
                 $this->assertFalse($courseenrol['isfavourite']);    // This always false.
                 $this->assertFalse($courseenrol['hidden']); // This always false.
             }
@@ -493,7 +506,7 @@ class core_enrol_externallib_testcase extends externallib_advanced_testcase {
         // Check other users can't see private info.
         $this->setUser($otherstudent);
 
-        $enrolledincourses = core_enrol_external::get_users_courses($student->id);
+        $enrolledincourses = core_enrol_external::get_users_courses($student->id, true);
         $enrolledincourses = external_api::clean_returnvalue(core_enrol_external::get_users_courses_returns(), $enrolledincourses);
         $this->assertEquals(1, count($enrolledincourses));
 
@@ -502,7 +515,7 @@ class core_enrol_externallib_testcase extends externallib_advanced_testcase {
 
         // Change some global profile visibility fields.
         $CFG->hiddenuserfields = 'lastaccess';
-        $enrolledincourses = core_enrol_external::get_users_courses($student->id);
+        $enrolledincourses = core_enrol_external::get_users_courses($student->id, true);
         $enrolledincourses = external_api::clean_returnvalue(core_enrol_external::get_users_courses_returns(), $enrolledincourses);
 
         $this->assertEquals(0, $enrolledincourses[0]['lastaccess']); // I can't see this, hidden by global setting.
@@ -656,6 +669,46 @@ class core_enrol_externallib_testcase extends externallib_advanced_testcase {
         $this->assertArrayNotHasKey('email', $enrolledusers[0]);
     }
 
+
+    /**
+     * Test get_enrolled_users last course access.
+     */
+    public function test_get_enrolled_users_including_lastcourseaccess() {
+        global $DB;
+        $capability = 'moodle/course:viewparticipants';
+        $data = $this->get_enrolled_users_setup($capability);
+
+        // Call the external function.
+        $enrolledusers = core_enrol_external::get_enrolled_users($data->course->id);
+        // We need to execute the return values cleaning process to simulate the web service server.
+        $enrolledusers = external_api::clean_returnvalue(core_enrol_external::get_enrolled_users_returns(), $enrolledusers);
+
+        // Check the result set.
+        $this->assertEquals(3, count($enrolledusers));
+        $this->assertArrayHasKey('email', $enrolledusers[0]);
+        $this->assertEquals(0, $enrolledusers[0]['lastcourseaccess']);
+        $this->assertEquals(0, $enrolledusers[1]['lastcourseaccess']);
+        $this->assertNotEquals(0, $enrolledusers[2]['lastcourseaccess']);   // We forced an access to the course via setUser.
+
+        // Force last access.
+        $timenow = time();
+        $lastaccess = array(
+            'userid' => $enrolledusers[0]['id'],
+            'courseid' => $data->course->id,
+            'timeaccess' => $timenow
+        );
+        $DB->insert_record('user_lastaccess', $lastaccess);
+
+        $enrolledusers = core_enrol_external::get_enrolled_users($data->course->id);
+        $enrolledusers = external_api::clean_returnvalue(core_enrol_external::get_enrolled_users_returns(), $enrolledusers);
+
+        // Check the result set.
+        $this->assertEquals(3, count($enrolledusers));
+        $this->assertEquals($timenow, $enrolledusers[0]['lastcourseaccess']);
+        $this->assertEquals(0, $enrolledusers[1]['lastcourseaccess']);
+        $this->assertNotEquals(0, $enrolledusers[2]['lastcourseaccess']);
+    }
+
     /**
      * Test get_enrolled_users from core_enrol_external with capability to
      * viewparticipants removed.
@@ -773,6 +826,56 @@ class core_enrol_externallib_testcase extends externallib_advanced_testcase {
     }
 
     /**
+     * Test get_enrolled_users last course access.
+     */
+    public function test_get_enrolled_users_with_capability_including_lastcourseaccess() {
+        global $DB;
+        $capability = 'moodle/course:viewparticipants';
+        $data = $this->get_enrolled_users_with_capability_setup($capability);
+
+        $parameters = array(
+            'coursecapabilities' => array(
+                'courseid' => $data->course->id,
+                'capabilities' => array(
+                    $capability,
+                ),
+            ),
+        );
+
+        $result = core_enrol_external::get_enrolled_users_with_capability($parameters, array());
+        // We need to execute the return values cleaning process to simulate the web service server.
+        $result = external_api::clean_returnvalue(core_enrol_external::get_enrolled_users_with_capability_returns(), $result);
+
+        // Check an array containing the expected user for the course capability is returned.
+        $expecteduserlist = $result[0];
+        $this->assertEquals($data->course->id, $expecteduserlist['courseid']);
+        $this->assertEquals($capability, $expecteduserlist['capability']);
+        $this->assertEquals(2, count($expecteduserlist['users']));
+        // We forced an access to the course via setUser.
+        $this->assertNotEquals(0, $expecteduserlist['users'][0]['lastcourseaccess']);
+        $this->assertEquals(0, $expecteduserlist['users'][1]['lastcourseaccess']);
+
+        // Force last access.
+        $timenow = time();
+        $lastaccess = array(
+            'userid' => $expecteduserlist['users'][1]['id'],
+            'courseid' => $data->course->id,
+            'timeaccess' => $timenow
+        );
+        $DB->insert_record('user_lastaccess', $lastaccess);
+
+        $result = core_enrol_external::get_enrolled_users_with_capability($parameters, array());
+        // We need to execute the return values cleaning process to simulate the web service server.
+        $result = external_api::clean_returnvalue(core_enrol_external::get_enrolled_users_with_capability_returns(), $result);
+
+        // Check the result set.
+        $expecteduserlist = $result[0];
+        $this->assertEquals(2, count($expecteduserlist['users']));
+        $this->assertNotEquals(0, $expecteduserlist['users'][0]['lastcourseaccess']);
+        $this->assertEquals($timenow, $expecteduserlist['users'][1]['lastcourseaccess']);
+    }
+
+    /**
      * Test for core_enrol_external::edit_user_enrolment().
      */
     public function test_edit_user_enrolment() {
@@ -886,7 +989,7 @@ class core_enrol_externallib_testcase extends externallib_advanced_testcase {
                     ],
                 ],
                 'expectedresult' => false,
-                'validationerror' => true
+                'validationerror' => true,
             ],
             'Valid data' => [
                 'customdata' => [
@@ -977,6 +1080,7 @@ class core_enrol_externallib_testcase extends externallib_advanced_testcase {
             'ifilter'   => 0,
             'status'    => null,
             'timestart' => null,
+            'duration'  => null,
             'timeend'   => null,
         ];
 
@@ -997,7 +1101,7 @@ class core_enrol_externallib_testcase extends externallib_advanced_testcase {
                 $result,
                 '', 0.0, 10, true);
 
-        if (!empty($result['result'])) {
+        if ($result['result']) {
             $ue = $DB->get_record('user_enrolments', ['id' => $ueid], '*', MUST_EXIST);
             $this->assertEquals($formdata['status'], $ue->status);
         }
@@ -1066,5 +1170,93 @@ class core_enrol_externallib_testcase extends externallib_advanced_testcase {
         // Check unenrol user enrolment.
         $ue = $DB->count_records('user_enrolments', ['id' => $ueid]);
         $this->assertEquals(0, $ue);
+    }
+
+    /**
+     * Test for core_enrol_external::test_search_users().
+     */
+    public function test_search_users() {
+        global $DB;
+
+        $this->resetAfterTest(true);
+        $datagen = $this->getDataGenerator();
+
+        /** @var enrol_manual_plugin $manualplugin */
+        $manualplugin = enrol_get_plugin('manual');
+        $this->assertNotNull($manualplugin);
+
+        $studentroleid = $DB->get_field('role', 'id', ['shortname' => 'student'], MUST_EXIST);
+        $teacherroleid = $DB->get_field('role', 'id', ['shortname' => 'editingteacher'], MUST_EXIST);
+
+        $course1 = $datagen->create_course();
+        $course2 = $datagen->create_course();
+
+        $user1 = $datagen->create_user(['firstname' => 'user 1']);
+        $user2 = $datagen->create_user(['firstname' => 'user 2']);
+        $user3 = $datagen->create_user(['firstname' => 'user 3']);
+        $teacher = $datagen->create_user(['firstname' => 'user 4']);
+
+        $instanceid = null;
+        $instances = enrol_get_instances($course1->id, true);
+        foreach ($instances as $inst) {
+            if ($inst->enrol == 'manual') {
+                $instanceid = (int)$inst->id;
+                break;
+            }
+        }
+        if (empty($instanceid)) {
+            $instanceid = $manualplugin->add_default_instance($course1);
+            if (empty($instanceid)) {
+                $instanceid = $manualplugin->add_instance($course1);
+            }
+        }
+        $this->assertNotNull($instanceid);
+
+        $instance = $DB->get_record('enrol', ['id' => $instanceid], '*', MUST_EXIST);
+        $manualplugin->enrol_user($instance, $user1->id, $studentroleid, 0, 0, ENROL_USER_ACTIVE);
+        $manualplugin->enrol_user($instance, $user2->id, $studentroleid, 0, 0, ENROL_USER_ACTIVE);
+        $manualplugin->enrol_user($instance, $user3->id, $studentroleid, 0, 0, ENROL_USER_ACTIVE);
+        $manualplugin->enrol_user($instance, $teacher->id, $teacherroleid, 0, 0, ENROL_USER_ACTIVE);
+
+        $this->setUser($teacher);
+
+        // Search for users in a course with enrolled users.
+        $result = core_enrol_external::search_users($course1->id, 'user', true, 0, 30);
+        $this->assertCount(4, $result);
+
+        $this->expectException('moodle_exception');
+        // Search for users in a course without any enrolled users, shouldn't return anything.
+        $result = core_enrol_external::search_users($course2->id, 'user', true, 0, 30);
+        $this->assertCount(0, $result);
+
+        // Search for invalid first name.
+        $result = core_enrol_external::search_users($course1->id, 'yada yada', true, 0, 30);
+        $this->assertCount(0, $result);
+
+        // Test pagination, it should return only 3 users.
+        $result = core_enrol_external::search_users($course1->id, 'user', true, 0, 3);
+        $this->assertCount(3, $result);
+
+        // Test pagination, it should return only 3 users.
+        $result = core_enrol_external::search_users($course1->id, 'user 1', true, 0, 1);
+        $result = $result[0];
+        $this->assertEquals($user1->id, $result['id']);
+        $this->assertEquals($user1->email, $result['email']);
+        $this->assertEquals(fullname($user1), $result['fullname']);
+
+        $this->setUser($user1);
+
+        // Search for users in a course with enrolled users.
+        $result = core_enrol_external::search_users($course1->id, 'user', true, 0, 30);
+        $this->assertCount(4, $result);
+
+        $this->expectException('moodle_exception');
+        // Search for users in a course without any enrolled users, shouldn't return anything.
+        $result = core_enrol_external::search_users($course2->id, 'user', true, 0, 30);
+        $this->assertCount(0, $result);
+
+        // Search for invalid first name.
+        $result = core_enrol_external::search_users($course1->id, 'yada yada', true, 0, 30);
+        $this->assertCount(0, $result);
     }
 }

@@ -81,6 +81,9 @@ class mod_forum_generator extends testing_module_generator {
         if (!isset($record->forcesubscribe)) {
             $record->forcesubscribe = FORUM_CHOOSESUBSCRIBE;
         }
+        if (!isset($record->grade_forum)) {
+            $record->grade_forum = 0;
+        }
 
         return parent::create_instance($record, (array)$options);
     }
@@ -193,6 +196,10 @@ class mod_forum_generator extends testing_module_generator {
             $record['pinned'] = FORUM_DISCUSSION_UNPINNED;
         }
 
+        if (!isset($record['timelocked'])) {
+            $record['timelocked'] = 0;
+        }
+
         if (isset($record['mailed'])) {
             $mailed = $record['mailed'];
         }
@@ -300,7 +307,16 @@ class mod_forum_generator extends testing_module_generator {
             $record['mailnow'] = 0;
         }
 
+        if (!isset($record['deleted'])) {
+            $record['deleted'] = 0;
+        }
+
+        if (!isset($record['privatereplyto'])) {
+            $record['privatereplyto'] = 0;
+        }
+
         $record = (object) $record;
+        \mod_forum\local\entities\post::add_message_counts($record);
 
         // Add the post.
         $record->id = $DB->insert_record('forum_posts', $record);
@@ -341,5 +357,23 @@ class mod_forum_generator extends testing_module_generator {
             $post = $this->create_post($record);
         }
         return $post;
+    }
+
+    /**
+     * Extracted from exporter/post.php
+     *
+     * Get the HTML to display as a subheading in a post.
+     *
+     * @param stdClass $exportedauthor The exported author object
+     * @param int $timecreated The post time created timestamp if it's to be displayed
+     * @return string
+     */
+    public function get_author_subheading_html(stdClass $exportedauthor, int $timecreated) : string {
+        $fullname = $exportedauthor->fullname;
+        $profileurl = $exportedauthor->urls['profile'] ?? null;
+        $formatteddate = userdate($timecreated, get_string('strftimedaydatetime', 'core_langconfig'));
+        $name = $profileurl ? "<a href=\"{$profileurl}\">{$fullname}</a>" : $fullname;
+        $date = "<time>{$formatteddate}</time>";
+        return get_string('bynameondate', 'mod_forum', ['name' => $name, 'date' => $date]);
     }
 }

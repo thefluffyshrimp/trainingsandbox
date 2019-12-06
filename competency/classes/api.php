@@ -46,6 +46,9 @@ use required_capability_exception;
  */
 class api {
 
+    /** @var boolean Allow api functions even if competencies are not enabled for the site. */
+    private static $skipenabled = false;
+
     /**
      * Returns whether competencies are enabled.
      *
@@ -56,7 +59,30 @@ class api {
      * @return boolean True when enabled.
      */
     public static function is_enabled() {
-        return get_config('core_competency', 'enabled');
+        return self::$skipenabled || get_config('core_competency', 'enabled');
+    }
+
+    /**
+     * When competencies used to be enabled, we can show the text but do not include links.
+     *
+     * @return boolean True means show links.
+     */
+    public static function show_links() {
+        return isloggedin() && !isguestuser() && get_config('core_competency', 'enabled');
+    }
+
+    /**
+     * Allow calls to competency api functions even if competencies are not currently enabled.
+     */
+    public static function skip_enabled() {
+        self::$skipenabled = true;
+    }
+
+    /**
+     * Restore the checking that competencies are enabled with any api function.
+     */
+    public static function check_enabled() {
+        self::$skipenabled = false;
     }
 
     /**
@@ -1175,6 +1201,31 @@ class api {
                 'nopermissions', '');
         }
         return $uc;
+    }
+
+    /**
+     * Count the competencies associated to a course module.
+     *
+     * @param mixed $cmorid The course module, or its ID.
+     * @return int
+     */
+    public static function count_course_module_competencies($cmorid) {
+        static::require_enabled();
+        $cm = $cmorid;
+        if (!is_object($cmorid)) {
+            $cm = get_coursemodule_from_id('', $cmorid, 0, true, MUST_EXIST);
+        }
+
+        // Check the user have access to the course module.
+        self::validate_course_module($cm);
+        $context = context_module::instance($cm->id);
+
+        $capabilities = array('moodle/competency:coursecompetencyview', 'moodle/competency:coursecompetencymanage');
+        if (!has_any_capability($capabilities, $context)) {
+            throw new required_capability_exception($context, 'moodle/competency:coursecompetencyview', 'nopermissions', '');
+        }
+
+        return course_module_competency::count_competencies($cm->id);
     }
 
     /**
@@ -3192,6 +3243,34 @@ class api {
     }
 
     /**
+     * List the plans with a competency.
+     *
+     * @param  int $userid The user id we want the plans for.
+     * @param  int $competencyorid The competency, or its ID.
+     * @return array[plan] Array of learning plans.
+     */
+    public static function list_plans_with_competency($userid, $competencyorid) {
+        global $USER;
+
+        static::require_enabled();
+        $competencyid = $competencyorid;
+        $competency = null;
+        if (is_object($competencyid)) {
+            $competency = $competencyid;
+            $competencyid = $competency->get('id');
+        }
+
+        $plans = plan::get_by_user_and_competency($userid, $competencyid);
+        foreach ($plans as $index => $plan) {
+            // Filter plans we cannot read.
+            if (!$plan->can_read()) {
+                unset($plans[$index]);
+            }
+        }
+        return $plans;
+    }
+
+    /**
      * List the competencies in a user plan.
      *
      * @param  int $planorid The plan, or its ID.
@@ -3760,7 +3839,7 @@ class api {
         if (!$userevidence->can_manage()) {
             throw new required_capability_exception($context, 'moodle/competency:userevidencemanage', 'nopermissions', '');
 
-        } else if (array_key_exists('userid', $data) && $data->userid != $userevidence->get('userid')) {
+        } else if (property_exists($data, 'userid') && $data->userid != $userevidence->get('userid')) {
             throw new coding_exception('Can not change the userid of a user evidence.');
         }
 

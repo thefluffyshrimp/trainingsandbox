@@ -61,7 +61,7 @@ define(['jquery',
 
         $.when(
             str.get_string('configurecoursecompetencysettings', 'tool_lp'),
-            templates.render('tool_lp/course_competency_settings', context)
+            templates.render('tool_lp/course_competency_settings', context),
         )
         .then(function(title, templateResult) {
             this._dialogue = new Dialogue(
@@ -147,7 +147,7 @@ define(['jquery',
 
         ajax.call([
             {methodname: 'tool_lp_data_for_course_competencies_page',
-              args: {courseid: courseId}}
+              args: {courseid: courseId, moduleid: 0}}
         ])[0]
         .then(function(context) {
             return templates.render('tool_lp/course_competencies_page', context);

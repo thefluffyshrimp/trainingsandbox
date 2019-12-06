@@ -20,6 +20,9 @@
  * @package   core_message
  * @copyright 2011 Lancaster University Network Services Limited
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ *
+ * @deprecated since Moodle 3.7 MDL-64495. Please use /admin/message.php instead.
+ * @todo       MDL-64866 This will be deleted in Moodle 4.1.
  */
 require_once(__DIR__ . '/../config.php');
 require_once($CFG->dirroot . '/message/lib.php');
@@ -73,7 +76,7 @@ if (($form = data_submitted()) && confirm_sesskey()) {
                     // record the site preference
                     $preferences[$processor->name.'_provider_'.$componentprovidersetting] = $value;
                 }
-            } else if (array_key_exists($componentprovidersetting, $form)) {
+            } else if (property_exists($form, $componentprovidersetting)) {
                 // we must be processing loggedin or loggedoff checkboxes. Store
                 // defained comma-separated processors as setting value.
                 // Using array_filter eliminates elements set to 0 above

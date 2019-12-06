@@ -52,7 +52,7 @@ class core_cohort_externallib_testcase extends externallib_advanced_testcase {
             'name' => 'cohort test 1',
             'idnumber' => 'cohorttest1',
             'description' => 'This is a description for cohorttest1',
-            'theme' => 'clean'
+            'theme' => 'classic'
             );
 
         $cohort2 = array(
@@ -76,7 +76,7 @@ class core_cohort_externallib_testcase extends externallib_advanced_testcase {
             'name' => 'cohort test 4',
             'idnumber' => 'cohorttest4',
             'description' => 'This is a description for cohorttest4',
-            'theme' => 'clean'
+            'theme' => 'classic'
             );
 
         // Call the external function.
@@ -182,7 +182,7 @@ class core_cohort_externallib_testcase extends externallib_advanced_testcase {
             'name' => 'cohortnametest1',
             'idnumber' => 'idnumbertest1',
             'description' => 'This is a description for cohort 1',
-            'theme' => 'clean'
+            'theme' => 'classic'
             );
         $cohort1 = self::getDataGenerator()->create_cohort($cohort1);
         $cohort2 = self::getDataGenerator()->create_cohort();
@@ -250,7 +250,7 @@ class core_cohort_externallib_testcase extends externallib_advanced_testcase {
             'name' => 'cohortnametest1',
             'idnumber' => 'idnumbertest1',
             'description' => 'This is a description for cohort 1',
-            'theme' => 'clean'
+            'theme' => 'classic'
             );
 
         $context = context_system::instance();
@@ -279,15 +279,15 @@ class core_cohort_externallib_testcase extends externallib_advanced_testcase {
 
         // Call when $CFG->allowcohortthemes is enabled.
         set_config('allowcohortthemes', 1);
-        core_cohort_external::update_cohorts(array($cohort1 + array('theme' => 'clean')));
+        core_cohort_external::update_cohorts(array($cohort1 + array('theme' => 'classic')));
         $dbcohort = $DB->get_record('cohort', array('id' => $cohort1['id']));
-        $this->assertEquals('clean', $dbcohort->theme);
+        $this->assertEquals('classic', $dbcohort->theme);
 
         // Call when $CFG->allowcohortthemes is disabled.
         set_config('allowcohortthemes', 0);
-        core_cohort_external::update_cohorts(array($cohort1 + array('theme' => 'more')));
+        core_cohort_external::update_cohorts(array($cohort1 + array('theme' => 'boost')));
         $dbcohort = $DB->get_record('cohort', array('id' => $cohort1['id']));
-        $this->assertEquals('clean', $dbcohort->theme);
+        $this->assertEquals('classic', $dbcohort->theme);
 
         // Call without required capability.
         $this->unassignUserCapability('moodle/cohort:manage', $context->id, $roleid);
@@ -522,6 +522,7 @@ class core_cohort_externallib_testcase extends externallib_advanced_testcase {
      * Search cohorts.
      */
     public function test_search_cohorts() {
+        global $DB, $CFG;
         $this->resetAfterTest(true);
 
         $creator = $this->getDataGenerator()->create_user();
@@ -537,9 +538,7 @@ class core_cohort_externallib_testcase extends externallib_advanced_testcase {
         $coursecontext = context_course::instance($course->id);
 
         // Fetching default authenticated user role.
-        $userroles = get_archetype_roles('user');
-        $this->assertCount(1, $userroles);
-        $authrole = array_pop($userroles);
+        $authrole = $DB->get_record('role', array('id' => $CFG->defaultuserroleid));
 
         // Reset all default authenticated users permissions.
         unassign_capability('moodle/cohort:manage', $authrole->id);

@@ -430,6 +430,20 @@ function upgrade_stale_php_files_present() {
     global $CFG;
 
     $someexamplesofremovedfiles = array(
+        // Removed in 3.8.
+        '/lib/amd/src/modal_confirm.js',
+        '/lib/fonts/font-awesome-4.7.0/css/font-awesome.css',
+        '/lib/jquery/jquery-3.2.1.min.js',
+        '/lib/recaptchalib.php',
+        '/lib/sessionkeepalive_ajax.php',
+        '/lib/yui/src/checknet/js/checknet.js',
+        '/question/amd/src/qbankmanager.js',
+        // Removed in 3.7.
+        '/lib/form/yui/src/showadvanced/js/showadvanced.js',
+        '/lib/tests/output_external_test.php',
+        '/message/amd/src/message_area.js',
+        '/message/templates/message_area.mustache',
+        '/question/yui/src/qbankmanager/build.json',
         // Removed in 3.6.
         '/lib/classes/session/memcache.php',
         '/lib/eventslib.php',
@@ -578,6 +592,7 @@ function upgrade_plugins($type, $startcallback, $endcallback, $verbose) {
                     log_update_descriptions($component);
                     external_update_descriptions($component);
                     \core\task\manager::reset_scheduled_tasks_for_component($component);
+                    \core_analytics\manager::update_default_models_for_component($component);
                     message_update_providers($component);
                     \core\message\inbound\manager::update_handlers_for_component($component);
                     if ($type === 'message') {
@@ -616,6 +631,7 @@ function upgrade_plugins($type, $startcallback, $endcallback, $verbose) {
             log_update_descriptions($component);
             external_update_descriptions($component);
             \core\task\manager::reset_scheduled_tasks_for_component($component);
+            \core_analytics\manager::update_default_models_for_component($component);
             message_update_providers($component);
             \core\message\inbound\manager::update_handlers_for_component($component);
             if ($type === 'message') {
@@ -649,6 +665,7 @@ function upgrade_plugins($type, $startcallback, $endcallback, $verbose) {
             log_update_descriptions($component);
             external_update_descriptions($component);
             \core\task\manager::reset_scheduled_tasks_for_component($component);
+            \core_analytics\manager::update_default_models_for_component($component);
             message_update_providers($component);
             \core\message\inbound\manager::update_handlers_for_component($component);
             if ($type === 'message') {
@@ -756,6 +773,7 @@ function upgrade_plugins_modules($startcallback, $endcallback, $verbose) {
                     log_update_descriptions($component);
                     external_update_descriptions($component);
                     \core\task\manager::reset_scheduled_tasks_for_component($component);
+                    \core_analytics\manager::update_default_models_for_component($component);
                     message_update_providers($component);
                     \core\message\inbound\manager::update_handlers_for_component($component);
                     upgrade_plugin_mnet_functions($component);
@@ -790,6 +808,7 @@ function upgrade_plugins_modules($startcallback, $endcallback, $verbose) {
             log_update_descriptions($component);
             external_update_descriptions($component);
             \core\task\manager::reset_scheduled_tasks_for_component($component);
+            \core_analytics\manager::update_default_models_for_component($component);
             message_update_providers($component);
             \core\message\inbound\manager::update_handlers_for_component($component);
             upgrade_plugin_mnet_functions($component);
@@ -826,6 +845,7 @@ function upgrade_plugins_modules($startcallback, $endcallback, $verbose) {
             log_update_descriptions($component);
             external_update_descriptions($component);
             \core\task\manager::reset_scheduled_tasks_for_component($component);
+            \core_analytics\manager::update_default_models_for_component($component);
             message_update_providers($component);
             \core\message\inbound\manager::update_handlers_for_component($component);
             upgrade_plugin_mnet_functions($component);
@@ -947,6 +967,7 @@ function upgrade_plugins_blocks($startcallback, $endcallback, $verbose) {
                     log_update_descriptions($component);
                     external_update_descriptions($component);
                     \core\task\manager::reset_scheduled_tasks_for_component($component);
+                    \core_analytics\manager::update_default_models_for_component($component);
                     message_update_providers($component);
                     \core\message\inbound\manager::update_handlers_for_component($component);
                     upgrade_plugin_mnet_functions($component);
@@ -987,6 +1008,7 @@ function upgrade_plugins_blocks($startcallback, $endcallback, $verbose) {
             log_update_descriptions($component);
             external_update_descriptions($component);
             \core\task\manager::reset_scheduled_tasks_for_component($component);
+            \core_analytics\manager::update_default_models_for_component($component);
             message_update_providers($component);
             \core\message\inbound\manager::update_handlers_for_component($component);
             core_tag_area::reset_definitions_for_component($component);
@@ -1022,6 +1044,7 @@ function upgrade_plugins_blocks($startcallback, $endcallback, $verbose) {
             log_update_descriptions($component);
             external_update_descriptions($component);
             \core\task\manager::reset_scheduled_tasks_for_component($component);
+            \core_analytics\manager::update_default_models_for_component($component);
             message_update_providers($component);
             \core\message\inbound\manager::update_handlers_for_component($component);
             upgrade_plugin_mnet_functions($component);
@@ -1738,6 +1761,7 @@ function install_core($version, $verbose) {
         log_update_descriptions('moodle');
         external_update_descriptions('moodle');
         \core\task\manager::reset_scheduled_tasks_for_component('moodle');
+        \core_analytics\manager::update_default_models_for_component('moodle');
         message_update_providers('moodle');
         \core\message\inbound\manager::update_handlers_for_component('moodle');
         core_tag_area::reset_definitions_for_component('moodle');
@@ -1805,6 +1829,7 @@ function upgrade_core($version, $verbose) {
         log_update_descriptions('moodle');
         external_update_descriptions('moodle');
         \core\task\manager::reset_scheduled_tasks_for_component('moodle');
+        \core_analytics\manager::update_default_models_for_component('moodle');
         message_update_providers('moodle');
         \core\message\inbound\manager::update_handlers_for_component('moodle');
         core_tag_area::reset_definitions_for_component('moodle');

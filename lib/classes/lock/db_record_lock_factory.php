@@ -103,7 +103,7 @@ class db_record_lock_factory implements lock_factory {
      * to duplicates in a clustered environment (especially on VMs due to poor time precision).
      */
     protected function generate_unique_token() {
-        return generate_uuid();
+        return \core\uuid::generate();
     }
 
     /**
@@ -148,7 +148,7 @@ class db_record_lock_factory implements lock_factory {
             $countparams = array('owner' => $token, 'resourcekey' => $resourcekey);
             $result = $this->db->count_records('lock_db', $countparams);
             $locked = $result === 1;
-            if (!$locked) {
+            if (!$locked && $timeout > 0) {
                 usleep(rand(10000, 250000)); // Sleep between 10 and 250 milliseconds.
             }
             // Try until the giveup time.

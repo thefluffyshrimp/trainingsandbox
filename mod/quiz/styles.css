@@ -939,6 +939,7 @@ table.quizreviewsummary td.cell {
 }
 
 #page-mod-quiz-edit ul.slots .activityinstance img.activityicon {
+    float: inherit;
     margin: .2em 0 0;
     padding: 0;
 }
@@ -976,8 +977,7 @@ table.quizreviewsummary td.cell {
     white-space: nowrap;
 }
 
-#categoryquestions th.modifiername .sorters,
-#categoryquestions th.creatorname .sorters {
+#categoryquestions th .sorters {
     font-weight: normal;
     font-size: 0.8em;
 }
@@ -995,7 +995,6 @@ table.quizreviewsummary td.cell {
 
 table#categoryquestions {
     width: 100%;
-    overflow: hidden;
     table-layout: fixed;
 }
 
@@ -1009,6 +1008,10 @@ table#categoryquestions {
     width: 19px;
     text-align: center;
     padding: 0;
+}
+
+#categoryquestions .editmenu {
+    width: 5em;
 }
 
 #categoryquestions .qtype {
@@ -1145,12 +1148,8 @@ table#categoryquestions {
 
 /* Bulk edit actions */
 
-#page-mod-quiz-edit .selectmultiplecommandbuttons {
-    margin: 0.6em 0.4em;
-}
-
 #page-mod-quiz-edit .btn-group.selectmultiplecommand,
-#page-mod-quiz-edit .btn-group.selectmultiplecommandbuttons,
+#page-mod-quiz-edit .selectmultiplecommandbuttons,
 #page-mod-quiz-edit .select-multiple-checkbox {
     display: none;
 }
@@ -1158,21 +1157,7 @@ table#categoryquestions {
 #page-mod-quiz-edit.select-multiple .selectmultiplecommand,
 #page-mod-quiz-edit.select-multiple .selectmultiplecommandbuttons,
 #page-mod-quiz-edit.select-multiple .select-multiple-checkbox {
-    display: inherit;
-}
-
-#page-mod-quiz-edit.select-multiple .selectmultiplecommandbuttons .separator {
-    position: relative;
-    float: left;
-    padding: .5rem 0;
-}
-
-#page-mod-quiz-edit #questionselectall {
-    padding-right: .1rem;
-}
-
-#page-mod-quiz-edit #questiondeselectall {
-    padding-left: .1rem;
+    display: inline-block;
 }
 
 #page-mod-quiz-edit.select-multiple input.select-multiple-checkbox[type="checkbox"] {
@@ -1204,7 +1189,7 @@ table#categoryquestions {
     display: none;
 }
 
-#page-mod-quiz-edit.select-multiple .mod-quiz-edit-content .edit-toolbar .m-b-1 {
+#page-mod-quiz-edit.select-multiple .mod-quiz-edit-content .edit-toolbar .mb-1 {
     display: none;
 }
 

@@ -245,6 +245,9 @@ class restore_gradebook_structure_step extends restore_structure_step {
             }
 
             $newitemid = $DB->insert_record('grade_items', $data);
+            $data->id = $newitemid;
+            $gradeitem = new grade_item($data);
+            core\event\grade_item_created::create_from_grade_item($gradeitem)->trigger();
         }
         $this->set_mapping('grade_item', $oldid, $newitemid);
     }
@@ -1788,6 +1791,7 @@ class restore_course_structure_step extends restore_structure_step {
         $course = new restore_path_element('course', '/course');
         $category = new restore_path_element('category', '/course/category');
         $tag = new restore_path_element('tag', '/course/tags/tag');
+        $customfield = new restore_path_element('customfield', '/course/customfields/customfield');
         $allowed_module = new restore_path_element('allowed_module', '/course/allowed_modules/module');
 
         // Apply for 'format' plugins optional paths at course level
@@ -1811,7 +1815,7 @@ class restore_course_structure_step extends restore_structure_step {
         // Apply for admin tool plugins optional paths at course level.
         $this->add_plugin_structure('tool', $course);
 
-        return array($course, $category, $tag, $allowed_module);
+        return array($course, $category, $tag, $customfield, $allowed_module);
     }
 
     /**
@@ -1933,6 +1937,16 @@ class restore_course_structure_step extends restore_structure_step {
 
         core_tag_tag::add_item_tag('core', 'course', $this->get_courseid(),
                 context_course::instance($this->get_courseid()), $data->rawname);
+    }
+
+    /**
+     * Process custom fields
+     *
+     * @param array $data
+     */
+    public function process_customfield($data) {
+        $handler = core_course\customfield\course_handler::create();
+        $handler->restore_instance_data_from_backup($this->task, $data);
     }
 
     public function process_allowed_module($data) {
@@ -2586,15 +2600,15 @@ class restore_badges_structure_step extends restore_structure_step {
 
         $data = (object)$data;
 
-        $params = array(
-                'badgeid'           => $this->get_new_parentid('badge'),
-                'issuername'        => $data->issuername,
-                'issuerurl'         => $data->issuerurl,
-                'issueremail'       => $data->issueremail,
-                'claimid'           => $data->claimid,
-                'claimcomment'      => $data->claimcomment,
-                'dateissued'        => $this->apply_date_offset($data->dateissued)
-        );
+        $params = [
+            'badgeid' => $this->get_new_parentid('badge'),
+            'issuername' => $data->issuername,
+            'issuerurl' => $data->issuerurl,
+            'issueremail' => $data->issueremail,
+            'claimid' => $data->claimid,
+            'claimcomment' => $data->claimcomment,
+            'dateissued' => $this->apply_date_offset($data->dateissued)
+        ];
         $newid = $DB->insert_record('badge_endorsement', $params);
         $this->set_mapping('endorsement', $data->id, $newid);
     }
@@ -2639,7 +2653,7 @@ class restore_badges_structure_step extends restore_structure_step {
                 'targetframework'   => $data->targetframework,
                 'targetcode'        => $data->targetcode
         );
-        $newid = $DB->insert_record('badge_competencies', $params);
+        $newid = $DB->insert_record('badge_alignment', $params);
         $this->set_mapping('alignment', $data->id, $newid);
     }
 
@@ -2686,6 +2700,14 @@ class restore_badges_structure_step extends restore_structure_step {
             if (!empty($role)) {
                 $params['name'] = 'role_' . $role;
                 $params['value'] = $role;
+            } else {
+                return;
+            }
+        } else if ($data->criteriatype == BADGE_CRITERIA_TYPE_COMPETENCY) {
+            $competencyid = $this->get_mappingid('competency', $data->value);
+            if (!empty($competencyid)) {
+                $params['name'] = 'competency_' . $competencyid;
+                $params['value'] = $competencyid;
             } else {
                 return;
             }
@@ -4158,6 +4180,9 @@ class restore_module_structure_step extends restore_structure_step {
         // Apply for 'format' plugins optional paths at module level
         $this->add_plugin_structure('format', $module);
 
+        // Apply for 'report' plugins optional paths at module level.
+        $this->add_plugin_structure('report', $module);
+
         // Apply for 'plagiarism' plugins optional paths at module level
         $this->add_plugin_structure('plagiarism', $module);
 
@@ -5301,10 +5326,9 @@ class restore_process_file_aliases_queue extends restore_execution_step {
 
 
 /**
- * Abstract structure step, to be used by all the activities using core questions stuff
- * (like the quiz module), to support qtype plugins, states and sessions
+ * Helper code for use by any plugin that stores question attempt data that it needs to back up.
  */
-abstract class restore_questions_activity_structure_step extends restore_activity_structure_step {
+trait restore_questions_attempt_data_trait {
     /** @var array question_attempt->id to qtype. */
     protected $qtypes = array();
     /** @var array question_attempt->id to questionid. */
@@ -5356,26 +5380,26 @@ abstract class restore_questions_activity_structure_step extends restore_activit
     /**
      * Process question_usages
      */
-    protected function process_question_usage($data) {
+    public function process_question_usage($data) {
         $this->restore_question_usage_worker($data, '');
     }
 
     /**
      * Process question_attempts
      */
-    protected function process_question_attempt($data) {
+    public function process_question_attempt($data) {
         $this->restore_question_attempt_worker($data, '');
     }
 
     /**
      * Process question_attempt_steps
      */
-    protected function process_question_attempt_step($data) {
+    public function process_question_attempt_step($data) {
         $this->restore_question_attempt_step_worker($data, '');
     }
 
     /**
-     * This method does the acutal work for process_question_usage or
+     * This method does the actual work for process_question_usage or
      * process_{nameprefix}_question_usage.
      * @param array $data the data from the XML file.
      * @param string $nameprefix the element name prefix.
@@ -5390,8 +5414,7 @@ abstract class restore_questions_activity_structure_step extends restore_activit
         $data = (object)$data;
         $oldid = $data->id;
 
-        $oldcontextid = $this->get_task()->get_old_contextid();
-        $data->contextid  = $this->get_mappingid('context', $this->task->get_old_contextid());
+        $data->contextid  = $this->task->get_contextid();
 
         // Everything ready, insert (no mapping needed)
         $newitemid = $DB->insert_record('question_usages', $data);
@@ -5410,7 +5433,7 @@ abstract class restore_questions_activity_structure_step extends restore_activit
     abstract protected function inform_new_usage_id($newusageid);
 
     /**
-     * This method does the acutal work for process_question_attempt or
+     * This method does the actual work for process_question_attempt or
      * process_{nameprefix}_question_attempt.
      * @param array $data the data from the XML file.
      * @param string $nameprefix the element name prefix.
@@ -5440,7 +5463,7 @@ abstract class restore_questions_activity_structure_step extends restore_activit
     }
 
     /**
-     * This method does the acutal work for process_question_attempt_step or
+     * This method does the actual work for process_question_attempt_step or
      * process_{nameprefix}_question_attempt_step.
      * @param array $data the data from the XML file.
      * @param string $nameprefix the element name prefix.
@@ -5547,6 +5570,17 @@ abstract class restore_questions_activity_structure_step extends restore_activit
             $this->add_related_files('question', $filearea, 'question_attempt_step');
         }
     }
+}
+
+
+/**
+ * Abstract structure step to help activities that store question attempt data.
+ *
+ * @copyright 2011 The Open University
+ * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+abstract class restore_questions_activity_structure_step extends restore_activity_structure_step {
+    use restore_questions_attempt_data_trait;
 
     /**
      * Attach below $element (usually attempts) the needed restore_path_elements
@@ -5590,7 +5624,7 @@ abstract class restore_questions_activity_structure_step extends restore_activit
     /**
      * Process the attempt data defined by {@link add_legacy_question_attempt_data()}.
      * @param object $data contains all the grouped attempt data to process.
-     * @param pbject $quiz data about the activity the attempts belong to. Required
+     * @param object $quiz data about the activity the attempts belong to. Required
      * fields are (basically this only works for the quiz module):
      *      oldquestions => list of question ids in this activity - using old ids.
      *      preferredbehaviour => the behaviour to use for questionattempts.
@@ -5652,7 +5686,7 @@ abstract class restore_questions_activity_structure_step extends restore_activit
 
         $data->uniqueid = $usage->id;
         $upgrader->save_usage($quiz->preferredbehaviour, $data, $qas,
-                 $this->questions_recode_layout($quiz->oldquestions));
+                $this->questions_recode_layout($quiz->oldquestions));
     }
 
     protected function find_question_session_and_states($data, $questionid) {
@@ -5711,6 +5745,7 @@ abstract class restore_questions_activity_structure_step extends restore_activit
         }
     }
 }
+
 
 /**
  * Restore completion defaults for each module type

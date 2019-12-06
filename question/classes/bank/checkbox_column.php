@@ -14,41 +14,61 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * A column with a checkbox for each question with name q{questionid}.
+ *
+ * @package   core_question
+ * @copyright 2009 Tim Hunt
+ * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 namespace core_question\bank;
+defined('MOODLE_INTERNAL') || die();
+
+use core\output\checkbox_toggleall;
+
 
 /**
  * A column with a checkbox for each question with name q{questionid}.
  *
- * @copyright  2009 Tim Hunt
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @copyright 2009 Tim Hunt
+ * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class checkbox_column extends column_base {
-    protected $strselect;
-
-    public function init() {
-        $this->strselect = get_string('select');
-    }
 
     public function get_name() {
         return 'checkbox';
     }
 
     protected function get_title() {
-        return '<input type="checkbox" disabled="disabled" id="qbheadercheckbox" />';
+        global $OUTPUT;
+
+        $mastercheckbox = new checkbox_toggleall('qbank', true, [
+            'id' => 'qbheadercheckbox',
+            'name' => 'qbheadercheckbox',
+            'value' => '1',
+            'label' => get_string('selectall'),
+            'labelclasses' => 'accesshide',
+        ]);
+
+        return $OUTPUT->render($mastercheckbox);
     }
 
     protected function get_title_tip() {
-        global $PAGE;
-        $PAGE->requires->strings_for_js(array('selectall', 'deselectall'), 'moodle');
-        $PAGE->requires->yui_module('moodle-question-qbankmanager', 'M.question.qbankmanager.init');
         return get_string('selectquestionsforbulk', 'question');
-
     }
 
     protected function display_content($question, $rowclasses) {
-        global $PAGE;
-        echo '<input title="' . $this->strselect . '" type="checkbox" name="q' .
-                $question->id . '" id="checkq' . $question->id . '" value="1"/>';
+        global $OUTPUT;
+
+        $checkbox = new checkbox_toggleall('qbank', false, [
+            'id' => "checkq{$question->id}",
+            'name' => "q{$question->id}",
+            'value' => '1',
+            'label' => get_string('select'),
+            'labelclasses' => 'accesshide',
+        ]);
+
+        echo $OUTPUT->render($checkbox);
     }
 
     public function get_required_fields() {

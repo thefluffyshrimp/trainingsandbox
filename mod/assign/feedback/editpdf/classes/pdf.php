@@ -23,12 +23,13 @@
  */
 
 namespace assignfeedback_editpdf;
+use setasign\Fpdi\TcpdfFpdi;
 
 defined('MOODLE_INTERNAL') || die();
 
 global $CFG;
 require_once($CFG->libdir.'/pdflib.php');
-require_once($CFG->dirroot.'/mod/assign/feedback/editpdf/fpdi/fpdi.php');
+require_once($CFG->dirroot.'/mod/assign/feedback/editpdf/fpdi/autoload.php');
 
 /**
  * Library code for manipulating PDFs
@@ -37,7 +38,7 @@ require_once($CFG->dirroot.'/mod/assign/feedback/editpdf/fpdi/fpdi.php');
  * @copyright 2012 Davo Smith
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class pdf extends \FPDI {
+class pdf extends TcpdfFpdi {
 
     /** @var int the number of the current page in the PDF being processed */
     protected $currentpage = 0;
@@ -70,7 +71,8 @@ class pdf extends \FPDI {
     const MIN_ANNOTATION_HEIGHT = 5;
     /** Blank PDF file used during error. */
     const BLANK_PDF = '/mod/assign/feedback/editpdf/fixtures/blank.pdf';
-
+    /** Page image file name prefix*/
+    const IMAGE_PAGE = 'image_page';
     /**
      * Get the name of the font to use in generated PDF files.
      * If $CFG->pdfexportfont is set - use it, otherwise use "freesans" as this
@@ -208,14 +210,11 @@ class pdf extends \FPDI {
         // Get the size (and deduce the orientation) of the next page.
         $template = $this->importPage($pageno);
         $size = $this->getTemplateSize($template);
-        $orientation = 'P';
-        if ($size['w'] > $size['h']) {
-            $orientation = 'L';
-        }
+
         // Create a page of the required size / orientation.
-        $this->AddPage($orientation, array($size['w'], $size['h']));
+        $this->AddPage($size['orientation'], array($size['width'], $size['height']));
         // Prevent new page creation when comments are at the bottom of a page.
-        $this->setPageOrientation($orientation, false, 0);
+        $this->setPageOrientation($size['orientation'], false, 0);
         // Fill in the page with the original contents from the student.
         $this->useTemplate($template);
     }
@@ -551,7 +550,7 @@ class pdf extends \FPDI {
             throw new \coding_exception('The specified image output folder is not a valid folder');
         }
 
-        $imagefile = $this->imagefolder.'/image_page' . $pageno . '.png';
+        $imagefile = $this->imagefolder . '/' . self::IMAGE_PAGE . $pageno . '.png';
         $generate = true;
         if (file_exists($imagefile)) {
             if (filemtime($imagefile) > filemtime($this->filename)) {
@@ -583,7 +582,7 @@ class pdf extends \FPDI {
             }
         }
 
-        return 'image_page'.$pageno.'.png';
+        return self::IMAGE_PAGE . $pageno . '.png';
     }
 
     /**
@@ -689,7 +688,7 @@ class pdf extends \FPDI {
         $pdf->set_image_folder($tmperrorimagefolder);
         $image = $pdf->get_image(0);
         $pdf->Close(); // PDF loaded and never saved/outputted needs to be closed.
-        $newimg = 'image_page' . $pageno . '.png';
+        $newimg = self::IMAGE_PAGE . $pageno . '.png';
 
         copy($tmperrorimagefolder . '/' . $image, $errorimagefolder . '/' . $newimg);
         return $newimg;
@@ -736,7 +735,11 @@ class pdf extends \FPDI {
         }
 
         $testimagefolder = \make_temp_directory('assignfeedback_editpdf_test');
-        @unlink($testimagefolder.'/image_page0.png'); // Delete any previous test images.
+        $filepath = $testimagefolder . '/' . self::IMAGE_PAGE . '0.png';
+        // Delete any previous test images, if they exist.
+        if (file_exists($filepath)) {
+            unlink($filepath);
+        }
 
         $pdf = new pdf();
         $pdf->set_pdf($testfile);
@@ -761,10 +764,46 @@ class pdf extends \FPDI {
         require_once($CFG->libdir.'/filelib.php');
 
         $testimagefolder = \make_temp_directory('assignfeedback_editpdf_test');
-        $testimage = $testimagefolder.'/image_page0.png';
+        $testimage = $testimagefolder . '/' . self::IMAGE_PAGE . '0.png';
         send_file($testimage, basename($testimage), 0);
         die();
     }
 
+    /**
+     * This function add an image file to PDF page.
+     * @param \stored_file $imagestoredfile Image file to be added
+     */
+    public function add_image_page($imagestoredfile) {
+        $imageinfo = $imagestoredfile->get_imageinfo();
+        $imagecontent = $imagestoredfile->get_content();
+        $this->currentpage++;
+        $template = $this->importPage($this->currentpage);
+        $size = $this->getTemplateSize($template);
+
+        if ($imageinfo["width"] > $imageinfo["height"]) {
+            if ($size['width'] < $size['height']) {
+                $temp = $size['width'];
+                $size['width'] = $size['height'];
+                $size['height'] = $temp;
+            }
+        } else if ($imageinfo["width"] < $imageinfo["height"]) {
+            if ($size['width'] > $size['height']) {
+                $temp = $size['width'];
+                $size['width'] = $size['height'];
+                $size['height'] = $temp;
+            }
+        }
+        $orientation = $size['orientation'];
+        $this->SetHeaderMargin(0);
+        $this->SetFooterMargin(0);
+        $this->SetMargins(0, 0, 0, true);
+        $this->setPrintFooter(false);
+        $this->setPrintHeader(false);
+
+        $this->AddPage($orientation, $size);
+        $this->SetAutoPageBreak(false, 0);
+        $this->Image('@' . $imagecontent, 0, 0, $size['w'], $size['h'],
+            '', '', '', false, null, '', false, false, 0);
+    }
 }
 

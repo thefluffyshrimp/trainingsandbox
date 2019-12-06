@@ -30,6 +30,8 @@ use Phpml\Preprocessing\Normalizer;
 use Phpml\CrossValidation\RandomSplit;
 use Phpml\Dataset\ArrayDataset;
 use Phpml\ModelManager;
+use Phpml\Classification\Linear\LogisticRegression;
+use Phpml\Metric\ClassificationReport;
 
 /**
  * PHP predictions processor.
@@ -38,7 +40,7 @@ use Phpml\ModelManager;
  * @copyright 2016 David Monllao {@link http://www.davidmonllao.com}
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class processor implements \core_analytics\classifier, \core_analytics\regressor {
+class processor implements \core_analytics\classifier, \core_analytics\regressor, \core_analytics\packable {
 
     /**
      * Size of training / prediction batches.
@@ -87,9 +89,10 @@ class processor implements \core_analytics\classifier, \core_analytics\regressor
      * Delete the output directory.
      *
      * @param string $modeloutputdir
+     * @param string $uniqueid
      * @return null
      */
-    public function delete_output_dir($modeloutputdir) {
+    public function delete_output_dir($modeloutputdir, $uniqueid) {
         remove_dir($modeloutputdir);
     }
 
@@ -103,15 +106,14 @@ class processor implements \core_analytics\classifier, \core_analytics\regressor
      */
     public function train_classification($uniqueid, \stored_file $dataset, $outputdir) {
 
-        // Output directory is already unique to the model.
-        $modelfilepath = $outputdir . DIRECTORY_SEPARATOR . self::MODEL_FILENAME;
+        $modelfilepath = $this->get_model_filepath($outputdir);
 
         $modelmanager = new ModelManager();
 
         if (file_exists($modelfilepath)) {
             $classifier = $modelmanager->restoreFromFile($modelfilepath);
         } else {
-            $classifier = new \Phpml\Classification\Linear\LogisticRegression(self::TRAIN_ITERATIONS, Normalizer::NORM_L2);
+            $classifier = $this->instantiate_algorithm();
         }
 
         $fh = $dataset->get_content_file_handle();
@@ -132,8 +134,7 @@ class processor implements \core_analytics\classifier, \core_analytics\regressor
             $nsamples = count($samples);
             if ($nsamples === self::BATCH_SIZE) {
                 // Training it batches to avoid running out of memory.
-
-                $classifier->partialTrain($samples, $targets, array(0, 1));
+                $classifier->partialTrain($samples, $targets, json_decode($metadata['targetclasses']));
                 $samples = array();
                 $targets = array();
             }
@@ -152,7 +153,7 @@ class processor implements \core_analytics\classifier, \core_analytics\regressor
 
         // Train the remaining samples.
         if ($samples) {
-            $classifier->partialTrain($samples, $targets, array(0, 1));
+            $classifier->partialTrain($samples, $targets, json_decode($metadata['targetclasses']));
         }
 
         $resultobj = new \stdClass();
@@ -175,15 +176,7 @@ class processor implements \core_analytics\classifier, \core_analytics\regressor
      */
     public function classify($uniqueid, \stored_file $dataset, $outputdir) {
 
-        // Output directory is already unique to the model.
-        $modelfilepath = $outputdir . DIRECTORY_SEPARATOR . self::MODEL_FILENAME;
-
-        if (!file_exists($modelfilepath)) {
-            throw new \moodle_exception('errorcantloadmodel', 'mlbackend_php', '', $modelfilepath);
-        }
-
-        $modelmanager = new ModelManager();
-        $classifier = $modelmanager->restoreFromFile($modelfilepath);
+        $classifier = $this->load_classifier($outputdir);
 
         $fh = $dataset->get_content_file_handle();
 
@@ -246,10 +239,18 @@ class processor implements \core_analytics\classifier, \core_analytics\regressor
      * @param int $niterations
      * @param \stored_file $dataset
      * @param string $outputdir
+     * @param  string $trainedmodeldir
      * @return \stdClass
      */
-    public function evaluate_classification($uniqueid, $maxdeviation, $niterations, \stored_file $dataset, $outputdir) {
+    public function evaluate_classification($uniqueid, $maxdeviation, $niterations, \stored_file $dataset,
+            $outputdir, $trainedmodeldir) {
         $fh = $dataset->get_content_file_handle();
+
+        if ($trainedmodeldir) {
+            // We overwrite the number of iterations as the results will always be the same.
+            $niterations = 1;
+            $classifier = $this->load_classifier($trainedmodeldir);
+        }
 
         // The first lines are var names and the second one values.
         $metadata = $this->extract_metadata($fh);
@@ -292,10 +293,14 @@ class processor implements \core_analytics\classifier, \core_analytics\regressor
 
         // We need at least 2 samples belonging to each target.
         $counts = array_count_values($targets);
+        $ntargets = count(explode(',', $metadata['targetclasses']));
         foreach ($counts as $count) {
             if ($count < 2) {
                 $notenoughdata = true;
             }
+        }
+        if ($ntargets > count($counts)) {
+            $notenoughdata = true;
         }
         if (!empty($notenoughdata)) {
             $resultobj = new \stdClass();
@@ -305,48 +310,56 @@ class processor implements \core_analytics\classifier, \core_analytics\regressor
             return $resultobj;
         }
 
-        $phis = array();
+        $scores = array();
 
         // Evaluate the model multiple times to confirm the results are not significantly random due to a short amount of data.
         for ($i = 0; $i < $niterations; $i++) {
 
-            $classifier = new \Phpml\Classification\Linear\LogisticRegression(self::TRAIN_ITERATIONS, Normalizer::NORM_L2);
+            if (!$trainedmodeldir) {
+                $classifier = $this->instantiate_algorithm();
 
-            // Split up the dataset in classifier and testing.
-            $data = new RandomSplit(new ArrayDataset($samples, $targets), 0.2);
+                // Split up the dataset in classifier and testing.
+                $data = new RandomSplit(new ArrayDataset($samples, $targets), 0.2);
 
-            $classifier->train($data->getTrainSamples(), $data->getTrainLabels());
-
-            $predictedlabels = $classifier->predict($data->getTestSamples());
-            $phis[] = $this->get_phi($data->getTestLabels(), $predictedlabels);
+                $classifier->train($data->getTrainSamples(), $data->getTrainLabels());
+                $predictedlabels = $classifier->predict($data->getTestSamples());
+                $report = new ClassificationReport($data->getTestLabels(), $predictedlabels,
+                    ClassificationReport::WEIGHTED_AVERAGE);
+            } else {
+                $predictedlabels = $classifier->predict($samples);
+                $report = new ClassificationReport($targets, $predictedlabels,
+                    ClassificationReport::WEIGHTED_AVERAGE);
+            }
+            $averages = $report->getAverage();
+            $scores[] = $averages['f1score'];
         }
 
         // Let's fill the results changing the returned status code depending on the phi-related calculated metrics.
-        return $this->get_evaluation_result_object($dataset, $phis, $maxdeviation);
+        return $this->get_evaluation_result_object($dataset, $scores, $maxdeviation);
     }
 
     /**
      * Returns the results objects from all evaluations.
      *
      * @param \stored_file $dataset
-     * @param array $phis
+     * @param array $scores
      * @param float $maxdeviation
      * @return \stdClass
      */
-    protected function get_evaluation_result_object(\stored_file $dataset, $phis, $maxdeviation) {
+    protected function get_evaluation_result_object(\stored_file $dataset, $scores, $maxdeviation) {
 
-        // Average phi of all evaluations as final score.
-        if (count($phis) === 1) {
-            $avgphi = reset($phis);
+        // Average f1 score of all evaluations as final score.
+        if (count($scores) === 1) {
+            $avgscore = reset($scores);
         } else {
-            $avgphi = \Phpml\Math\Statistic\Mean::arithmetic($phis);
+            $avgscore = \Phpml\Math\Statistic\Mean::arithmetic($scores);
         }
 
         // Standard deviation should ideally be calculated against the area under the curve.
-        if (count($phis) === 1) {
+        if (count($scores) === 1) {
             $modeldev = 0;
         } else {
-            $modeldev = \Phpml\Math\Statistic\StandardDeviation::population($phis);
+            $modeldev = \Phpml\Math\Statistic\StandardDeviation::population($scores);
         }
 
         // Let's fill the results object.
@@ -355,9 +368,7 @@ class processor implements \core_analytics\classifier, \core_analytics\regressor
         // Zero is ok, now we add other bits if something is not right.
         $resultobj->status = \core_analytics\model::OK;
         $resultobj->info = array();
-
-        // Convert phi to a standard score (from -1 to 1 to a value between 0 and 1).
-        $resultobj->score = ($avgphi + 1) / 2;
+        $resultobj->score = $avgscore;
 
         // If each iteration results varied too much we need more data to confirm that this is a valid model.
         if ($modeldev > $maxdeviation) {
@@ -381,6 +392,24 @@ class processor implements \core_analytics\classifier, \core_analytics\regressor
         }
 
         return $resultobj;
+    }
+
+    /**
+     * Loads the pre-trained classifier.
+     *
+     * @throws \moodle_exception
+     * @param string $outputdir
+     * @return \Phpml\Classification\Linear\LogisticRegression
+     */
+    protected function load_classifier($outputdir) {
+        $modelfilepath = $this->get_model_filepath($outputdir);
+
+        if (!file_exists($modelfilepath)) {
+            throw new \moodle_exception('errorcantloadmodel', 'mlbackend_php', '', $modelfilepath);
+        }
+
+        $modelmanager = new ModelManager();
+        return $modelmanager->restoreFromFile($modelfilepath);
     }
 
     /**
@@ -418,37 +447,83 @@ class processor implements \core_analytics\classifier, \core_analytics\regressor
      * @param int $niterations
      * @param \stored_file $dataset
      * @param string $outputdir
+     * @param  string $trainedmodeldir
      * @return \stdClass
      */
-    public function evaluate_regression($uniqueid, $maxdeviation, $niterations, \stored_file $dataset, $outputdir) {
+    public function evaluate_regression($uniqueid, $maxdeviation, $niterations, \stored_file $dataset,
+            $outputdir, $trainedmodeldir) {
         throw new \coding_exception('This predictor does not support regression yet.');
     }
 
     /**
-     * Returns the Phi correlation coefficient.
+     * Exports the machine learning model.
      *
-     * @param array $testlabels
-     * @param array $predictedlabels
-     * @return float
+     * @throws \moodle_exception
+     * @param  string $uniqueid  The model unique id
+     * @param  string $modeldir  The directory that contains the trained model.
+     * @return string            The path to the directory that contains the exported model.
      */
-    protected function get_phi($testlabels, $predictedlabels) {
+    public function export(string $uniqueid, string $modeldir) : string {
 
-        // Binary here only as well.
-        $matrix = \Phpml\Metric\ConfusionMatrix::compute($testlabels, $predictedlabels, array(0, 1));
+        $modelfilepath = $this->get_model_filepath($modeldir);
 
-        $tptn = $matrix[0][0] * $matrix[1][1];
-        $fpfn = $matrix[1][0] * $matrix[0][1];
-        $tpfp = $matrix[0][0] + $matrix[1][0];
-        $tpfn = $matrix[0][0] + $matrix[0][1];
-        $tnfp = $matrix[1][1] + $matrix[1][0];
-        $tnfn = $matrix[1][1] + $matrix[0][1];
-        if ($tpfp === 0 || $tpfn === 0 || $tnfp === 0 || $tnfn === 0) {
-            $phi = 0;
-        } else {
-            $phi = ( $tptn - $fpfn ) / sqrt( $tpfp * $tpfn * $tnfp * $tnfn);
+        if (!file_exists($modelfilepath)) {
+            throw new \moodle_exception('errorexportmodelresult', 'analytics');
         }
 
-        return $phi;
+        // We can use the actual $modeldir as the directory is not modified during export, just copied into a zip.
+        return $modeldir;
+    }
+
+    /**
+     * Imports the provided machine learning model.
+     *
+     * @param  string $uniqueid The model unique id
+     * @param  string $modeldir  The directory that will contain the trained model.
+     * @param  string $importdir The directory that contains the files to import.
+     * @return bool Success
+     */
+    public function import(string $uniqueid, string $modeldir, string $importdir) : bool {
+
+        $importmodelfilepath = $this->get_model_filepath($importdir);
+        $modelfilepath = $this->get_model_filepath($modeldir);
+
+        $modelmanager = new ModelManager();
+
+        // Copied from ModelManager::restoreFromFile to validate the serialised contents
+        // before restoring them.
+        $importconfig = file_get_contents($importmodelfilepath);
+
+        // Clean stuff like function calls.
+        $importconfig = preg_replace('/[^a-zA-Z0-9\{\}%\.\*\;\,\:\"\-\0\\\]/', '', $importconfig);
+
+        $object = unserialize($importconfig,
+            ['allowed_classes' => ['Phpml\\Classification\\Linear\\LogisticRegression']]);
+        if (!$object) {
+            return false;
+        }
+
+        if (get_class($object) == '__PHP_Incomplete_Class') {
+            return false;
+        }
+
+        $classifier = $modelmanager->restoreFromFile($importmodelfilepath);
+
+        // This would override any previous classifier.
+        $modelmanager->saveToFile($classifier, $modelfilepath);
+
+        return true;
+    }
+
+    /**
+     * Returns the path to the serialised model file in the provided directory.
+     *
+     * @param  string $modeldir The model directory
+     * @return string           The model file
+     */
+    protected function get_model_filepath(string $modeldir) : string {
+        // Output directory is already unique to the model.
+        return $modeldir . DIRECTORY_SEPARATOR . self::MODEL_FILENAME;
     }
 
     /**
@@ -462,5 +537,15 @@ class processor implements \core_analytics\classifier, \core_analytics\regressor
     protected function extract_metadata($fh) {
         $metadata = fgetcsv($fh);
         return array_combine($metadata, fgetcsv($fh));
+    }
+
+    /**
+     * Instantiates the ML algorithm.
+     *
+     * @return \Phpml\Classification\Linear\LogisticRegression
+     */
+    protected function instantiate_algorithm(): \Phpml\Classification\Linear\LogisticRegression {
+        return new LogisticRegression(self::TRAIN_ITERATIONS, true,
+            LogisticRegression::CONJUGATE_GRAD_TRAINING, 'log');
     }
 }

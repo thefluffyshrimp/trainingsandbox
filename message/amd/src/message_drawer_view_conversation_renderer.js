@@ -76,6 +76,26 @@ function(
     };
 
     /**
+     * Get the self-conversation message container element.
+     *
+     * @param  {Object} body Conversation body container element.
+     * @return {Object} The messages container element.
+     */
+    var getSelfConversationMessageContainer = function(body) {
+        return body.find(SELECTORS.SELF_CONVERSATION_MESSAGE_CONTAINER);
+    };
+
+    /**
+     * Hide the self-conversation message container element.
+     *
+     * @param  {Object} body Conversation body container element.
+     * @return {Object} The messages container element.
+     */
+    var hideSelfConversationMessageContainer = function(body) {
+        return getSelfConversationMessageContainer(body).addClass('hidden');
+    };
+
+    /**
      * Get the contact request sent container element.
      *
      * @param  {Object} body Conversation body container element.
@@ -401,13 +421,23 @@ function(
     };
 
     /**
-     * Get the text input area element.
+     * Get the emoji picker container element.
      *
      * @param  {Object} footer Conversation footer container element.
-     * @return {Object} The footer placeholder container element.
+     * @return {Object} The emoji picker container element.
      */
-    var getMessageTextArea = function(footer) {
-        return footer.find(SELECTORS.MESSAGE_TEXT_AREA);
+    var getEmojiPickerContainer = function(footer) {
+        return footer.find(SELECTORS.EMOJI_PICKER_CONTAINER);
+    };
+
+    /**
+     * Get the emoji picker container element.
+     *
+     * @param  {Object} footer Conversation footer container element.
+     * @return {Object} The emoji picker container element.
+     */
+    var getEmojiAutoCompleteContainer = function(footer) {
+        return footer.find(SELECTORS.EMOJI_AUTO_COMPLETE_CONTAINER);
     };
 
     /**
@@ -460,59 +490,6 @@ function(
      */
     var hideMoreMessagesLoadingIcon = function(body) {
         getMoreMessagesLoadingIconContainer(body).addClass('hidden');
-    };
-
-    /**
-     * Disable the message controls for sending a message.
-     *
-     * @param  {Object} footer Conversation footer container element.
-     */
-    var disableSendMessage = function(footer) {
-        footer.find(SELECTORS.SEND_MESSAGE_BUTTON).prop('disabled', true);
-        getMessageTextArea(footer).prop('disabled', true);
-    };
-
-    /**
-     * Enable the message controls for sending a message.
-     *
-     * @param  {Object} footer Conversation footer container element.
-     */
-    var enableSendMessage = function(footer) {
-        footer.find(SELECTORS.SEND_MESSAGE_BUTTON).prop('disabled', false);
-        getMessageTextArea(footer).prop('disabled', false);
-    };
-
-    /**
-     * Show the sending message loading icon and disable sending more.
-     *
-     * @param  {Object} footer Conversation footer container element.
-     */
-    var startSendMessageLoading = function(footer) {
-        disableSendMessage(footer);
-        footer.find(SELECTORS.SEND_MESSAGE_ICON_CONTAINER).addClass('hidden');
-        footer.find(SELECTORS.LOADING_ICON_CONTAINER).removeClass('hidden');
-    };
-
-    /**
-     * Hide the sending message loading icon and allow sending new messages.
-     *
-     * @param  {Object} footer Conversation footer container element.
-     */
-    var stopSendMessageLoading = function(footer) {
-        enableSendMessage(footer);
-        footer.find(SELECTORS.SEND_MESSAGE_ICON_CONTAINER).removeClass('hidden');
-        footer.find(SELECTORS.LOADING_ICON_CONTAINER).addClass('hidden');
-    };
-
-    /**
-     * Clear out message text input and focus the input element.
-     *
-     * @param  {Object} footer Conversation footer container element.
-     */
-    var hasSentMessage = function(footer) {
-        var textArea = getMessageTextArea(footer);
-        textArea.val('');
-        textArea.focus();
     };
 
     /**
@@ -580,7 +557,7 @@ function(
                 fromloggedinuser: message.fromLoggedInUser,
                 userfrom: message.userFrom,
                 text: message.text,
-                formattedtime: datesCache[message.timeCreated]
+                formattedtime: message.timeCreated ? datesCache[message.timeCreated] : null
             };
         });
     };
@@ -662,6 +639,82 @@ function(
     };
 
     /**
+     * Update existing messages.
+     *
+     * @param  {Object} header The header container element.
+     * @param  {Object} body The body container element.
+     * @param  {Object} footer The footer container element.
+     * @param  {Array} messages List of messages.
+     * @param  {Object} datesCache Cache timestamps and their formatted date string.
+     */
+    var renderUpdateMessages = function(header, body, footer, messages, datesCache) {
+        messages.forEach(function(message) {
+            var before = message.before;
+            var after = message.after;
+            var element = getMessageElement(body, before.id);
+
+            if (before.id != after.id) {
+                element.attr('data-message-id', after.id);
+            }
+
+            if (before.timeCreated != after.timeCreated) {
+                var formattedTime = datesCache[after.timeCreated];
+                element.find(SELECTORS.LOADING_ICON_CONTAINER).addClass('hidden');
+                element.find(SELECTORS.TIME_CREATED).text(formattedTime).removeClass('hidden');
+            }
+
+            if (before.sendState != after.sendState) {
+                var loading = element.find(SELECTORS.LOADING_ICON_CONTAINER);
+                var time = element.find(SELECTORS.TIME_CREATED);
+                var retry = element.find(SELECTORS.RETRY_SEND);
+
+                loading.addClass('hidden');
+                loading.attr('aria-hidden', 'true');
+                time.addClass('hidden');
+                time.attr('aria-hidden', 'true');
+                retry.addClass('hidden');
+                retry.attr('aria-hidden', 'true');
+                element.removeClass('border border-danger');
+
+                switch (after.sendState) {
+                    case 'pending':
+                        loading.removeClass('hidden');
+                        loading.attr('aria-hidden', 'false');
+                        break;
+                    case 'error':
+                        retry.removeClass('hidden');
+                        retry.attr('aria-hidden', 'false');
+                        element.addClass('border border-danger');
+                        break;
+                    case 'sent':
+                        time.removeClass('hidden');
+                        time.attr('aria-hidden', 'false');
+                        break;
+                }
+            }
+
+            if (before.text != after.text) {
+                element.find(SELECTORS.TEXT_CONTAINER).html(after.text);
+            }
+
+            if (before.errorMessage != after.errorMessage) {
+                var messageContainer = element.find(SELECTORS.ERROR_MESSAGE_CONTAINER);
+                var message = messageContainer.find(SELECTORS.ERROR_MESSAGE);
+
+                if (after.errorMessage) {
+                    messageContainer.removeClass('hidden');
+                    messageContainer.attr('aria-hidden', 'false');
+                    message.text(after.errorMessage);
+                } else {
+                    messageContainer.addClass('hidden');
+                    messageContainer.attr('aria-hidden', 'true');
+                    message.text('');
+                }
+            }
+        });
+    };
+
+    /**
      * Remove days from conversation.
      *
      * @param  {Object} body The body container element.
@@ -701,6 +754,7 @@ function(
         var renderingPromises = [];
         var hasAddDays = data.days.add.length > 0;
         var hasAddMessages = data.messages.add.length > 0;
+        var hasUpdateMessages = data.messages.update.length > 0;
         var timestampsToFormat = [];
         var datesCachePromise = $.Deferred().resolve({}).promise();
 
@@ -708,18 +762,33 @@ function(
             // Search for all of the timeCreated values in all of the messages in all of
             // the days that we need to render.
             timestampsToFormat = timestampsToFormat.concat(data.days.add.reduce(function(carry, day) {
-                return carry.concat(day.value.messages.map(function(message) {
-                    return message.timeCreated;
-                }));
+                return carry.concat(day.value.messages.reduce(function(timestamps, message) {
+                    if (message.timeCreated) {
+                        timestamps.push(message.timeCreated);
+                    }
+                    return timestamps;
+                }, []));
             }, []));
         }
 
         if (hasAddMessages) {
             // Search for all of the timeCreated values in all of the messages that we
             // need to render.
-            timestampsToFormat = timestampsToFormat.concat(data.messages.add.map(function(message) {
-                return message.value.timeCreated;
-            }));
+            timestampsToFormat = timestampsToFormat.concat(data.messages.add.reduce(function(timestamps, message) {
+                if (message.value.timeCreated) {
+                    timestamps.push(message.value.timeCreated);
+                }
+                return timestamps;
+            }, []));
+        }
+
+        if (hasUpdateMessages) {
+            timestampsToFormat = timestampsToFormat.concat(data.messages.update.reduce(function(timestamps, message) {
+                if (message.before.timeCreated != message.after.timeCreated) {
+                    timestamps.push(message.after.timeCreated);
+                }
+                return timestamps;
+            }, []));
         }
 
         if (timestampsToFormat.length) {
@@ -757,6 +826,12 @@ function(
             }));
         }
 
+        if (hasUpdateMessages) {
+            renderingPromises.push(datesCachePromise.then(function(datesCache) {
+                return renderUpdateMessages(header, body, footer, data.messages.update, datesCache);
+            }));
+        }
+
         if (data.days.remove.length > 0) {
             renderRemoveDays(body, data.days.remove);
         }
@@ -780,9 +855,11 @@ function(
     var renderHeader = function(header, body, footer, data) {
         var headerContainer = getHeaderContent(header);
         var template = TEMPLATES.HEADER_PUBLIC;
-
+        data.context.showrouteback = (header.attr('data-from-panel') === "false");
         if (data.type == CONVERSATION_TYPES.PRIVATE) {
             template = data.showControls ? TEMPLATES.HEADER_PRIVATE : TEMPLATES.HEADER_PRIVATE_NO_CONTROLS;
+        } else if (data.type == CONVERSATION_TYPES.SELF) {
+            template = TEMPLATES.HEADER_SELF;
         }
 
         return Templates.render(template, data.context)
@@ -914,19 +991,43 @@ function(
     };
 
     /**
-     * Activate or deactivate send message controls.
+     * Hide or show the emoji picker.
      *
      * @param {Object} header The header container element.
      * @param {Object} body The body container element.
      * @param {Object} footer The footer container element.
-     * @param {Bool} isSending Message sending.
+     * @param {Bool} show Should the emoji picker be visible.
      */
-    var renderSendingMessage = function(header, body, footer, isSending) {
-        if (isSending) {
-            startSendMessageLoading(footer);
+    var renderShowEmojiPicker = function(header, body, footer, show) {
+        var container = getEmojiPickerContainer(footer);
+
+        if (show) {
+            container.removeClass('hidden');
+            container.attr('aria-hidden', false);
+            container.find(SELECTORS.EMOJI_PICKER_SEARCH_INPUT).focus();
         } else {
-            stopSendMessageLoading(footer);
-            hasSentMessage(footer);
+            container.addClass('hidden');
+            container.attr('aria-hidden', true);
+        }
+    };
+
+    /**
+     * Hide or show the emoji auto complete.
+     *
+     * @param {Object} header The header container element.
+     * @param {Object} body The body container element.
+     * @param {Object} footer The footer container element.
+     * @param {Bool} show Should the emoji picker be visible.
+     */
+    var renderShowEmojiAutoComplete = function(header, body, footer, show) {
+        var container = getEmojiAutoCompleteContainer(footer);
+
+        if (show) {
+            container.removeClass('hidden');
+            container.attr('aria-hidden', false);
+        } else {
+            container.addClass('hidden');
+            container.attr('aria-hidden', true);
         }
     };
 
@@ -941,6 +1042,7 @@ function(
      * @param {String} headerText Text to show in dialogue header.
      * @param {Bool} canCancel Can this dialogue be cancelled.
      * @param {Bool} skipHeader Skip blanking out the header
+     * @param {Bool} showOk Show an 'Okay' button for a dialogue which will close it
      */
     var showConfirmDialogue = function(
         header,
@@ -950,13 +1052,15 @@ function(
         bodyText,
         headerText,
         canCancel,
-        skipHeader
+        skipHeader,
+        showOk
     ) {
         var dialogue = getConfirmDialogueContainer(body);
         var buttons = buttonSelectors.map(function(selector) {
             return dialogue.find(selector);
         });
         var cancelButton = dialogue.find(SELECTORS.CONFIRM_DIALOGUE_CANCEL_BUTTON);
+        var okayButton = dialogue.find(SELECTORS.CONFIRM_DIALOGUE_OKAY_BUTTON);
         var text = dialogue.find(SELECTORS.CONFIRM_DIALOGUE_TEXT);
         var dialogueHeader = dialogue.find(SELECTORS.CONFIRM_DIALOGUE_HEADER);
 
@@ -966,6 +1070,12 @@ function(
             cancelButton.removeClass('hidden');
         } else {
             cancelButton.addClass('hidden');
+        }
+
+        if (showOk) {
+            okayButton.removeClass('hidden');
+        } else {
+            okayButton.addClass('hidden');
         }
 
         if (headerText) {
@@ -1001,14 +1111,17 @@ function(
     var hideConfirmDialogue = function(header, body, footer) {
         var dialogue = getConfirmDialogueContainer(body);
         var cancelButton = dialogue.find(SELECTORS.CONFIRM_DIALOGUE_CANCEL_BUTTON);
+        var okayButton = dialogue.find(SELECTORS.CONFIRM_DIALOGUE_OKAY_BUTTON);
         var text = dialogue.find(SELECTORS.CONFIRM_DIALOGUE_TEXT);
         var dialogueHeader = dialogue.find(SELECTORS.CONFIRM_DIALOGUE_HEADER);
 
+        hideCheckDeleteDialogue(body);
         hideConfirmDialogueContainer(body);
         hideConfirmDialogueContainer(footer);
         hideConfirmDialogueContainer(header);
         dialogue.find('button').addClass('hidden');
         cancelButton.removeClass('hidden');
+        okayButton.removeClass('hidden');
         text.text('');
         dialogueHeader.addClass('hidden');
         dialogueHeader.text('');
@@ -1028,10 +1141,17 @@ function(
      */
     var renderConfirmBlockUser = function(header, body, footer, user) {
         if (user) {
-            return Str.get_string('blockuserconfirm', 'core_message', user.fullname)
-                .then(function(string) {
-                    return showConfirmDialogue(header, body, footer, [SELECTORS.ACTION_CONFIRM_BLOCK], string, '', true, false);
-                });
+            if (user.canmessageevenifblocked) {
+                return Str.get_string('cantblockuser', 'core_message', user.fullname)
+                    .then(function(string) {
+                        return showConfirmDialogue(header, body, footer, [], string, '', false, false, true);
+                    });
+            } else {
+                return Str.get_string('blockuserconfirm', 'core_message', user.fullname)
+                    .then(function(string) {
+                        return showConfirmDialogue(header, body, footer, [SELECTORS.ACTION_CONFIRM_BLOCK], string, '', true, false);
+                    });
+            }
         } else {
             return hideConfirmDialogue(header, body, footer);
         }
@@ -1121,12 +1241,26 @@ function(
      * @param {Object} header The header container element.
      * @param {Object} body The body container element.
      * @param {Object} footer The footer container element.
-     * @param {Bool} show If the dialogue should show.
+     * @param {Object} data If the dialogue should show and checkbox shows to delete message for all users.
      * @return {Object} jQuery promise
      */
-    var renderConfirmDeleteSelectedMessages = function(header, body, footer, show) {
-        if (show) {
-            return Str.get_string('deleteselectedmessagesconfirm', 'core_message')
+    var renderConfirmDeleteSelectedMessages = function(header, body, footer, data) {
+        var showmessage = null;
+        if (data.type == CONVERSATION_TYPES.SELF) {
+            // Message displayed to self-conversations is slighly different.
+            showmessage = 'deleteselectedmessagesconfirmselfconversation';
+        } else {
+            // This other message should be displayed.
+            if (data.canDeleteMessagesForAllUsers) {
+                showCheckDeleteDialogue(body);
+                showmessage = 'deleteforeveryoneselectedmessagesconfirm';
+            } else {
+                showmessage = 'deleteselectedmessagesconfirm';
+            }
+        }
+
+        if (data.show) {
+            return Str.get_string(showmessage, 'core_message')
                 .then(function(string) {
                     return showConfirmDialogue(
                         header,
@@ -1150,12 +1284,21 @@ function(
      * @param {Object} header The header container element.
      * @param {Object} body The body container element.
      * @param {Object} footer The footer container element.
-     * @param {Bool} show If the dialogue should show
+     * @param {int|Null} type The conversation type to be removed.
      * @return {Object} jQuery promise
      */
-    var renderConfirmDeleteConversation = function(header, body, footer, show) {
-        if (show) {
-            return Str.get_string('deleteallconfirm', 'core_message')
+    var renderConfirmDeleteConversation = function(header, body, footer, type) {
+        var showmessage = null;
+        if (type == CONVERSATION_TYPES.SELF) {
+            // Message displayed to self-conversations is slighly different.
+            showmessage = 'deleteallselfconfirm';
+        } else if (type) {
+            // This other message should be displayed.
+            showmessage = 'deleteallconfirm';
+        }
+
+        if (showmessage) {
+            return Str.get_string(showmessage, 'core_message')
                 .then(function(string) {
                     return showConfirmDialogue(
                         header,
@@ -1195,6 +1338,30 @@ function(
         } else {
             return hideConfirmDialogue(header, body, footer);
         }
+    };
+
+    /**
+     * Show the checkbox to allow delete message for all.
+     *
+     * @param {Object} body The body container element.
+     */
+    var showCheckDeleteDialogue = function(body) {
+        var dialogue = getConfirmDialogueContainer(body);
+        var checkboxRegion = dialogue.find(SELECTORS.DELETE_MESSAGES_FOR_ALL_USERS_TOGGLE_CONTAINER);
+        checkboxRegion.removeClass('hidden');
+    };
+
+    /**
+     * Hide the checkbox to allow delete message for all.
+     *
+     * @param {Object} body The body container element.
+     */
+    var hideCheckDeleteDialogue = function(body) {
+        var dialogue = getConfirmDialogueContainer(body);
+        var checkboxRegion = dialogue.find(SELECTORS.DELETE_MESSAGES_FOR_ALL_USERS_TOGGLE_CONTAINER);
+        var checkbox = dialogue.find(SELECTORS.DELETE_MESSAGES_FOR_ALL_USERS_TOGGLE);
+        checkbox.prop('checked', false);
+        checkboxRegion.addClass('hidden');
     };
 
     /**
@@ -1244,6 +1411,39 @@ function(
                 favouriteIcon.removeClass('hidden');
                 addFavourite.addClass('hidden');
                 removeFavourite.removeClass('hidden');
+                break;
+        }
+    };
+
+    /**
+     * Show or hide the mute / unmute option in the header dropdown menu
+     * and the muted icon in the header title.
+     *
+     * @param {Object} header The header container element.
+     * @param {Object} body The body container element.
+     * @param {Object} footer The footer container element.
+     * @param {string} state The state of the conversation as defined by the patcher.
+     */
+    var renderIsMuted = function(header, body, footer, state) {
+        var muteIcon = header.find(SELECTORS.MUTED_ICON_CONTAINER);
+        var setMuted = header.find(SELECTORS.ACTION_CONFIRM_MUTE);
+        var unsetMuted = header.find(SELECTORS.ACTION_CONFIRM_UNMUTE);
+
+        switch (state) {
+            case 'hide':
+                muteIcon.addClass('hidden');
+                setMuted.addClass('hidden');
+                unsetMuted.addClass('hidden');
+                break;
+            case 'show-mute':
+                muteIcon.addClass('hidden');
+                setMuted.removeClass('hidden');
+                unsetMuted.addClass('hidden');
+                break;
+            case 'show-unmute':
+                muteIcon.removeClass('hidden');
+                setMuted.addClass('hidden');
+                unsetMuted.removeClass('hidden');
                 break;
         }
     };
@@ -1405,6 +1605,25 @@ function(
     };
 
     /**
+     * Show or hide the self-conversation message.
+     *
+     * @param {Object} header The header container element.
+     * @param {Object} body The body container element.
+     * @param {Object} footer The footer container element.
+     * @param {Object} displayMessage should the message be displayed?.
+     * @return {Object|true} jQuery promise
+     */
+    var renderSelfConversationMessage = function(header, body, footer, displayMessage) {
+        var container = getSelfConversationMessageContainer(body);
+        if (displayMessage) {
+            container.removeClass('hidden');
+        } else {
+            container.addClass('hidden');
+        }
+        return true;
+    };
+
+    /**
      * Show or hide the require add contact panel.
      *
      * @param {Object} header The header container element.
@@ -1439,6 +1658,7 @@ function(
     var renderReset = function(header, body, footer) {
         hideConfirmDialogue(header, body, footer);
         hideContactRequestSentContainer(body);
+        hideSelfConversationMessageContainer(body);
         hideAllHeaderElements(header);
         showHeaderPlaceholder(header);
         hideAllFooterElements(footer);
@@ -1466,18 +1686,21 @@ function(
                 confirmDeleteConversation: renderConfirmDeleteConversation,
                 confirmContactRequest: renderConfirmContactRequest,
                 requireAddContact: renderRequireAddContact,
+                selfConversationMessage: renderSelfConversationMessage,
                 contactRequestSent: renderContactRequestSent
             },
             {
                 loadingMembers: renderLoadingMembers,
                 loadingFirstMessages: renderLoadingFirstMessages,
                 loadingMessages: renderLoadingMessages,
-                sendingMessage: renderSendingMessage,
                 isBlocked: renderIsBlocked,
                 isContact: renderIsContact,
                 isFavourite: renderIsFavourite,
+                isMuted: renderIsMuted,
                 loadingConfirmAction: renderLoadingConfirmAction,
-                inEditMode: renderInEditMode
+                inEditMode: renderInEditMode,
+                showEmojiPicker: renderShowEmojiPicker,
+                showEmojiAutoComplete: renderShowEmojiAutoComplete,
             },
             {
                 // Scrolling should be last to make sure everything

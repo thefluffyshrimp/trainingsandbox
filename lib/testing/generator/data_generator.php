@@ -253,7 +253,10 @@ EOD;
         }
 
         $record['timemodified'] = $record['timecreated'];
-        $record['lastip'] = '0.0.0.0';
+
+        if (!isset($record['lastip'])) {
+            $record['lastip'] = '0.0.0.0';
+        }
 
         if ($record['deleted']) {
             $delname = $record['email'].'.'.time();
@@ -270,6 +273,13 @@ EOD;
 
         if (!$record['deleted']) {
             context_user::instance($userid);
+
+            // All new not deleted users must have a favourite self-conversation.
+            $selfconversation = \core_message\api::create_conversation(
+                \core_message\api::MESSAGE_CONVERSATION_TYPE_SELF,
+                [$userid]
+            );
+            \core_message\api::set_favourite_conversation($selfconversation->id, $userid);
         }
 
         $user = $DB->get_record('user', array('id' => $userid), '*', MUST_EXIST);
@@ -424,6 +434,12 @@ EOD;
             // Since Moodle 3.3 function create_course() automatically creates sections if numsections is specified.
             // For BC if 'createsections' is given but 'numsections' is not, assume the default value from config.
             $record['numsections'] = get_config('moodlecourse', 'numsections');
+        }
+
+        if (!empty($record['customfields'])) {
+            foreach ($record['customfields'] as $field) {
+                $record['customfield_'.$field['shortname']] = $field['value'];
+            }
         }
 
         $course = create_course((object)$record);
@@ -1129,7 +1145,6 @@ EOD;
         require_once($CFG->dirroot . '/calendar/lib.php');
         $record = new \stdClass();
         $record->name = 'event name';
-        $record->eventtype = 'global';
         $record->repeat = 0;
         $record->repeats = 0;
         $record->timestart = time();
@@ -1160,7 +1175,7 @@ EOD;
                 unset($record->courseid);
                 unset($record->groupid);
                 break;
-            case 'global':
+            case 'site':
                 unset($record->categoryid);
                 unset($record->courseid);
                 unset($record->groupid);
@@ -1171,6 +1186,31 @@ EOD;
         $event->create($record);
 
         return $event->properties();
+    }
+
+    /**
+     * Create a new course custom field category with the given name.
+     *
+     * @param   array $data Array with data['name'] of category
+     * @return  \core_customfield\category_controller   The created category
+     */
+    public function create_custom_field_category($data) : \core_customfield\category_controller {
+        return $this->get_plugin_generator('core_customfield')->create_category($data);
+    }
+
+    /**
+     * Create a new custom field
+     *
+     * @param   array $data Array with 'name', 'shortname' and 'type' of the field
+     * @return  \core_customfield\field_controller   The created field
+     */
+    public function create_custom_field($data) : \core_customfield\field_controller {
+        global $DB;
+        if (empty($data['categoryid']) && !empty($data['category'])) {
+            $data['categoryid'] = $DB->get_field('customfield_category', 'id', ['name' => $data['category']]);
+            unset($data['category']);
+        }
+        return $this->get_plugin_generator('core_customfield')->create_field($data);
     }
 
     /**

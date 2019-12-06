@@ -66,6 +66,16 @@ class test_target_site_users extends \core_analytics\local\target\binary {
     }
 
     /**
+     * Everything yep, this is just for testing.
+     *
+     * @param  \core_analytics\local\time_splitting\base $timesplitting
+     * @return bool
+     */
+    public function can_use_timesplitting(\core_analytics\local\time_splitting\base $timesplitting): bool {
+        return true;
+    }
+
+    /**
      * classes_description
      *
      * @return string[]
@@ -89,7 +99,7 @@ class test_target_site_users extends \core_analytics\local\target\binary {
      * We don't want to discard results.
      * @return array
      */
-    protected function ignored_predicted_classes() {
+    public function ignored_predicted_classes() {
         return array();
     }
 

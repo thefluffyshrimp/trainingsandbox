@@ -1134,7 +1134,7 @@ class mod_assign_external_testcase extends externallib_advanced_testcase {
         $result = mod_assign_external::get_grades(array($instance->id));
         $result = external_api::clean_returnvalue(mod_assign_external::get_grades_returns(), $result);
 
-        $this->assertEquals($result['assignments'][0]['grades'][0]['grade'], '50.0');
+        $this->assertEquals((float)$result['assignments'][0]['grades'][0]['grade'], '50.0');
     }
 
     /**
@@ -1284,13 +1284,13 @@ class mod_assign_external_testcase extends externallib_advanced_testcase {
                                          array('userid' => $student1->id, 'assignment' => $instance->id),
                                          '*',
                                          MUST_EXIST);
-        $this->assertEquals($student1grade->grade, '50.0');
+        $this->assertEquals((float)$student1grade->grade, '50.0');
 
         $student2grade = $DB->get_record('assign_grades',
                                          array('userid' => $student2->id, 'assignment' => $instance->id),
                                          '*',
                                          MUST_EXIST);
-        $this->assertEquals($student2grade->grade, '100.0');
+        $this->assertEquals((float)$student2grade->grade, '100.0');
     }
 
     /**
@@ -2029,7 +2029,7 @@ class mod_assign_external_testcase extends externallib_advanced_testcase {
         $this->assertEquals(0, $result['gradingsummary']['submissiondraftscount']);
         $this->assertEquals(1, $result['gradingsummary']['submissionssubmittedcount']);  // One student from G1 submitted.
         $this->assertEquals(1, $result['gradingsummary']['submissionsneedgradingcount']);    // One student from G1 submitted.
-        $this->assertFalse($result['gradingsummary']['warnofungroupedusers']);
+        $this->assertEmpty($result['gradingsummary']['warnofungroupedusers']);
 
         // Second group.
         $result = mod_assign_external::get_submission_status($assign->get_instance()->id, 0, $g2->id);
@@ -2168,6 +2168,64 @@ class mod_assign_external_testcase extends externallib_advanced_testcase {
         // Access control test.
         mod_assign_external::get_submission_status($assign->get_instance()->id, $student1->id);
 
+    }
+
+    /**
+     * Test hidden grader for get_submission_status.
+     */
+    public function test_get_submission_status_hidden_grader() {
+        $this->resetAfterTest(true);
+
+        list($assign, $instance, $student1, $student2, $teacher, $g1, $g2) = $this->create_submission_for_testing_status(true);
+
+        // Grade the assign for the student1.
+        $this->setUser($teacher);
+
+        $data = new stdClass();
+        $data->grade = '50.0';
+        $data->assignfeedbackcomments_editor = ['text' => ''];
+        $assign->testable_apply_grade_to_user($data, $student1->id, 0);
+
+        $this->setUser($student1);
+
+        // Check that the student can see the grader by default.
+        $result = mod_assign_external::get_submission_status($assign->get_instance()->id);
+        // We expect debugging because of the $PAGE object, this won't happen in a normal WS request.
+        $this->assertDebuggingCalled();
+
+        $result = external_api::clean_returnvalue(mod_assign_external::get_submission_status_returns(), $result);
+
+        $this->assertTrue(isset($result['feedback']));
+        $this->assertTrue(isset($result['feedback']['grade']));
+        $this->assertEquals($teacher->id, $result['feedback']['grade']['grader']);
+
+        // Now change the setting so the grader is hidden.
+        $this->setAdminUser();
+
+        $instance = $assign->get_instance();
+        $instance->instance = $instance->id;
+        $instance->hidegrader = true;
+        $assign->update_instance($instance);
+
+        $this->setUser($student1);
+
+        // Check that the student cannot see the grader anymore.
+        $result = mod_assign_external::get_submission_status($assign->get_instance()->id);
+        $result = external_api::clean_returnvalue(mod_assign_external::get_submission_status_returns(), $result);
+
+        $this->assertTrue(isset($result['feedback']));
+        $this->assertTrue(isset($result['feedback']['grade']));
+        $this->assertEquals(-1, $result['feedback']['grade']['grader']);
+
+        // Check that the teacher can see the grader.
+        $this->setUser($teacher);
+
+        $result = mod_assign_external::get_submission_status($assign->get_instance()->id, $student1->id);
+        $result = external_api::clean_returnvalue(mod_assign_external::get_submission_status_returns(), $result);
+
+        $this->assertTrue(isset($result['feedback']));
+        $this->assertTrue(isset($result['feedback']['grade']));
+        $this->assertEquals($teacher->id, $result['feedback']['grade']['grader']);
     }
 
     /**
@@ -2469,6 +2527,66 @@ class mod_assign_external_testcase extends externallib_advanced_testcase {
     }
 
     /**
+     * Test get_participant() when relative dates mode is enabled on the course.
+     *
+     * @dataProvider get_participant_relative_dates_provider
+     * @param array $courseconfig the config to use when creating the course.
+     * @param array $assignconfig the config to use when creating the assignment.
+     * @param array $enrolconfig the enrolement to create.
+     * @param array $expectedproperties array of expected assign properties.
+     */
+    public function test_get_participant_relative_dates(array $courseconfig, array $assignconfig, array $enrolconfig,
+            array $expectedproperties) {
+        $this->resetAfterTest();
+
+        set_config('enablecourserelativedates', true); // Enable relative dates at site level.
+
+        $course = $this->getDataGenerator()->create_course($courseconfig);
+        $generator = $this->getDataGenerator()->get_plugin_generator('mod_assign');
+        $assignconfig['course'] = $course->id;
+        $instance = $generator->create_instance($assignconfig);
+        $cm = get_coursemodule_from_instance('assign', $instance->id);
+        $context = context_module::instance($cm->id);
+        $assign = new assign($context, $cm, $course);
+
+        $user = $this->getDataGenerator()->create_and_enrol($course, ...array_values($enrolconfig));
+
+        $teacher = $this->getDataGenerator()->create_and_enrol($course, 'teacher', null, 'manual', time() - 50 * DAYSECS);
+
+        $this->setUser($teacher);
+        $result = mod_assign_external::get_participant($assign->get_instance()->id, $user->id, false);
+        $result = external_api::clean_returnvalue(mod_assign_external::get_participant_returns(), $result);
+
+        foreach ($expectedproperties as $propertyname => $propertyval) {
+            $this->assertEquals($propertyval, $result[$propertyname]);
+        }
+    }
+
+    /**
+     * The test_get_participant_relative_dates data provider.
+     */
+    public function get_participant_relative_dates_provider() {
+        $timenow = time();
+
+        return [
+            'Student whose enrolment starts after the course start date, relative dates mode enabled' => [
+                'courseconfig' => ['relativedatesmode' => true, 'startdate' => $timenow - 10 * DAYSECS],
+                'assignconfig' => ['duedate' => $timenow + 4 * DAYSECS],
+                'enrolconfig' => ['shortname' => 'student', 'userparams' => null, 'method' => 'manual',
+                    'startdate' => $timenow - 8 * DAYSECS],
+                'expectedproperties' => ['duedate' => $timenow + 6 * DAYSECS]
+            ],
+            'Student whose enrolment starts before the course start date, relative dates mode enabled' => [
+                'courseconfig' => ['relativedatesmode' => true, 'startdate' => $timenow - 10 * DAYSECS],
+                'assignconfig' => ['duedate' => $timenow + 4 * DAYSECS],
+                'enrolconfig' => ['shortname' => 'student', 'userparams' => null, 'method' => 'manual',
+                    'startdate' => $timenow - 12 * DAYSECS],
+                'expectedproperties' => ['duedate' => $timenow + 4 * DAYSECS]
+            ],
+        ];
+    }
+
+    /**
      * Test for mod_assign_external::list_participants().
      *
      * @throws coding_exception
@@ -2495,7 +2613,7 @@ class mod_assign_external_testcase extends externallib_advanced_testcase {
         $DB->update_record('user', $student);
 
         $this->setUser($teacher);
-        $participants = mod_assign_external::list_participants($assignment->id, 0, '', 0, 0, false, true);
+        $participants = mod_assign_external::list_participants($assignment->id, 0, '', 0, 0, false, true, true);
         $participants = external_api::clean_returnvalue(mod_assign_external::list_participants_returns(), $participants);
         $this->assertCount(1, $participants);
 
@@ -2513,7 +2631,7 @@ class mod_assign_external_testcase extends externallib_advanced_testcase {
         $this->assertEquals($student->institution, $participant['institution']);
         $this->assertArrayHasKey('enrolledcourses', $participant);
 
-        $participants = mod_assign_external::list_participants($assignment->id, 0, '', 0, 0, false, false);
+        $participants = mod_assign_external::list_participants($assignment->id, 0, '', 0, 0, false, false, true);
         $participants = external_api::clean_returnvalue(mod_assign_external::list_participants_returns(), $participants);
         // Check that the list of courses the participant is enrolled is not returned.
         $participant = $participants[0];

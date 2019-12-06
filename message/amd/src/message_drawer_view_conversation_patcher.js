@@ -45,7 +45,8 @@ function(
      */
     var sortMessagesByDay = function(messages, midnight) {
         var messagesByDay = messages.reduce(function(carry, message) {
-            var dayTimestamp = UserDate.getUserMidnightForTimestamp(message.timeCreated, midnight);
+            var timeCreated = message.timeCreated ? message.timeCreated : midnight;
+            var dayTimestamp = UserDate.getUserMidnightForTimestamp(timeCreated, midnight);
 
             if (carry.hasOwnProperty(dayTimestamp)) {
                 carry[dayTimestamp].push(message);
@@ -145,6 +146,9 @@ function(
      * @return {Boolean} Are arrays equal.
      */
     var isArrayEqual = function(a, b) {
+        // Make shallow copies so that we don't mess with the array sorting.
+        a = a.slice();
+        b = b.slice();
         a.sort();
         b.sort();
         var aLength = a.length;
@@ -164,16 +168,83 @@ function(
     };
 
     /**
+     * Do a shallow check to see if two objects appear to be equal. This should
+     * only be used for pretty basic objects.
+     *
+     * @param {Object} a First object to compare.
+     * @param {Object} b Second object to compare
+     * @return {Bool}
+     */
+    var isObjectEqual = function(a, b) {
+        var aKeys = Object.keys(a);
+        var bKeys = Object.keys(b);
+
+        if (aKeys.length != bKeys.length) {
+            return false;
+        }
+
+        return aKeys.every(function(key) {
+            var aVal = a[key];
+            var bVal = b[key];
+            var aType = typeof aVal;
+            var bType = typeof bVal;
+            aType = (aVal === null) ? 'null' : aType;
+            bType = (aVal === null) ? 'null' : bType;
+            aType = (aType === 'object' && Array.isArray(aType)) ? 'array' : aType;
+            bType = (bType === 'object' && Array.isArray(bType)) ? 'array' : bType;
+
+            if (aType !== bType) {
+                return false;
+            }
+
+            switch (aType) {
+                case 'object':
+                    return isObjectEqual(aVal, bVal);
+                case 'array':
+                    return isArrayEqual(aVal, bVal);
+                default:
+                    return a[key] == b[key];
+            }
+        });
+    };
+
+    /**
+     * Compare two messages to check if they are equal. This function only checks a subset
+     * of the message properties which we know will change rather than all properties.
+     *
+     * @param {Object} a The first message
+     * @param {Object} b The second message
+     * @return {Bool}
+     */
+    var isMessageEqual = function(a, b) {
+        return isObjectEqual(
+            {
+                id: a.id,
+                state: a.sendState,
+                text: a.text,
+                timeCreated: a.timeCreated
+            },
+            {
+                id: b.id,
+                state: b.sendState,
+                text: b.text,
+                timeCreated: b.timeCreated
+            }
+        );
+    };
+
+    /**
      * Build a patch based on days.
      *
      * @param  {Object} current Current list current items.
-     * @param  {Object} daysDiff Difference between current and new.
+     * @param  {Array} remove List of days to remove.
+     * @param  {Array} add List of days to add.
      * @return {Object} Patch with elements to add and remove.
      */
-    var buildDaysPatch = function(current, daysDiff) {
+    var buildDaysPatch = function(current, remove, add) {
         return {
-            remove: daysDiff.missingFromB,
-            add: daysDiff.missingFromA.map(function(day) {
+            remove: remove,
+            add: add.map(function(day) {
                 // Any days left over in the "next" list weren't in the "current" list
                 // so they will need to be added.
                 var before = findPositionInArray(current, function(candidate) {
@@ -197,24 +268,61 @@ function(
     var buildMessagesPatch = function(matchingDays) {
         var remove = [];
         var add = [];
+        var update = [];
 
+        // Iterate over the list of days and determine which messages in those days
+        // have been changed.
         matchingDays.forEach(function(days) {
             var dayCurrent = days.a;
             var dayNext = days.b;
-            var messagesDiff = diffArrays(dayCurrent.messages, dayNext.messages, function(messageCurrent, messageNext) {
-                return messageCurrent.id == messageNext.id;
-            });
+            // Find out which messages have changed in this day. This will return a list of messages
+            // from the current state that couldn't be found in the next state and a list of messages in
+            // the next state which couldn't be count in the current state.
+            var messagesDiff = diffArrays(dayCurrent.messages, dayNext.messages, isMessageEqual);
+            // Take the two arrays (list of messages changed from dayNext and list of messages changed
+            // from dayCurrent) any work out which messages have been added/removed from the list and
+            // which messages were just updated.
+            var patch = diffArrays(
+                // The messages from dayCurrent.message that weren't in dayNext.messages.
+                messagesDiff.missingFromB,
+                // The messages from dayNext.message that weren't in dayCurrent.messages.
+                messagesDiff.missingFromA,
+                function(a, b) {
+                    // This function is going to determine if the messages were
+                    // added/removed from either list or if they were simply an updated.
+                    //
+                    // If the IDs match or it was a state change (i.e. message with a temp
+                    // ID goes from pending to sent and receives an actual id) then they are
+                    // the same message which should be an update not an add/remove.
+                    return a.id == b.id || (a.sendState != b.sendState && a.timeAdded == b.timeAdded);
+                }
+            );
 
-            remove = remove.concat(messagesDiff.missingFromB);
+            // Any messages from the current state for this day which aren't in the next state
+            // for this day (i.e. the user deleted the message) means we need to remove them from
+            // the UI.
+            remove = remove.concat(patch.missingFromB);
 
-            messagesDiff.missingFromA.forEach(function(message) {
-                var before = findPositionInArray(dayCurrent.messages, function(candidate) {
-                    if (message.timeCreated == candidate.timeCreated) {
-                        return message.id < candidate.id;
-                    } else {
-                        return message.timeCreated < candidate.timeCreated;
-                    }
-                });
+            // Any messages not in the current state for this day which are in the next state
+            // for this day (i.e. it's a new message) means we need to add it to the UI so work
+            // out where in the list of messages it should appear (it could be a new message the
+            // user has sent or older messages loaded as part of the conversation scroll back).
+            patch.missingFromA.forEach(function(message) {
+                // By default a null value for before will render the message at the bottom of
+                // the message UI (i.e. it's the newest message).
+                var before = null;
+
+                if (message.timeCreated) {
+                    // If this message has a time created then find where it sits in the list of
+                    // message to insert it into the correct position.
+                    before = findPositionInArray(dayCurrent.messages, function(candidate) {
+                        if (message.timeCreated == candidate.timeCreated) {
+                            return message.id < candidate.id;
+                        } else {
+                            return message.timeCreated < candidate.timeCreated;
+                        }
+                    });
+                }
 
                 add.push({
                     before: before,
@@ -222,11 +330,21 @@ function(
                     day: dayCurrent
                 });
             });
+
+            // Any message that appears in both the current state for this day and the next state
+            // for this day means something in the message was updated.
+            update = update.concat(patch.matches.map(function(message) {
+                return {
+                    before: message.a,
+                    after: message.b
+                };
+            }));
         });
 
         return {
             add: add,
-            remove: remove
+            remove: remove,
+            update: update
         };
     };
 
@@ -238,22 +356,24 @@ function(
      * @return {Object} Patch with days and messsages for each day.
      */
     var buildConversationPatch = function(state, newState) {
-        var oldMessageIds = state.messages.map(function(message) {
-            return message.id;
-        });
-        var newMessageIds = newState.messages.map(function(message) {
-            return message.id;
-        });
+        var diff = diffArrays(state.messages, newState.messages, isMessageEqual);
 
-        if (!isArrayEqual(oldMessageIds, newMessageIds)) {
+        if (diff.missingFromA.length || diff.missingFromB.length) {
+            // Some messages have changed so let's work out which ones by sorting
+            // them into their respective days.
             var current = sortMessagesByDay(state.messages, state.midnight);
             var next = sortMessagesByDay(newState.messages, newState.midnight);
+            // This diffs the arrays to work out if there are any missing days that need
+            // to be added (i.e. we've got some new messages on a new day) or if there
+            // are any days that need to be deleted (i.e. the user has deleted some old messages).
             var daysDiff = diffArrays(current, next, function(dayCurrent, dayNext) {
                 return dayCurrent.timestamp == dayNext.timestamp;
             });
 
             return {
-                days: buildDaysPatch(current, daysDiff),
+                // Handle adding or removing whole days.
+                days: buildDaysPatch(current, daysDiff.missingFromB, daysDiff.missingFromA),
+                // Handle updating messages that don't require adding/removing a whole day.
                 messages: buildMessagesPatch(daysDiff.matches)
             };
         } else {
@@ -298,6 +418,7 @@ function(
                     totalmembercount: newState.totalMemberCount,
                     imageurl: newState.imageUrl,
                     isfavourite: newState.isFavourite,
+                    ismuted: newState.isMuted,
                     // Don't show favouriting if we don't have a conversation.
                     showfavourite: newState.id !== null,
                     userid: newOtherUser.id,
@@ -312,6 +433,37 @@ function(
         return null;
     };
 
+    /**
+     * Build a patch for the header of this conversation. Check if this conversation
+     * is a group conversation.
+     *
+     * @param  {Object} state The current state.
+     * @param  {Object} newState The new state.
+     * @return {Object} patch
+     */
+    var buildHeaderPatchTypeSelf = function(state, newState) {
+        var shouldRenderHeader = (state.name === null && newState.name !== null);
+
+        if (shouldRenderHeader) {
+            return {
+                type: Constants.CONVERSATION_TYPES.SELF,
+                // Don't display the controls for the self-conversations.
+                showControls: false,
+                context: {
+                    id: newState.id,
+                    name: newState.name,
+                    subname: newState.subname,
+                    imageurl: newState.imageUrl,
+                    isfavourite: newState.isFavourite,
+                    // Don't show favouriting if we don't have a conversation.
+                    showfavourite: newState.id !== null,
+                    showonlinestatus: true,
+                }
+            };
+        }
+
+        return null;
+    };
 
     /**
      * Build a patch for the header of this conversation. Check if this conversation
@@ -336,6 +488,7 @@ function(
                     totalmembercount: newState.totalMemberCount,
                     imageurl: newState.imageUrl,
                     isfavourite: newState.isFavourite,
+                    ismuted: newState.isMuted,
                     // Don't show favouriting if we don't have a conversation.
                     showfavourite: newState.id !== null
                 }
@@ -432,16 +585,33 @@ function(
     };
 
     /**
-     * Check if the messages are still being send
+     * Determine if we should show the emoji picker.
      *
      * @param  {Object} state The current state.
      * @param  {Object} newState The new state.
-     * @return {Bool|Null} User Object if Object.
+     * @return {Bool|Null}
      */
-    var buildSendingMessage = function(state, newState) {
-        if (!state.sendingMessage && newState.sendingMessage) {
+    var buildShowEmojiPicker = function(state, newState) {
+        if (!state.showEmojiPicker && newState.showEmojiPicker) {
             return true;
-        } else if (state.sendingMessage && !newState.sendingMessage) {
+        } else if (state.showEmojiPicker && !newState.showEmojiPicker) {
+            return false;
+        } else {
+            return null;
+        }
+    };
+
+    /**
+     * Determine if we should show the emoji auto complete.
+     *
+     * @param  {Object} state The current state.
+     * @param  {Object} newState The new state.
+     * @return {Bool|Null}
+     */
+    var buildShowEmojiAutoComplete = function(state, newState) {
+        if (!state.showEmojiAutoComplete && newState.showEmojiAutoComplete) {
+            return true;
+        } else if (state.showEmojiAutoComplete && !newState.showEmojiAutoComplete) {
             return false;
         } else {
             return null;
@@ -529,13 +699,22 @@ function(
      *
      * @param  {Object} state The current state.
      * @param  {Object} newState The new state.
-     * @return {Bool|Null}
+     * @return {Object|Null} The conversation type and if the user can delete  the messages for all users.
      */
     var buildConfirmDeleteSelectedMessages = function(state, newState) {
-        if (newState.pendingDeleteMessageIds.length) {
-            return true;
-        } else if (state.pendingDeleteMessageIds.length) {
-            return false;
+        var oldPendingCount = state.pendingDeleteMessageIds.length;
+        var newPendingCount = newState.pendingDeleteMessageIds.length;
+
+        if (newPendingCount && !oldPendingCount) {
+            return {
+                show: true,
+                type: newState.type,
+                canDeleteMessagesForAllUsers: newState.canDeleteMessagesForAllUsers
+            };
+        } else if (oldPendingCount && !newPendingCount) {
+            return {
+                show: false
+            };
         }
 
         return null;
@@ -546,11 +725,11 @@ function(
      *
      * @param  {Object} state The current state.
      * @param  {Object} newState The new state.
-     * @return {Bool|Null}
+     * @return {int|Null} The conversation type to be deleted.
      */
     var buildConfirmDeleteConversation = function(state, newState) {
         if (!state.pendingDeleteConversation && newState.pendingDeleteConversation) {
-            return true;
+            return newState.type;
         } else if (state.pendingDeleteConversation && !newState.pendingDeleteConversation) {
             return false;
         }
@@ -641,6 +820,39 @@ function(
             return 'show-remove';
         } else if (oldIsFavourite && !newIsFavourite) {
             return 'show-add';
+        } else {
+            return null;
+        }
+    };
+
+    /**
+     * Check if there are any changes the conversation muted state.
+     *
+     * @param  {Object} state The current state.
+     * @param  {Object} newState The new state.
+     * @return {string|null}
+     */
+    var buildIsMuted = function(state, newState) {
+        var oldIsMuted = state.isMuted;
+        var newIsMuted = newState.isMuted;
+
+        if (state.id === null && newState.id === null) {
+            // The conversation isn't yet created so don't change anything.
+            return null;
+        } else if (state.id === null && newState.id !== null) {
+            // The conversation was created so we can show the mute button.
+            return 'show-mute';
+        } else if (state.id !== null && newState.id === null) {
+            // We're changing from a created conversation to a new conversation so hide
+            // the muting functionality for now.
+            return 'hide';
+        } else if (oldIsMuted == newIsMuted) {
+            // No change.
+            return null;
+        } else if (!oldIsMuted && newIsMuted) {
+            return 'show-unmute';
+        } else if (oldIsMuted && !newIsMuted) {
+            return 'show-mute';
         } else {
             return null;
         }
@@ -918,6 +1130,11 @@ function(
         var oldOtherUser = getOtherUserFromState(state);
         var newOtherUser = getOtherUserFromState(newState);
 
+        if (newState.type == Constants.CONVERSATION_TYPES.SELF) {
+            // Users always can send message themselves on self-conversations.
+            return null;
+        }
+
         if (!oldOtherUser && !newOtherUser) {
             return null;
         } else if (oldOtherUser && !newOtherUser) {
@@ -1075,6 +1292,23 @@ function(
     };
 
     /**
+     * We should show this message always, for all the self-conversations.
+     *
+     * The message should be hidden when it's not a self-conversation.
+     *
+     * @param  {Object} state The current state.
+     * @param  {Object} newState The new state.
+     * @return {bool}
+     */
+    var buildSelfConversationMessage = function(state, newState) {
+        if (state.type != newState.type) {
+            return (newState.type == Constants.CONVERSATION_TYPES.SELF);
+        }
+
+        return null;
+    };
+
+    /**
      * We should show the contact request sent message if the user just sent
      * a contact request to the other user and there are no messages in the
      * conversation.
@@ -1131,11 +1365,13 @@ function(
                 loadingMembers: buildLoadingMembersPatch,
                 loadingFirstMessages: buildLoadingFirstMessages,
                 loadingMessages: buildLoadingMessages,
-                sendingMessage: buildSendingMessage,
                 confirmDeleteSelectedMessages: buildConfirmDeleteSelectedMessages,
                 inEditMode: buildInEditMode,
                 selectedMessages: buildSelectedMessages,
-                isFavourite: buildIsFavourite
+                isFavourite: buildIsFavourite,
+                isMuted: buildIsMuted,
+                showEmojiPicker: buildShowEmojiPicker,
+                showEmojiAutoComplete: buildShowEmojiAutoComplete
             }
         };
         // These build functions are only applicable to private conversations.
@@ -1158,6 +1394,13 @@ function(
         config[Constants.CONVERSATION_TYPES.PUBLIC] = {
             header: buildHeaderPatchTypePublic,
             footer: buildFooterPatchTypePublic,
+        };
+        // These build functions are only applicable to self-conversations.
+        config[Constants.CONVERSATION_TYPES.SELF] = {
+            header: buildHeaderPatchTypeSelf,
+            footer: buildFooterPatchTypePublic,
+            confirmDeleteConversation: buildConfirmDeleteConversation,
+            selfConversationMessage: buildSelfConversationMessage
         };
 
         var patchConfig = $.extend({}, config.all);

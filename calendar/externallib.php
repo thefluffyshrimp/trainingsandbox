@@ -28,6 +28,7 @@
 defined('MOODLE_INTERNAL') || die;
 
 require_once("$CFG->libdir/externallib.php");
+require_once($CFG->dirroot . '/calendar/lib.php');
 
 use \core_calendar\local\api as local_api;
 use \core_calendar\local\event\container as event_container;
@@ -79,8 +80,7 @@ class core_calendar_external extends external_api {
      * @since Moodle 2.5
      */
     public static function delete_calendar_events($events) {
-        global $CFG, $DB;
-        require_once($CFG->dirroot."/calendar/lib.php");
+        global $DB;
 
         // Parameter validation.
         $params = self::validate_parameters(self:: delete_calendar_events_parameters(), array('events' => $events));
@@ -147,7 +147,7 @@ class core_calendar_external extends external_api {
                                              "Set to true to return current user's user events",
                                              VALUE_DEFAULT, true, NULL_ALLOWED),
                                     'siteevents' => new external_value(PARAM_BOOL,
-                                             "Set to true to return global events",
+                                             "Set to true to return site events",
                                              VALUE_DEFAULT, true, NULL_ALLOWED),
                                     'timestart' => new external_value(PARAM_INT,
                                              "Time from which events should be returned",
@@ -173,8 +173,7 @@ class core_calendar_external extends external_api {
      * @since Moodle 2.5
      */
     public static function get_calendar_events($events = array(), $options = array()) {
-        global $SITE, $DB, $USER, $CFG;
-        require_once($CFG->dirroot."/calendar/lib.php");
+        global $SITE, $DB, $USER;
 
         // Parameter validation.
         $params = self::validate_parameters(self::get_calendar_events_parameters(), array('events' => $events, 'options' => $options));
@@ -406,7 +405,8 @@ class core_calendar_external extends external_api {
                 'aftereventid' => new external_value(PARAM_INT, 'The last seen event id', VALUE_DEFAULT, 0),
                 'limitnum' => new external_value(PARAM_INT, 'Limit number', VALUE_DEFAULT, 20),
                 'limittononsuspendedevents' => new external_value(PARAM_BOOL,
-                        'Limit the events to courses the user is not suspended in', VALUE_DEFAULT, false)
+                        'Limit the events to courses the user is not suspended in', VALUE_DEFAULT, false),
+                'userid' => new external_value(PARAM_INT, 'The user id', VALUE_DEFAULT, null),
             )
         );
     }
@@ -419,15 +419,14 @@ class core_calendar_external extends external_api {
      * @param null|int $timesortto Events before this time (inclusive)
      * @param null|int $aftereventid Get events with ids greater than this one
      * @param int $limitnum Limit the number of results to this value
+     * @param null|int $userid The user id
      * @return array
      */
     public static function get_calendar_action_events_by_timesort($timesortfrom = 0, $timesortto = null,
-                                                       $aftereventid = 0, $limitnum = 20, $limittononsuspendedevents = false) {
-        global $CFG, $PAGE, $USER;
+                                                       $aftereventid = 0, $limitnum = 20, $limittononsuspendedevents = false,
+                                                       $userid = null) {
+        global $PAGE, $USER;
 
-        require_once($CFG->dirroot . '/calendar/lib.php');
-
-        $user = null;
         $params = self::validate_parameters(
             self::get_calendar_action_events_by_timesort_parameters(),
             [
@@ -435,10 +434,17 @@ class core_calendar_external extends external_api {
                 'timesortto' => $timesortto,
                 'aftereventid' => $aftereventid,
                 'limitnum' => $limitnum,
-                'limittononsuspendedevents' => $limittononsuspendedevents
+                'limittononsuspendedevents' => $limittononsuspendedevents,
+                'userid' => $userid,
             ]
         );
-        $context = \context_user::instance($USER->id);
+        if ($params['userid']) {
+            $user = \core_user::get_user($params['userid']);
+        } else {
+            $user = $USER;
+        }
+
+        $context = \context_user::instance($user->id);
         self::validate_context($context);
 
         if (empty($params['aftereventid'])) {
@@ -451,7 +457,8 @@ class core_calendar_external extends external_api {
             $params['timesortto'],
             $params['aftereventid'],
             $params['limitnum'],
-            $params['limittononsuspendedevents']
+            $params['limittononsuspendedevents'],
+            $user
         );
 
         $exportercache = new events_related_objects_cache($events);
@@ -501,9 +508,7 @@ class core_calendar_external extends external_api {
     public static function get_calendar_action_events_by_course(
         $courseid, $timesortfrom = null, $timesortto = null, $aftereventid = 0, $limitnum = 20) {
 
-        global $CFG, $PAGE, $USER;
-
-        require_once($CFG->dirroot . '/calendar/lib.php');
+        global $PAGE, $USER;
 
         $user = null;
         $params = self::validate_parameters(
@@ -586,9 +591,7 @@ class core_calendar_external extends external_api {
     public static function get_calendar_action_events_by_courses(
         array $courseids, $timesortfrom = null, $timesortto = null, $limitnum = 10) {
 
-        global $CFG, $PAGE, $USER;
-
-        require_once($CFG->dirroot . '/calendar/lib.php');
+        global $PAGE, $USER;
 
         $user = null;
         $params = self::validate_parameters(
@@ -681,8 +684,7 @@ class core_calendar_external extends external_api {
      * @throws moodle_exception if user doesnt have the permission to create events.
      */
     public static function create_calendar_events($events) {
-        global $CFG, $DB, $USER;
-        require_once($CFG->dirroot."/calendar/lib.php");
+        global $DB, $USER;
 
         // Parameter validation.
         $params = self::validate_parameters(self::create_calendar_events_parameters(), array('events' => $events));
@@ -787,8 +789,7 @@ class core_calendar_external extends external_api {
      * @return array Array of event details
      */
     public static function get_calendar_event_by_id($eventid) {
-        global $CFG, $PAGE, $USER;
-        require_once($CFG->dirroot."/calendar/lib.php");
+        global $PAGE, $USER;
 
         $params = self::validate_parameters(self::get_calendar_event_by_id_parameters(), ['eventid' => $eventid]);
         $context = \context_user::instance($USER->id);
@@ -858,8 +859,7 @@ class core_calendar_external extends external_api {
      * @throws moodle_exception
      */
     public static function submit_create_update_form($formdata) {
-        global $CFG, $USER, $PAGE;
-        require_once($CFG->dirroot."/calendar/lib.php");
+        global $USER, $PAGE, $CFG;
         require_once($CFG->libdir."/filelib.php");
 
         // Parameter validation.
@@ -880,6 +880,7 @@ class core_calendar_external extends external_api {
         $courseid = (!empty($data[$coursekey])) ? $data[$coursekey] : null;
         $editoroptions = \core_calendar\local\event\forms\create::build_editor_options($context);
         $formoptions = ['editoroptions' => $editoroptions, 'courseid' => $courseid];
+        $formoptions['eventtypes'] = calendar_get_allowed_event_types($courseid);
         if ($courseid) {
             require_once($CFG->libdir . '/grouplib.php');
             $groupcoursedata = groups_get_course_data($courseid);
@@ -990,8 +991,7 @@ class core_calendar_external extends external_api {
      * @return  array
      */
     public static function get_calendar_monthly_view($year, $month, $courseid, $categoryid, $includenavigation, $mini) {
-        global $CFG, $DB, $USER, $PAGE;
-        require_once($CFG->dirroot."/calendar/lib.php");
+        global $DB, $USER, $PAGE;
 
         // Parameter validation.
         $params = self::validate_parameters(self::get_calendar_monthly_view_parameters(), [
@@ -1068,8 +1068,7 @@ class core_calendar_external extends external_api {
      * @return  array
      */
     public static function get_calendar_day_view($year, $month, $day, $courseid, $categoryid) {
-        global $CFG, $DB, $USER, $PAGE;
-        require_once($CFG->dirroot."/calendar/lib.php");
+        global $DB, $USER, $PAGE;
 
         // Parameter validation.
         $params = self::validate_parameters(self::get_calendar_day_view_parameters(), [
@@ -1209,8 +1208,7 @@ class core_calendar_external extends external_api {
      * @return  array
      */
     public static function get_calendar_upcoming_view($courseid, $categoryid) {
-        global $CFG, $DB, $USER, $PAGE;
-        require_once($CFG->dirroot."/calendar/lib.php");
+        global $DB, $USER, $PAGE;
 
         // Parameter validation.
         $params = self::validate_parameters(self::get_calendar_upcoming_view_parameters(), [
@@ -1251,5 +1249,204 @@ class core_calendar_external extends external_api {
      */
     public static function get_calendar_upcoming_view_returns() {
         return \core_calendar\external\calendar_upcoming_exporter::get_read_structure();
+    }
+
+
+    /**
+     * Returns description of method parameters.
+     *
+     * @return external_function_parameters.
+     * @since  Moodle 3.7
+     */
+    public static function get_calendar_access_information_parameters() {
+        return new external_function_parameters(
+            [
+                'courseid' => new external_value(PARAM_INT, 'Course to check, empty for site calendar events.', VALUE_DEFAULT, 0),
+            ]
+        );
+    }
+
+    /**
+     * Convenience function to retrieve some permissions information for the given course calendar.
+     *
+     * @param int $courseid Course to check, empty for site.
+     * @return array The access information
+     * @throws moodle_exception
+     * @since  Moodle 3.7
+     */
+    public static function get_calendar_access_information($courseid = 0) {
+
+        $params = self::validate_parameters(self::get_calendar_access_information_parameters(), ['courseid' => $courseid]);
+
+        if (empty($params['courseid']) || $params['courseid'] == SITEID) {
+            $context = \context_system::instance();
+        } else {
+            $context = \context_course::instance($params['courseid']);
+        }
+
+        self::validate_context($context);
+
+        return [
+            'canmanageentries' => has_capability('moodle/calendar:manageentries', $context),
+            'canmanageownentries' => has_capability('moodle/calendar:manageownentries', $context),
+            'canmanagegroupentries' => has_capability('moodle/calendar:managegroupentries', $context),
+            'warnings' => [],
+        ];
+    }
+
+    /**
+     * Returns description of method result value.
+     *
+     * @return external_description.
+     * @since  Moodle 3.7
+     */
+    public static function  get_calendar_access_information_returns() {
+
+        return new external_single_structure(
+            [
+                'canmanageentries' => new external_value(PARAM_BOOL, 'Whether the user can manage entries.'),
+                'canmanageownentries' => new external_value(PARAM_BOOL, 'Whether the user can manage its own entries.'),
+                'canmanagegroupentries' => new external_value(PARAM_BOOL, 'Whether the user can manage group entries.'),
+                'warnings' => new external_warnings(),
+            ]
+        );
+    }
+
+    /**
+     * Returns description of method parameters.
+     *
+     * @return external_function_parameters.
+     * @since  Moodle 3.7
+     */
+    public static function get_allowed_event_types_parameters() {
+        return new external_function_parameters(
+            [
+                'courseid' => new external_value(PARAM_INT, 'Course to check, empty for site.', VALUE_DEFAULT, 0),
+            ]
+        );
+    }
+
+    /**
+     * Get the type of events a user can create in the given course.
+     *
+     * @param int $courseid Course to check, empty for site.
+     * @return array The types allowed
+     * @throws moodle_exception
+     * @since  Moodle 3.7
+     */
+    public static function get_allowed_event_types($courseid = 0) {
+
+        $params = self::validate_parameters(self::get_allowed_event_types_parameters(), ['courseid' => $courseid]);
+
+        if (empty($params['courseid']) || $params['courseid'] == SITEID) {
+            $context = \context_system::instance();
+        } else {
+            $context = \context_course::instance($params['courseid']);
+        }
+
+        self::validate_context($context);
+
+        $allowedeventtypes = array_filter(calendar_get_allowed_event_types($params['courseid']));
+
+        return [
+            'allowedeventtypes' => array_keys($allowedeventtypes),
+            'warnings' => [],
+        ];
+    }
+
+    /**
+     * Returns description of method result value.
+     *
+     * @return external_description.
+     * @since  Moodle 3.7
+     */
+    public static function  get_allowed_event_types_returns() {
+
+        return new external_single_structure(
+            [
+                'allowedeventtypes' => new external_multiple_structure(
+                    new external_value(PARAM_NOTAGS, 'Allowed event types to be created in the given course.')
+                ),
+                'warnings' => new external_warnings(),
+            ]
+        );
+    }
+
+    /**
+     * Convert the specified dates into unix timestamps.
+     *
+     * @param   array $datetimes Array of arrays containing date time details, each in the format:
+     *           ['year' => a, 'month' => b, 'day' => c,
+     *            'hour' => d (optional), 'minute' => e (optional), 'key' => 'x' (optional)]
+     * @return  array Provided array of dates converted to unix timestamps
+     * @throws moodle_exception If one or more of the dates provided does not convert to a valid timestamp.
+     */
+    public static function get_timestamps($datetimes) {
+        $params = self::validate_parameters(self::get_timestamps_parameters(), ['data' => $datetimes]);
+
+        $type = \core_calendar\type_factory::get_calendar_instance();
+        $timestamps = ['timestamps' => []];
+
+        foreach ($params['data'] as $key => $datetime) {
+            $hour = $datetime['hour'] ?? 0;
+            $minute = $datetime['minute'] ?? 0;
+
+            try {
+                $timestamp = $type->convert_to_timestamp(
+                    $datetime['year'], $datetime['month'], $datetime['day'], $hour, $minute);
+
+                $timestamps['timestamps'][] = [
+                    'key' => $datetime['key'] ?? $key,
+                    'timestamp' => $timestamp,
+                ];
+
+            } catch (Exception $e) {
+                throw new moodle_exception('One or more of the dates provided were invalid');
+            }
+        }
+
+        return $timestamps;
+    }
+
+    /**
+     * Describes the parameters for get_timestamps.
+     *
+     * @return external_function_parameters
+     */
+    public static function get_timestamps_parameters() {
+        return new external_function_parameters ([
+            'data' => new external_multiple_structure(
+                new external_single_structure(
+                    [
+                        'key' => new external_value(PARAM_ALPHANUMEXT, 'key', VALUE_OPTIONAL),
+                        'year' => new external_value(PARAM_INT, 'year'),
+                        'month' => new external_value(PARAM_INT, 'month'),
+                        'day' => new external_value(PARAM_INT, 'day'),
+                        'hour' => new external_value(PARAM_INT, 'hour', VALUE_OPTIONAL),
+                        'minute' => new external_value(PARAM_INT, 'minute', VALUE_OPTIONAL),
+                    ]
+                )
+            )
+        ]);
+    }
+
+    /**
+     * Describes the timestamps return format.
+     *
+     * @return external_single_structure
+     */
+    public static function get_timestamps_returns() {
+        return new external_single_structure(
+            [
+                'timestamps' => new external_multiple_structure(
+                    new external_single_structure(
+                        [
+                            'key' => new external_value(PARAM_ALPHANUMEXT, 'Timestamp key'),
+                            'timestamp' => new external_value(PARAM_INT, 'Unix timestamp'),
+                        ]
+                    )
+                )
+            ]
+        );
     }
 }
