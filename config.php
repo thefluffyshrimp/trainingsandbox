@@ -8,7 +8,7 @@ $CFG = new stdClass();
 $CFG->dbtype    = 'mariadb';
 $CFG->dblibrary = 'native';
 $CFG->dbhost    = 'localhost';
-$CFG->dbname    = 'admin_trainingsandbox';
+$CFG->dbname    = 'admin_trainingsandboxnew';
 $CFG->dbuser    = 'admin_training';
 $CFG->dbpass    = 'U8NBm7uqcF';
 $CFG->prefix    = 'mdl_';
@@ -20,7 +20,7 @@ $CFG->dboptions = array (
 );
 
 $CFG->wwwroot   = 'https://miss.moe/missmoesandbox/trainingsandbox';
-$CFG->dataroot  = '/home/admin/web/miss.moe/public_html/missmoesandbox/moodledatasandbox';
+$CFG->dataroot  = '/home/admin/web/miss.moe/public_html/missmoesandbox/moodledatasandboxnew';
 //$CFG->dataroot  = '/home/admin/web/miss.moe/moodledata11123';
 $CFG->admin     = 'admin';
 
