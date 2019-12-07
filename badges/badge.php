@@ -69,6 +69,13 @@ if (!empty($badge->recipient->id)) {
     badges_setup_backpack_js();
 
     echo $OUTPUT->header();
+     $url = new moodle_url('/badges/badge.php', array('hash' => $id));
+    $sb_title=$PAGE->title;
+    $twitterURL = 'https://twitter.com/intent/tweet?text='.$sb_title.'&amp;url='.$url.'';
+    $facebookURL = 'https://www.facebook.com/sharer/sharer.php?u='.$url;
+    $linkedInURL = 'https://www.linkedin.com/shareArticle?mini=true&url='.$url.'&amp;title='.$sb_title;
+
+    echo $OUTPUT->container('<a class="fa fa-twitter-square fa-2x" href="'. $twitterURL .'" target="_blank" rel="nofollow"></a>  <a class="fa fa-facebook-square fa-2x" href="'.$facebookURL.'" target="_blank" rel="nofollow"></a>  <a class="fa fa-linkedin-square fa-2x" href="'.$linkedInURL.'" target="_blank" rel="nofollow"></a>');
 
     echo $output->render($badge);
 } else {

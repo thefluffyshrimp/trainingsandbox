@@ -57,6 +57,21 @@
 
     require_login($course);
 
+     $badges = badges_get_user_badges($USER->id, $COURSE->id, 0, 0);
+   $coursefullname = format_string($course->fullname, true, $COURSE->id);
+   //print_r($badges);
+   if($badges && $coursefullname=='MISS.MOE Verified Trainer'){
+    $context = context_course::instance($COURSE->id);
+
+
+    $contextid=$context->id;
+    //echo "<pre>";
+    //print_r($context);
+    /*$sql='UPDATE mdl_role_assignments set roleid=5 WHERE contextid ="'.$contextid.'" AND userid='.$USER->id.'';*/
+    $DB->execute('UPDATE {role_assignments} set roleid=3 WHERE contextid ="'.$contextid.'" AND userid='.$USER->id.'');
+
+   }
+
     // Switchrole - sanity check in cost-order...
     $reset_user_allowed_editing = false;
     if ($switchrole > 0 && confirm_sesskey() &&

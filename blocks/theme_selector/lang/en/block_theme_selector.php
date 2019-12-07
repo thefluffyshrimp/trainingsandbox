@@ -26,7 +26,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-$string['pluginname'] = 'Theme selector';
+$string['pluginname'] = 'Theme Selector';
 $string['by'] = 'by';
 $string['changetheme'] = 'Change theme:';
 $string['createwindow'] = 'Create window';
