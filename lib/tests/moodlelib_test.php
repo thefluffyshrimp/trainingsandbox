@@ -531,6 +531,38 @@ class core_moodlelib_testcase extends advanced_testcase {
         $this->assertSame('', clean_param('user_', PARAM_COMPONENT));
     }
 
+    public function test_clean_param_localisedfloat() {
+
+        $this->assertSame(0.5, clean_param('0.5', PARAM_LOCALISEDFLOAT));
+        $this->assertSame(false, clean_param('0X5', PARAM_LOCALISEDFLOAT));
+        $this->assertSame(0.5, clean_param('.5', PARAM_LOCALISEDFLOAT));
+        $this->assertSame(false, clean_param('X5', PARAM_LOCALISEDFLOAT));
+        $this->assertSame(10.5, clean_param('10.5', PARAM_LOCALISEDFLOAT));
+        $this->assertSame(false, clean_param('10X5', PARAM_LOCALISEDFLOAT));
+        $this->assertSame(1000.5, clean_param('1 000.5', PARAM_LOCALISEDFLOAT));
+        $this->assertSame(false, clean_param('1 000X5', PARAM_LOCALISEDFLOAT));
+        $this->assertSame(false, clean_param('1.000.5', PARAM_LOCALISEDFLOAT));
+        $this->assertSame(false, clean_param('1X000X5', PARAM_LOCALISEDFLOAT));
+        $this->assertSame(false, clean_param('nan', PARAM_LOCALISEDFLOAT));
+        $this->assertSame(false, clean_param('10.6blah', PARAM_LOCALISEDFLOAT));
+
+        // Tests with a localised decimal separator.
+        $this->define_local_decimal_separator();
+
+        $this->assertSame(0.5, clean_param('0.5', PARAM_LOCALISEDFLOAT));
+        $this->assertSame(0.5, clean_param('0X5', PARAM_LOCALISEDFLOAT));
+        $this->assertSame(0.5, clean_param('.5', PARAM_LOCALISEDFLOAT));
+        $this->assertSame(0.5, clean_param('X5', PARAM_LOCALISEDFLOAT));
+        $this->assertSame(10.5, clean_param('10.5', PARAM_LOCALISEDFLOAT));
+        $this->assertSame(10.5, clean_param('10X5', PARAM_LOCALISEDFLOAT));
+        $this->assertSame(1000.5, clean_param('1 000.5', PARAM_LOCALISEDFLOAT));
+        $this->assertSame(1000.5, clean_param('1 000X5', PARAM_LOCALISEDFLOAT));
+        $this->assertSame(false, clean_param('1.000.5', PARAM_LOCALISEDFLOAT));
+        $this->assertSame(false, clean_param('1X000X5', PARAM_LOCALISEDFLOAT));
+        $this->assertSame(false, clean_param('nan', PARAM_LOCALISEDFLOAT));
+        $this->assertSame(false, clean_param('10X6blah', PARAM_LOCALISEDFLOAT));
+    }
+
     public function test_is_valid_plugin_name() {
         $this->assertTrue(is_valid_plugin_name('forum'));
         $this->assertTrue(is_valid_plugin_name('forum2'));
@@ -4406,5 +4438,21 @@ class core_moodlelib_testcase extends advanced_testcase {
         } else {
             $this->assertFalse($fetcheduser);
         }
+    }
+
+    /**
+     * Test for send_password_change_().
+     */
+    public function test_send_password_change_info() {
+        $this->resetAfterTest();
+
+        $user = $this->getDataGenerator()->create_user();
+
+        $sink = $this->redirectEmails(); // Make sure we are redirecting emails.
+        send_password_change_info($user);
+        $result = $sink->get_messages();
+        $sink->close();
+
+        $this->assertContains('passwords cannot be reset on this site', $result[0]->body);
     }
 }

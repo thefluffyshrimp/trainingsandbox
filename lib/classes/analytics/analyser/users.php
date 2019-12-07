@@ -39,15 +39,14 @@ class users extends \core_analytics\local\analyser\base {
      * The site users are the analysable elements returned by this analyser.
      *
      * @param string|null $action 'prediction', 'training' or null if no specific action needed.
-     * @param \context[] $contexts Only analysables that depend on the provided contexts. All analysables in the system if empty.
      * @return \Iterator
      */
-    public function get_analysables_iterator(?string $action = null, array $contexts = []) {
+    public function get_analysables_iterator(?string $action = null) {
         global $DB, $CFG;
 
         $siteadmins = explode(',', $CFG->siteadmins);
 
-        list($sql, $params) = $this->get_iterator_sql('user', CONTEXT_USER, $action, 'u', $contexts);
+        list($sql, $params) = $this->get_iterator_sql('user', CONTEXT_USER, $action, 'u');
 
         $sql .= " AND u.deleted = :deleted AND u.confirmed = :confirmed AND u.suspended = :suspended";
         $params = $params + ['deleted' => 0, 'confirmed' => 1, 'suspended' => 0];

@@ -310,11 +310,11 @@ class mustache_template_source_loader {
             if ($name) {
                 switch ($type) {
                     case Mustache_Tokenizer::T_PARTIAL:
-                        list($component, $id) = explode('/', $name, 2);
+                        list($component, $id) = explode('/', $name);
                         $templates = $addtodependencies($templates, $component, $id);
                         break;
                     case Mustache_Tokenizer::T_PARENT:
-                        list($component, $id) = explode('/', $name, 2);
+                        list($component, $id) = explode('/', $name);
                         $templates = $addtodependencies($templates, $component, $id);
                         break;
                     case Mustache_Tokenizer::T_SECTION:
