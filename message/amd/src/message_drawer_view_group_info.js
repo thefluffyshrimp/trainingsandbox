@@ -134,16 +134,13 @@ function(
     /**
      * Setup the contact page.
      *
-     * @param {string} namespace The route namespace.
-     * @param {Object} header Contact header container element.
-     * @param {Object} body Contact body container element.
-     * @param {Object} footer Contact body container element.
+     * @param {Object} root Contact container element.
      * @param {Number} conversation The conversation
      * @param {Number} loggedInUserId The logged in user id
      * @return {Object} jQuery promise
      */
-    var show = function(namespace, header, body, footer, conversation, loggedInUserId) {
-        var root = $(body);
+    var show = function(root, conversation, loggedInUserId) {
+        root = $(root);
 
         getContentContainer(root).empty();
         return render(root, conversation, loggedInUserId)

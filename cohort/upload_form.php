@@ -48,6 +48,9 @@ class cohort_upload_form extends moodleform {
         $mform = $this->_form;
         $data  = (object)$this->_customdata;
 
+        $mform->addElement('hidden', 'returnurl');
+        $mform->setType('returnurl', PARAM_URL);
+
         $mform->addElement('header', 'cohortfileuploadform', get_string('uploadafile'));
 
         $filepickeroptions = array();

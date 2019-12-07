@@ -40,11 +40,18 @@ define(['jquery'], function($) {
      * @return {Object} newstate A copy of the state to clone.
      */
     var cloneState = function(state) {
-        // Do a deep extend to make sure we recursively copy objects and
-        // arrays so that the new state doesn't contain any references to
-        // the old state, e.g. adding a value to an array in the new state
-        // shouldn't also add it to the old state.
-        return $.extend(true, {}, state);
+        var newState = $.extend({}, state);
+        newState.messages = state.messages.map(function(message) {
+            return $.extend({}, message);
+        });
+        newState.members = Object.keys(state.members).reduce(function(carry, id) {
+            carry[id] = $.extend({}, state.members[id]);
+            carry[id].contactrequests = state.members[id].contactrequests.map(function(request) {
+                return $.extend({}, request);
+            });
+            return carry;
+        }, {});
+        return newState;
     };
 
     /**
@@ -59,12 +66,12 @@ define(['jquery'], function($) {
         return messages.map(function(message) {
             var fromLoggedInUser = message.useridfrom == loggedInUserId;
             return {
-                // Stringify the id.
-                id: "" + message.id,
+                id: parseInt(message.id, 10),
+                isRead: message.isread,
                 fromLoggedInUser: fromLoggedInUser,
                 userFrom: members[message.useridfrom],
                 text: message.text,
-                timeCreated: message.timecreated ? parseInt(message.timecreated, 10) : null
+                timeCreated: parseInt(message.timecreated, 10)
             };
         });
     };
@@ -88,8 +95,7 @@ define(['jquery'], function($) {
                 isblocked: member.isblocked,
                 iscontact: member.iscontact,
                 isdeleted: member.isdeleted,
-                canmessage: member.canmessage,
-                canmessageevenifblocked: member.canmessageevenifblocked,
+                canmessage:  member.canmessage,
                 requirescontact: member.requirescontact,
                 contactrequests: member.contactrequests || []
             };
@@ -102,39 +108,24 @@ define(['jquery'], function($) {
      * @param  {Number} midnight Midnight time.
      * @param  {Number} loggedInUserId The logged in user id.
      * @param  {Number} id The conversation id.
-     * @param  {Number} messagePollMin The message poll start timeout in seconds.
-     * @param  {Number} messagePollMax The message poll max timeout limit in seconds.
-     * @param  {Number} messagePollAfterMax The message poll frequency in seconds to reset to after max limit is reached.
      * @return {Object} Initial state.
      */
-    var buildInitialState = function(
-        midnight,
-        loggedInUserId,
-        id,
-        messagePollMin,
-        messagePollMax,
-        messagePollAfterMax
-    ) {
+    var buildInitialState = function(midnight, loggedInUserId, id) {
         return {
             midnight: midnight,
             loggedInUserId: loggedInUserId,
             id: id,
-            messagePollMin: messagePollMin,
-            messagePollMax: messagePollMax,
-            messagePollAfterMax: messagePollAfterMax,
             name: null,
             subname: null,
             type: null,
             totalMemberCount: null,
             imageUrl: null,
             isFavourite: null,
-            isMuted: null,
-            canDeleteMessagesForAllUsers: false,
-            deleteMessagesForAllUsers: false,
             members: {},
             messages: [],
             hasTriedToLoadMessages: false,
             loadingMessages: true,
+            sendingMessage: false,
             loadingMembers: true,
             loadingConfirmAction: false,
             pendingBlockUserIds: [],
@@ -142,11 +133,8 @@ define(['jquery'], function($) {
             pendingRemoveContactIds: [],
             pendingAddContactIds: [],
             pendingDeleteMessageIds: [],
-            pendingSendMessageIds: [],
             pendingDeleteConversation: false,
-            selectedMessageIds: [],
-            showEmojiAutoComplete: false,
-            showEmojiPicker: false
+            selectedMessageIds: []
         };
     };
 
@@ -160,34 +148,12 @@ define(['jquery'], function($) {
     var addMessages = function(state, messages) {
         var newState = cloneState(state);
         var formattedMessages = formatMessages(messages, state.loggedInUserId, state.members);
-        formattedMessages = formattedMessages.map(function(message) {
-            message.sendState = null;
-            message.timeAdded = Date.now();
-            message.errorMessage = null;
-            return message;
-        });
         var allMessages = state.messages.concat(formattedMessages);
         // Sort the messages. Oldest to newest.
         allMessages.sort(function(a, b) {
-            if (a.timeCreated === null && b.timeCreated === null) {
-                if (a.timeAdded < b.timeAdded) {
-                    return -1;
-                } else if (a.timeAdded > b.timeAdded) {
-                    return 1;
-                }
-            }
-
-            if (a.timeCreated === null && b.timeCreated !== null) {
-                // A comes after b.
-                return 1;
-            } else if (a.timeCreated !== null && b.timeCreated === null) {
-                // A comes before b.
-                return -1;
-            } else if (a.timeCreated < b.timeCreated) {
-                // A comes before b.
+            if (a.timeCreated < b.timeCreated) {
                 return -1;
             } else if (a.timeCreated > b.timeCreated) {
-                // A comes after b.
                 return 1;
             } else if (a.id < b.id) {
                 return -1;
@@ -200,37 +166,7 @@ define(['jquery'], function($) {
 
         // Filter out any duplicate messages.
         newState.messages = allMessages.filter(function(message, index, sortedMessages) {
-            return !index || message.id != sortedMessages[index - 1].id;
-        });
-
-        return newState;
-    };
-
-    /**
-     * Update existing messages.
-     *
-     * @param  {Object} state Current state.
-     * @param  {Array} data 2D array of old and new messages
-     * @return {Object} state.
-     */
-    var updateMessages = function(state, data) {
-        var newState = cloneState(state);
-        var updatesById = data.reduce(function(carry, messageData) {
-            var oldMessage = messageData[0];
-            var newMessage = messageData[1];
-            var formattedMessages = formatMessages([newMessage], state.loggedInUserId, state.members);
-            var formattedMessage = formattedMessages[0];
-
-            carry[oldMessage.id] = formattedMessage;
-            return carry;
-        }, {});
-
-        newState.messages = newState.messages.map(function(message) {
-            if (message.id in updatesById) {
-                return $.extend(message, updatesById[message.id]);
-            } else {
-                return message;
-            }
+            return !index || message.id !== sortedMessages[index - 1].id;
         });
 
         return newState;
@@ -246,7 +182,7 @@ define(['jquery'], function($) {
     var removeMessages = function(state, messages) {
         var newState = cloneState(state);
         var removeMessageIds = messages.map(function(message) {
-            return "" + message.id;
+            return message.id;
         });
         newState.messages = newState.messages.filter(function(message) {
             return removeMessageIds.indexOf(message.id) < 0;
@@ -259,16 +195,13 @@ define(['jquery'], function($) {
      * Remove messages from state by message id.
      *
      * @param  {Object} state Current state.
-     * @param  {Array} messageIds Message ids to remove from state.
+     * @param  {Array} messagesIds Message ids to remove from state.
      * @return {Object} state New state with removed messages.
      */
-    var removeMessagesById = function(state, messageIds) {
+    var removeMessagesById = function(state, messagesIds) {
         var newState = cloneState(state);
-        messageIds = messageIds.map(function(id) {
-            return "" + id;
-        });
         newState.messages = newState.messages.filter(function(message) {
-            return messageIds.indexOf(message.id) < 0;
+            return messagesIds.indexOf(message.id) < 0;
         });
 
         return newState;
@@ -320,6 +253,19 @@ define(['jquery'], function($) {
             // it means we've tried to load.
             newState.hasTriedToLoadMessages = true;
         }
+        return newState;
+    };
+
+    /**
+     * Set the state sending message attribute.
+     *
+     * @param  {Object} state Current state.
+     * @param  {Bool} value New sending message value.
+     * @return {Object} New state with sending message attribute.
+     */
+    var setSendingMessage = function(state, value) {
+        var newState = cloneState(state);
+        newState.sendingMessage = value;
         return newState;
     };
 
@@ -402,19 +348,6 @@ define(['jquery'], function($) {
     };
 
     /**
-     * Set whether the conversation is a muted conversation.
-     *
-     * @param  {Object} state Current state.
-     * @param  {bool} isMuted If it's muted.
-     * @return {Object} New state.
-     */
-    var setIsMuted = function(state, isMuted) {
-        var newState = cloneState(state);
-        newState.isMuted = isMuted;
-        return newState;
-    };
-
-    /**
      * Set the total member count.
      *
      * @param  {Object} state Current state.
@@ -463,95 +396,6 @@ define(['jquery'], function($) {
     var setPendingDeleteConversation = function(state, value) {
         var newState = cloneState(state);
         newState.pendingDeleteConversation = value;
-        return newState;
-    };
-
-    /**
-     * Set the state of message to pending.
-     *
-     * @param  {Object} state Current state.
-     * @param  {Array} messageIds Messages to delete.
-     * @return {Object} New state with array of pending delete message ids.
-     */
-    var setMessagesSendPendingById = function(state, messageIds) {
-        var newState = cloneState(state);
-        messageIds = messageIds.map(function(id) {
-            return "" + id;
-        });
-        newState.messages.forEach(function(message) {
-            if (messageIds.indexOf(message.id) >= 0) {
-                message.sendState = 'pending';
-                message.errorMessage = null;
-            }
-        });
-        return newState;
-    };
-
-    /**
-     * Set the state of message to sent.
-     *
-     * @param  {Object} state Current state.
-     * @param  {Array} messageIds Messages to delete.
-     * @return {Object} New state with array of pending delete message ids.
-     */
-    var setMessagesSendSuccessById = function(state, messageIds) {
-        var newState = cloneState(state);
-        messageIds = messageIds.map(function(id) {
-            return "" + id;
-        });
-        newState.messages.forEach(function(message) {
-            if (messageIds.indexOf(message.id) >= 0) {
-                message.sendState = 'sent';
-                message.errorMessage = null;
-            }
-        });
-        return newState;
-    };
-
-    /**
-     * Set the state of messages to error.
-     *
-     * @param  {Object} state Current state.
-     * @param  {Array} messageIds Messages to delete.
-     * @return {Object} New state with array of pending delete message ids.
-     */
-    var setMessagesSendFailById = function(state, messageIds, errorMessage) {
-        var newState = cloneState(state);
-        messageIds = messageIds.map(function(id) {
-            return "" + id;
-        });
-        newState.messages.forEach(function(message) {
-            if (messageIds.indexOf(message.id) >= 0) {
-                message.sendState = 'error';
-                message.errorMessage = errorMessage;
-            }
-        });
-        return newState;
-    };
-
-    /**
-     * Set the visibility of the emoji picker.
-     *
-     * @param  {Object} state Current state.
-     * @param  {Bool} show Should the emoji picker be shown.
-     * @return {Object} New state with array of pending delete message ids.
-     */
-    var setShowEmojiPicker = function(state, show) {
-        var newState = cloneState(state);
-        newState.showEmojiPicker = show;
-        return newState;
-    };
-
-    /**
-     * Set whether emojis auto complete suggestions should be shown.
-     *
-     * @param  {Object} state Current state.
-     * @param  {Bool} show Show the autocomplete
-     * @return {Object} New state with array of pending delete message ids.
-     */
-    var setShowEmojiAutoComplete = function(state, show) {
-        var newState = cloneState(state);
-        newState.showEmojiAutoComplete = show;
         return newState;
     };
 
@@ -630,6 +474,7 @@ define(['jquery'], function($) {
         return newState;
     };
 
+
     /**
      * Update the state pending block userids.
      *
@@ -699,9 +544,6 @@ define(['jquery'], function($) {
      */
     var removePendingDeleteMessagesById = function(state, messageIds) {
         var newState = cloneState(state);
-        messageIds = messageIds.map(function(id) {
-            return "" + id;
-        });
         newState.pendingDeleteMessageIds = newState.pendingDeleteMessageIds.filter(function(id) {
             return messageIds.indexOf(id) < 0;
         });
@@ -717,9 +559,6 @@ define(['jquery'], function($) {
      */
     var addSelectedMessagesById = function(state, messageIds) {
         var newState = cloneState(state);
-        messageIds = messageIds.map(function(id) {
-            return "" + id;
-        });
         newState.selectedMessageIds = newState.selectedMessageIds.concat(messageIds);
         return newState;
     };
@@ -733,9 +572,6 @@ define(['jquery'], function($) {
      */
     var removeSelectedMessagesById = function(state, messageIds) {
         var newState = cloneState(state);
-        messageIds = messageIds.map(function(id) {
-            return "" + id;
-        });
         newState.selectedMessageIds = newState.selectedMessageIds.filter(function(id) {
             return messageIds.indexOf(id) < 0;
         });
@@ -808,59 +644,25 @@ define(['jquery'], function($) {
         return newState;
     };
 
-    /**
-     * Set wheter the message of the conversation can delete for all users.
-     *
-     * @param  {Object} state Current state.
-     * @param  {Bool} value If it can delete for all users.
-     * @return {Object} New state.
-     */
-    var setCanDeleteMessagesForAllUsers = function(state, value) {
-        var newState = cloneState(state);
-        newState.canDeleteMessagesForAllUsers = value;
-        return newState;
-    };
-
-    /**
-     * Set wheter the messages of the conversation delete for all users.
-     *
-     * @param  {Object} state Current state.
-     * @param  {Bool} value Delete messages for all users.
-     * @return {Object} New state.
-     */
-    var setDeleteMessagesForAllUsers = function(state, value) {
-        var newState = cloneState(state);
-        newState.deleteMessagesForAllUsers = value;
-        return newState;
-    };
-
     return {
         buildInitialState: buildInitialState,
         addMessages: addMessages,
-        updateMessages: updateMessages,
         removeMessages: removeMessages,
         removeMessagesById: removeMessagesById,
         addMembers: addMembers,
         removeMembers: removeMembers,
         setLoadingMessages: setLoadingMessages,
+        setSendingMessage: setSendingMessage,
         setLoadingMembers: setLoadingMembers,
         setId: setId,
         setName: setName,
         setSubname: setSubname,
         setType: setType,
         setIsFavourite: setIsFavourite,
-        setIsMuted: setIsMuted,
-        setCanDeleteMessagesForAllUsers: setCanDeleteMessagesForAllUsers,
-        setDeleteMessagesForAllUsers: setDeleteMessagesForAllUsers,
         setTotalMemberCount: setTotalMemberCount,
         setImageUrl: setImageUrl,
         setLoadingConfirmAction: setLoadingConfirmAction,
         setPendingDeleteConversation: setPendingDeleteConversation,
-        setMessagesSendPendingById: setMessagesSendPendingById,
-        setMessagesSendSuccessById: setMessagesSendSuccessById,
-        setMessagesSendFailById: setMessagesSendFailById,
-        setShowEmojiAutoComplete: setShowEmojiAutoComplete,
-        setShowEmojiPicker: setShowEmojiPicker,
         addPendingBlockUsersById: addPendingBlockUsersById,
         addPendingRemoveContactsById: addPendingRemoveContactsById,
         addPendingUnblockUsersById: addPendingUnblockUsersById,

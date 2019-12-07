@@ -42,7 +42,6 @@
         {{#userid}}
             data-user-id="{{.}}"
         {{/userid}}
-        role="button"
     >
         {{#imageurl}}
             <img
@@ -62,9 +61,6 @@
                 <span class="{{^isblocked}}hidden{{/isblocked}}" data-region="contact-icon-blocked">
                     {{#pix}} t/block, core, {{#str}} contactblocked, message {{/str}} {{/pix}}
                 </span>
-                <span class="{{^ismuted}}hidden{{/ismuted}}" data-region="muted-icon-container">
-                    {{#pix}} i/muted, core {{/pix}}
-                </span>
             </div>
             {{#subname}}
                 <p class="m-0 text-truncate">{{.}}</p>
@@ -78,29 +74,22 @@
                         {{#str}} sender, core_message, {{.}} {{/str}}
                     {{/lastsendername}}
                 {{/sentfromcurrentuser}}
-                <span class="text-muted">{{{lastmessage}}}</span>
+                <span class='text-muted'>{{lastmessage}}</span>
             </p>
         </div>
         <div class="d-flex align-self-stretch">
             <div
                 class="px-2 py-1 small position-absolute position-right text-muted {{^lastmessagedate}}hidden{{/lastmessagedate}}"
-                data-region="last-message-date" aria-hidden="true"
+                data-region="last-message-date"
             >
                 {{#lastmessagedate}}
-                    {{#istoday}}
-                        {{#userdate}} {{.}}, {{#str}} strftimetime24, core_langconfig  {{/str}} {{/userdate}}
-                    {{/istoday}}
-                    {{^istoday}}
-                        {{#userdate}} {{.}}, {{#str}} strftimedatefullshort, core_langconfig  {{/str}} {{/userdate}}
-                    {{/istoday}}
-
+                    {{#userdate}} {{.}}, {{#str}} strftimetime24, core_langconfig  {{/str}} {{/userdate}}
                 {{/lastmessagedate}}
             </div>
             <div class="d-flex align-self-center align-items-center">
                 <span
                     class="badge badge-pill badge-primary bg-primary {{^unreadcount}}hidden{{/unreadcount}}"
                     data-region="unread-count"
-                    aria-label="{{#str}} unreadmessages, core_message, {{unreadcount}} {{/str}}"
                 >
                     {{unreadcount}}
                 </span>

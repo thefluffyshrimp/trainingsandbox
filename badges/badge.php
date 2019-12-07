@@ -32,13 +32,14 @@ $id = required_param('hash', PARAM_ALPHANUM);
 $bake = optional_param('bake', 0, PARAM_BOOL);
 
 $PAGE->set_context(context_system::instance());
-$output = $PAGE->get_renderer('core', 'badges');
 
 $PAGE->set_url('/badges/badge.php', array('hash' => $id));
-$PAGE->set_pagelayout('base');
+$PAGE->set_pagelayout('standard');
 $PAGE->set_title(get_string('issuedbadge', 'badges'));
 
-$badge = new \core_badges\output\issued_badge($id);
+$output = $PAGE->get_renderer('core', 'badges');
+
+$badge = new issued_badge($id);
 if (!empty($badge->recipient->id)) {
     if ($bake && ($badge->recipient->id == $USER->id)) {
         $name = str_replace(' ', '_', $badge->badgeclass['name']) . '.png';
@@ -69,6 +70,13 @@ if (!empty($badge->recipient->id)) {
     badges_setup_backpack_js();
 
     echo $OUTPUT->header();
+    $url = new moodle_url('/badges/badge.php', array('hash' => $id));
+    $sb_title=$page->title;
+    $twitterURL = 'https://twitter.com/intent/tweet?text='.$sb_title.'&amp;url='.$url.'';
+    $facebookURL = 'https://www.facebook.com/sharer/sharer.php?u='.$url;
+    $linkedInURL = 'https://www.linkedin.com/shareArticle?mini=true&url='.$url.'&amp;title='.$sb_title;
+
+    echo $OUTPUT->container('<a class="fa fa-twitter-square fa-2x" href="'. $twitterURL .'" target="_blank" rel="nofollow"></a>  <a class="fa fa-facebook-square fa-2x" href="'.$facebookURL.'" target="_blank" rel="nofollow"></a>  <a class="fa fa-linkedin-square fa-2x" href="'.$linkedInURL.'" target="_blank" rel="nofollow"></a>');
 
     echo $output->render($badge);
 } else {

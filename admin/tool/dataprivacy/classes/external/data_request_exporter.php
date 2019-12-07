@@ -160,40 +160,36 @@ class data_request_exporter extends persistent_exporter {
 
         switch ($this->persistent->get('status')) {
             case api::DATAREQUEST_STATUS_PENDING:
-                $values['statuslabelclass'] = 'badge-info';
+                $values['statuslabelclass'] = 'label-info';
                 // Request can be manually completed for general enquiry requests.
                 $values['canmarkcomplete'] = $requesttype == api::DATAREQUEST_TYPE_OTHERS;
                 break;
             case api::DATAREQUEST_STATUS_AWAITING_APPROVAL:
-                $values['statuslabelclass'] = 'badge-info';
+                $values['statuslabelclass'] = 'label-info';
                 // DPO can review the request once it's ready.
                 $values['canreview'] = true;
                 // Whether the DPO can approve or deny the request.
                 $values['approvedeny'] = in_array($requesttype, [api::DATAREQUEST_TYPE_EXPORT, api::DATAREQUEST_TYPE_DELETE]);
-                // If the request's type is delete, check if user have permission to approve/deny it.
-                if ($requesttype == api::DATAREQUEST_TYPE_DELETE) {
-                    $values['approvedeny'] = api::can_create_data_deletion_request_for_other();
-                }
                 break;
             case api::DATAREQUEST_STATUS_APPROVED:
-                $values['statuslabelclass'] = 'badge-info';
+                $values['statuslabelclass'] = 'label-info';
                 break;
             case api::DATAREQUEST_STATUS_PROCESSING:
-                $values['statuslabelclass'] = 'badge-info';
+                $values['statuslabelclass'] = 'label-info';
                 break;
             case api::DATAREQUEST_STATUS_COMPLETE:
             case api::DATAREQUEST_STATUS_DOWNLOAD_READY:
             case api::DATAREQUEST_STATUS_DELETED:
-                $values['statuslabelclass'] = 'badge-success';
+                $values['statuslabelclass'] = 'label-success';
                 break;
             case api::DATAREQUEST_STATUS_CANCELLED:
-                $values['statuslabelclass'] = 'badge-warning';
+                $values['statuslabelclass'] = 'label-warning';
                 break;
             case api::DATAREQUEST_STATUS_REJECTED:
-                $values['statuslabelclass'] = 'badge-danger';
+                $values['statuslabelclass'] = 'label-important';
                 break;
             case api::DATAREQUEST_STATUS_EXPIRED:
-                $values['statuslabelclass'] = 'badge-secondary';
+                $values['statuslabelclass'] = 'label-default';
                 break;
         }
 

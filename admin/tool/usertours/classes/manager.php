@@ -79,11 +79,6 @@ class manager {
     const ACTION_VIEWTOUR = 'viewtour';
 
     /**
-     * @var ACTION_DUPLICATETOUR     The action to duplicate the tour.
-     */
-    const ACTION_DUPLICATETOUR = 'duplicatetour';
-
-    /**
      * @var ACTION_NEWSTEP The action to create a new step.
      */
     const ACTION_NEWSTEP = 'newstep';
@@ -166,10 +161,6 @@ class manager {
 
             case self::ACTION_VIEWTOUR:
                 $this->view_tour(required_param('id', PARAM_INT));
-                break;
-
-            case self::ACTION_DUPLICATETOUR:
-                $this->duplicate_tour(required_param('id', PARAM_INT));
                 break;
 
             case self::ACTION_HIDETOUR:
@@ -266,7 +257,7 @@ class manager {
                 'title' => get_string('importtour', 'tool_usertours'),
             ],
             (object) [
-                'link'  => new \moodle_url('https://archive.moodle.net/tours'),
+                'link'  => new \moodle_url('https://moodle.net/tours'),
                 'linkproperties' => [
                         'target' => '_blank',
                     ],
@@ -493,39 +484,6 @@ class manager {
         $PAGE->requires->js_call_amd('tool_usertours/managesteps', 'setup');
 
         $this->footer();
-    }
-
-    /**
-     * Duplicate an existing tour.
-     *
-     * @param   int         $tourid     The ID of the tour to duplicate.
-     */
-    protected function duplicate_tour($tourid) {
-        $tour = helper::get_tour($tourid);
-
-        $export = $tour->to_record();
-        // Remove the id.
-        unset($export->id);
-
-        // Set the version.
-        $export->version = get_config('tool_usertours', 'version');
-
-        $export->name = get_string('duplicatetour_name', 'tool_usertours', $export->name);
-
-        // Step export.
-        $export->steps = [];
-        foreach ($tour->get_steps() as $step) {
-            $record = $step->to_record();
-            unset($record->id);
-            unset($record->tourid);
-
-            $export->steps[] = $record;
-        }
-
-        $exportstring = json_encode($export);
-        $newtour = self::import_tour_from_json($exportstring);
-
-        redirect($newtour->get_view_link());
     }
 
     /**
@@ -838,7 +796,8 @@ class manager {
         // the format filename => version. The version value needs to
         // be increased if the tour has been updated.
         $shippedtours = [
-            '36_dashboard.json' => 3
+            '36_dashboard.json' => 3,
+            '36_messaging.json' => 3,
         ];
 
         // These are tours that we used to ship but don't ship any longer.
@@ -847,12 +806,6 @@ class manager {
             'boost_administrator.json' => 1,
             'boost_course_view.json' => 1,
         ];
-
-        if ($CFG->messaging) {
-            $shippedtours['36_messaging.json'] = 3;
-        } else {
-            $unshippedtours['36_messaging.json'] = 3;
-        }
 
         $existingtourrecords = $DB->get_recordset('tool_usertours_tours');
 

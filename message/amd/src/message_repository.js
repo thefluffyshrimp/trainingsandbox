@@ -22,19 +22,12 @@
  * @copyright  2016 Ryan Wyllie <ryan@moodle.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-define(
-[
-    'jquery',
-    'core/ajax',
-    'core/notification',
-    'core_message/message_drawer_view_conversation_constants'
-], function(
-    $,
-    Ajax,
-    Notification,
-    Constants) {
+define(['jquery', 'core/ajax', 'core/notification'], function($, Ajax, Notification) {
 
-    var CONVERSATION_TYPES = Constants.CONVERSATION_TYPES;
+    var CONVERSATION_TYPES = {
+        PRIVATE: 1,
+        PUBLIC: 2
+    };
 
     /**
      * Retrieve a list of messages from the server.
@@ -431,8 +424,7 @@ define(
                         text: result.text,
                         timecreated: result.timecreated,
                         useridfrom: result.useridfrom,
-                        conversationid: result.conversationid,
-                        candeletemessagesforallusers: result.candeletemessagesforallusers
+                        conversationid: result.conversationid
                     };
                 });
             });
@@ -535,25 +527,6 @@ define(
         return $.when.apply(null, Ajax.call(messageIds.map(function(messageId) {
             return {
                 methodname: 'core_message_delete_message',
-                args: {
-                    messageid: messageId,
-                    userid: userId
-                }
-            };
-        })));
-    };
-
-    /**
-     * Delete a list of messages for all users.
-     *
-     * @param {int} userId The user to delete messages for
-     * @param {int[]} messageIds List of message ids to delete
-     * @return {object} jQuery promise
-     */
-    var deleteMessagesForAllUsers = function(userId, messageIds) {
-        return $.when.apply(null, Ajax.call(messageIds.map(function(messageId) {
-            return {
-                methodname: 'core_message_delete_message_for_all_users',
                 args: {
                     messageid: messageId,
                     userid: userId
@@ -799,45 +772,6 @@ define(
     };
 
     /**
-     * Get a self-conversation.
-     *
-     * @param {int} loggedInUserId The logged in user
-     * @param {int} messageLimit Limit for messages
-     * @param {int} messageOffset Offset for messages
-     * @param {bool} newestMessagesFirst Order the messages by newest first
-     * @return {object} jQuery promise
-     */
-    var getSelfConversation = function(
-        loggedInUserId,
-        messageLimit,
-        messageOffset,
-        newestMessagesFirst
-    ) {
-        var args = {
-            userid: loggedInUserId
-        };
-
-        if (typeof messageLimit != 'undefined' && messageLimit !== null) {
-            args.messagelimit = messageLimit;
-        }
-
-        if (typeof messageOffset != 'undefined' && messageOffset !== null) {
-            args.messageoffset = messageOffset;
-        }
-
-        if (typeof newestMessagesFirst != 'undefined' && newestMessagesFirst !== null) {
-            args.newestmessagesfirst = newestMessagesFirst;
-        }
-
-        var request = {
-            methodname: 'core_message_get_self_conversation',
-            args: args
-        };
-
-        return Ajax.call([request])[0];
-    };
-
-    /**
      * Get the conversations for a user.
      *
      * @param {int} userId The logged in user
@@ -852,8 +786,7 @@ define(
         type,
         limit,
         offset,
-        favourites,
-        mergeself
+        favourites
     ) {
         var args = {
             userid: userId,
@@ -872,10 +805,6 @@ define(
             args.favourites = favourites;
         }
 
-        if (typeof mergeself != 'undefined' && mergeself !== null) {
-            args.mergeself = mergeself;
-        }
-
         var request = {
             methodname: 'core_message_get_conversations',
             args: args
@@ -885,7 +814,7 @@ define(
             .then(function(result) {
                 if (result.conversations.length) {
                     result.conversations = result.conversations.map(function(conversation) {
-                        if (conversation.type == CONVERSATION_TYPES.PRIVATE || conversation.type == CONVERSATION_TYPES.SELF) {
+                        if (conversation.type == CONVERSATION_TYPES.PRIVATE) {
                             var otherUser = conversation.members.length ? conversation.members[0] : null;
 
                             if (otherUser) {
@@ -971,42 +900,6 @@ define(
             args: {
                 userid: userId,
                 conversations: conversationIds
-            }
-        };
-        return Ajax.call([request])[0];
-    };
-
-    /**
-     * Set a list of conversations to set as muted for the given user.
-     *
-     * @param {int} userId The user id
-     * @param {array} conversationIds List of conversation ids to set as favourite
-     * @return {object} jQuery promise
-     */
-    var setMutedConversations = function(userId, conversationIds) {
-        var request = {
-            methodname: 'core_message_mute_conversations',
-            args: {
-                userid: userId,
-                conversationids: conversationIds
-            }
-        };
-        return Ajax.call([request])[0];
-    };
-
-    /**
-     * Set a list of conversations to unset as muted for the given user.
-     *
-     * @param {int} userId The user id
-     * @param {array} conversationIds List of conversation ids to unset as favourite
-     * @return {object} jQuery promise
-     */
-    var unsetMutedConversations = function(userId, conversationIds) {
-        var request = {
-            methodname: 'core_message_unmute_conversations',
-            args: {
-                userid: userId,
-                conversationids: conversationIds
             }
         };
         return Ajax.call([request])[0];
@@ -1158,20 +1051,16 @@ define(
         savePreferences: savePreferences,
         getPreferences: getPreferences,
         deleteMessages: deleteMessages,
-        deleteMessagesForAllUsers: deleteMessagesForAllUsers,
         deleteConversation: deleteConversation,
         getContactRequests: getContactRequests,
         acceptContactRequest: acceptContactRequest,
         declineContactRequest: declineContactRequest,
         getConversation: getConversation,
         getConversationBetweenUsers: getConversationBetweenUsers,
-        getSelfConversation: getSelfConversation,
         getConversations: getConversations,
         getConversationMembers: getConversationMembers,
         setFavouriteConversations: setFavouriteConversations,
-        setMutedConversations: setMutedConversations,
         unsetFavouriteConversations: unsetFavouriteConversations,
-        unsetMutedConversations: unsetMutedConversations,
         getMemberInfo: getMemberInfo,
         markAllConversationMessagesAsRead: markAllConversationMessagesAsRead,
         getUserMessagePreferences: getUserMessagePreferences,

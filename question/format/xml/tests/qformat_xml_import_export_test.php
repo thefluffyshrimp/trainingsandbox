@@ -38,8 +38,8 @@ class qformat_xml_import_export_test extends advanced_testcase {
     /**
      * Create object qformat_xml for test.
      * @param string $filename with name for testing file.
-     * @param stdClass $course
-     * @return qformat_xml XML question format object.
+     * @param object $course
+     * @return object qformat_xml.
      */
     public function create_qformat($filename, $course) {
         global $DB;
@@ -99,12 +99,11 @@ class qformat_xml_import_export_test extends advanced_testcase {
      * @param string $info imported category info field (description of category).
      * @param int $infoformat imported category info field format.
      */
-    public function assert_category_imported($name, $info, $infoformat, $idnumber = null) {
+    public function assert_category_imported($name, $info, $infoformat) {
         global $DB;
         $category = $DB->get_record('question_categories', ['name' => $name], '*', MUST_EXIST);
         $this->assertEquals($info, $category->info);
         $this->assertEquals($infoformat, $category->infoformat);
-        $this->assertSame($idnumber, $category->idnumber);
     }
 
     /**
@@ -147,8 +146,7 @@ class qformat_xml_import_export_test extends advanced_testcase {
         $qformat = $this->create_qformat('category_with_description.xml', $course);
         $imported = $qformat->importprocess();
         $this->assertTrue($imported);
-        $this->assert_category_imported('Alpha',
-                'This is Alpha category for test', FORMAT_MOODLE, 'alpha-idnumber');
+        $this->assert_category_imported('Alpha', 'This is Alpha category for test', FORMAT_MOODLE);
         $this->assert_category_has_parent('Alpha', 'top');
     }
 
@@ -248,7 +246,6 @@ class qformat_xml_import_export_test extends advanced_testcase {
                 'contextid' => '2',
                 'info' => 'This is Alpha category for test',
                 'infoformat' => '0',
-                'idnumber' => 'alpha-idnumber',
                 'stamp' => make_unique_id_code(),
                 'parent' => '0',
                 'sortorder' => '999']);
@@ -424,31 +421,5 @@ class qformat_xml_import_export_test extends advanced_testcase {
 
         $expectedxml = file_get_contents(__DIR__ . '/fixtures/nested_categories_with_questions.xml');
         $this->assert_same_xml($expectedxml, $qformat->exportprocess());
-    }
-
-    /**
-     * Test that bad multianswer questions are not imported.
-     */
-    public function test_import_broken_multianswer_questions() {
-        $lines = file(__DIR__ . '/fixtures/broken_cloze_questions.xml');
-        $importer = $qformat = new qformat_xml();
-
-        // The importer echoes some errors, so we need to capture and check that.
-        ob_start();
-        $questions = $importer->readquestions($lines);
-        $output = ob_get_contents();
-        ob_end_clean();
-
-        // Check that there were some expected errors.
-        $this->assertContains('Error importing question', $output);
-        $this->assertContains('Invalid embedded answers (Cloze) question', $output);
-        $this->assertContains('This type of question requires at least 2 choices', $output);
-        $this->assertContains('The answer must be a number, for example -1.234 or 3e8, or \'*\'.', $output);
-        $this->assertContains('One of the answers should have a score of 100% so it is possible to get full marks for this question.',
-                $output);
-        $this->assertContains('The question text must include at least one embedded answer.', $output);
-
-        // No question  have been imported.
-        $this->assertCount(0, $questions);
     }
 }

@@ -567,8 +567,13 @@ function enrol_get_my_courses($fields = null, $sort = null, $limit = 0, $coursei
     $offset = 0, $excludecourses = []) {
     global $DB, $USER, $CFG;
 
-    // Re-Arrange the course sorting according to the admin settings.
-    $sort = enrol_get_courses_sortingsql($sort);
+    if ($sort === null) {
+        if (empty($CFG->navsortmycoursessort)) {
+            $sort = 'visible DESC, sortorder ASC';
+        } else {
+            $sort = 'visible DESC, '.$CFG->navsortmycoursessort.' ASC';
+        }
+    }
 
     // Guest account does not have any enrolled courses.
     if (!$allaccessible && (isguestuser() or !isloggedin())) {
@@ -800,41 +805,6 @@ function enrol_get_course_info_icons($course, array $instances = NULL) {
 }
 
 /**
- * Returns SQL ORDER arguments which reflect the admin settings to sort my courses.
- *
- * @param string|null $sort SQL ORDER arguments which were originally requested (optionally).
- * @return string SQL ORDER arguments.
- */
-function enrol_get_courses_sortingsql($sort = null) {
-    global $CFG;
-
-    // Prepare the visible SQL fragment as empty.
-    $visible = '';
-    // Only create a visible SQL fragment if the caller didn't already pass a sort order which contains the visible field.
-    if ($sort === null || strpos($sort, 'visible') === false) {
-        // If the admin did not explicitly want to have shown and hidden courses sorted as one list, we will sort hidden
-        // courses to the end of the course list.
-        if (!isset($CFG->navsortmycourseshiddenlast) || $CFG->navsortmycourseshiddenlast == true) {
-            $visible = 'visible DESC, ';
-        }
-    }
-
-    // Only create a sortorder SQL fragment if the caller didn't already pass one.
-    if ($sort === null) {
-        // If the admin has configured a course sort order, we will use this.
-        if (!empty($CFG->navsortmycoursessort)) {
-            $sort = $CFG->navsortmycoursessort . ' ASC';
-
-            // Otherwise we will fall back to the sortorder sorting.
-        } else {
-            $sort = 'sortorder ASC';
-        }
-    }
-
-    return $visible . $sort;
-}
-
-/**
  * Returns course enrolment detailed information.
  *
  * @param object $course
@@ -895,31 +865,7 @@ function enrol_get_users_courses($userid, $onlyactive = false, $fields = null, $
     }
 
     return $courses;
-}
 
-/**
- * Returns list of roles per users into course.
- *
- * @param int $courseid Course id.
- * @return array Array[$userid][$roleid] = role_assignment.
- */
-function enrol_get_course_users_roles(int $courseid) : array {
-    global $DB;
-
-    $context = context_course::instance($courseid);
-
-    $roles = array();
-
-    $records = $DB->get_recordset('role_assignments', array('contextid' => $context->id));
-    foreach ($records as $record) {
-        if (isset($roles[$record->userid]) === false) {
-            $roles[$record->userid] = array();
-        }
-        $roles[$record->userid][$record->roleid] = $record;
-    }
-    $records->close();
-
-    return $roles;
 }
 
 /**
@@ -985,10 +931,15 @@ function enrol_user_sees_own_courses($user = null) {
  * @return array
  */
 function enrol_get_all_users_courses($userid, $onlyactive = false, $fields = null, $sort = null) {
-    global $DB;
+    global $CFG, $DB;
 
-    // Re-Arrange the course sorting according to the admin settings.
-    $sort = enrol_get_courses_sortingsql($sort);
+    if ($sort === null) {
+        if (empty($CFG->navsortmycoursessort)) {
+            $sort = 'visible DESC, sortorder ASC';
+        } else {
+            $sort = 'visible DESC, '.$CFG->navsortmycoursessort.' ASC';
+        }
+    }
 
     // Guest account does not have any courses
     if (isguestuser($userid) or empty($userid)) {
@@ -1689,7 +1640,7 @@ function enrol_get_course_users($courseid = false, $onlyactive = false, $usersfi
 
     $sql = "SELECT ue.id AS ueid, ue.status AS uestatus, ue.enrolid AS ueenrolid, ue.timestart AS uetimestart,
              ue.timeend AS uetimeend, ue.modifierid AS uemodifierid, ue.timecreated AS uetimecreated,
-             ue.timemodified AS uetimemodified, e.status AS estatus,
+             ue.timemodified AS uetimemodified,
              u.* FROM {user_enrolments} ue
               JOIN {enrol} e ON e.id = ue.enrolid
               JOIN {user} u ON ue.userid = u.id
@@ -1724,33 +1675,6 @@ function enrol_get_course_users($courseid = false, $onlyactive = false, $usersfi
     }
 
     return $DB->get_records_sql($sql . ' ' . implode(' AND ', $conditions), $params);
-}
-
-/**
- * Get the list of options for the enrolment period dropdown
- *
- * @return array List of options for the enrolment period dropdown
- */
-function enrol_get_period_list() {
-    $periodmenu = [];
-    $periodmenu[''] = get_string('unlimited');
-    for ($i = 1; $i <= 365; $i++) {
-        $seconds = $i * DAYSECS;
-        $periodmenu[$seconds] = get_string('numdays', '', $i);
-    }
-    return $periodmenu;
-}
-
-/**
- * Calculate duration base on start time and end time
- *
- * @param int $timestart Time start
- * @param int $timeend Time end
- * @return float|int Calculated duration
- */
-function enrol_calculate_duration($timestart, $timeend) {
-    $duration = floor(($timeend - $timestart) / DAYSECS) * DAYSECS;
-    return $duration;
 }
 
 /**

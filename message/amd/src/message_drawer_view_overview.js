@@ -30,8 +30,7 @@ define(
     'core_message/message_drawer_routes',
     'core_message/message_drawer_events',
     'core_message/message_drawer_view_overview_section',
-    'core_message/message_repository',
-    'core_message/message_drawer_view_conversation_constants'
+    'core_message/message_repository'
 ],
 function(
     $,
@@ -42,8 +41,7 @@ function(
     Routes,
     MessageDrawerEvents,
     Section,
-    MessageRepository,
-    Constants
+    MessageRepository
 ) {
 
     var SELECTORS = {
@@ -55,11 +53,9 @@ function(
         SECTION_TOGGLE_BUTTON: '[data-toggle]'
     };
 
-    // Categories displayed in the message drawer. Some methods (such as filterCountsByType) are expecting their value
-    // will be the same as the defined in the CONVERSATION_TYPES, except for the favourite.
-    var OVERVIEW_SECTION_TYPES = {
-        PRIVATE: [Constants.CONVERSATION_TYPES.PRIVATE, Constants.CONVERSATION_TYPES.SELF],
-        PUBLIC: [Constants.CONVERSATION_TYPES.PUBLIC],
+    var CONVERSATION_TYPES = {
+        PRIVATE: 1,
+        PUBLIC: 2,
         FAVOURITE: null
     };
 
@@ -89,24 +85,11 @@ function(
      * This is used on the result returned by the loadAllCounts function.
      *
      * @param {Object} counts Conversation counts indexed by conversation type.
-     * @param {Array|null} types The conversation types handlded by this section (null for all conversation types).
-     * @param {bool} includeFavourites If this section includes favourites
+     * @param {String|null} type The conversation type (null for favourites only).
      * @return {Number}
      */
-    var filterCountsByTypes = function(counts, types, includeFavourites) {
-        var total = 0;
-
-        if (types && types.length) {
-            total = types.reduce(function(carry, type) {
-                return carry + counts.types[type];
-            }, total);
-        }
-
-        if (includeFavourites) {
-            total += counts.favourites;
-        }
-
-        return total;
+    var filterCountsByType = function(counts, type) {
+        return type === CONVERSATION_TYPES.FAVOURITE ? counts.favourites : counts.types[type];
     };
 
     /**
@@ -203,19 +186,18 @@ function(
     /**
      * Listen to, and handle event in the overview header.
      *
-     * @param {String} namespace Unique identifier for the Routes
      * @param {Object} header Conversation header container element.
      */
-    var registerEventListeners = function(namespace, header) {
+    var registerEventListeners = function(header) {
         var searchInput = getSearchInput(header);
         var ignoredKeys = [KeyCodes.tab, KeyCodes.shift, KeyCodes.ctrl, KeyCodes.alt];
 
         searchInput.on('click', function() {
-            Router.go(namespace, Routes.VIEW_SEARCH);
+            Router.go(Routes.VIEW_SEARCH);
         });
         searchInput.on('keydown', function(e) {
             if (ignoredKeys.indexOf(e.keyCode) < 0 && e.key != 'Meta') {
-                Router.go(namespace, Routes.VIEW_SEARCH);
+                Router.go(Routes.VIEW_SEARCH);
             }
         });
 
@@ -226,17 +208,15 @@ function(
     /**
      * Setup the overview page.
      *
-     * @param {String} namespace Unique identifier for the Routes
      * @param {Object} header Overview header container element.
      * @param {Object} body Overview body container element.
      * @return {Object} jQuery promise
      */
-    var show = function(namespace, header, body) {
+    var show = function(header, body) {
         if (!header.attr('data-init')) {
-            registerEventListeners(namespace, header);
+            registerEventListeners(header);
             header.attr('data-init', true);
         }
-        var fromPanel = header.attr('data-in-panel') ? 'frompanel' : null;
 
         getSearchInput(header).val('');
         var loggedInUserId = getLoggedInUserId(body);
@@ -244,35 +224,33 @@ function(
 
         var sections = [
             // Favourite conversations section.
-            [body.find(SELECTORS.FAVOURITES), OVERVIEW_SECTION_TYPES.FAVOURITE, true],
+            [body.find(SELECTORS.FAVOURITES), CONVERSATION_TYPES.FAVOURITE, true],
             // Group conversations section.
-            [body.find(SELECTORS.GROUP_MESSAGES), OVERVIEW_SECTION_TYPES.PUBLIC, false],
+            [body.find(SELECTORS.GROUP_MESSAGES), CONVERSATION_TYPES.PUBLIC, false],
             // Private conversations section.
-            [body.find(SELECTORS.MESSAGES), OVERVIEW_SECTION_TYPES.PRIVATE, false]
+            [body.find(SELECTORS.MESSAGES), CONVERSATION_TYPES.PRIVATE, false]
         ];
 
         sections.forEach(function(args) {
             var sectionRoot = args[0];
-            var sectionTypes = args[1];
+            var sectionType = args[1];
             var includeFavourites = args[2];
             var totalCountPromise = allCounts.then(function(result) {
-                return filterCountsByTypes(result.total, sectionTypes, includeFavourites);
+                return filterCountsByType(result.total, sectionType);
             });
             var unreadCountPromise = allCounts.then(function(result) {
-                return filterCountsByTypes(result.unread, sectionTypes, includeFavourites);
+                return filterCountsByType(result.unread, sectionType);
             });
 
-            Section.show(namespace, null, sectionRoot, null, sectionTypes, includeFavourites,
-                totalCountPromise, unreadCountPromise, fromPanel);
+            Section.show(sectionRoot, sectionType, includeFavourites, totalCountPromise, unreadCountPromise);
         });
 
         return allCounts.then(function(result) {
                 var sectionParams = sections.map(function(section) {
                     var sectionRoot = section[0];
-                    var sectionTypes = section[1];
-                    var includeFavourites = section[2];
-                    var totalCount = filterCountsByTypes(result.total, sectionTypes, includeFavourites);
-                    var unreadCount = filterCountsByTypes(result.unread, sectionTypes, includeFavourites);
+                    var sectionType = section[1];
+                    var totalCount = filterCountsByType(result.total, sectionType);
+                    var unreadCount = filterCountsByType(result.unread, sectionType);
 
                     return [sectionRoot, totalCount, unreadCount];
                 });

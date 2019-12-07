@@ -733,41 +733,41 @@ class core_moodle_page_testcase extends advanced_testcase {
                 'usertheme' => '',
                 'sitetheme' => 'boost',
                 'cohorts' => [
-                    'classic',
+                    'clean',
                 ],
-                'expected' => 'classic',
+                'expected' => 'clean',
             ],
             'User member of one cohort which has a theme set, and one without a theme' => [
                 'usertheme' => '',
                 'sitetheme' => 'boost',
                 'cohorts' => [
-                    'classic',
+                    'clean',
                     '',
                 ],
-                'expected' => 'classic',
+                'expected' => 'clean',
             ],
             'User member of one cohort which has a theme set, and one with a different theme' => [
                 'usertheme' => '',
                 'sitetheme' => 'boost',
                 'cohorts' => [
-                    'classic',
+                    'clean',
                     'someother',
                 ],
                 'expected' => 'boost',
             ],
             'User with a theme but not a member of any cohort' => [
-                'usertheme' => 'classic',
+                'usertheme' => 'more',
                 'sitetheme' => 'boost',
                 'cohorts' => [],
-                'expected' => 'classic',
+                'expected' => 'more',
             ],
             'User with a theme and member of one cohort which has a theme set' => [
-                'usertheme' => 'classic',
+                'usertheme' => 'more',
                 'sitetheme' => 'boost',
                 'cohorts' => [
-                    'boost',
+                    'clean',
                 ],
-                'expected' => 'classic',
+                'expected' => 'more',
             ],
         ];
     }

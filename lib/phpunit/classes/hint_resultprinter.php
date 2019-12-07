@@ -48,7 +48,7 @@ class Hint_ResultPrinter extends PHPUnit\TextUI\ResultPrinter {
         parent::__construct(null, false, self::COLOR_DEFAULT, false);
     }
 
-    protected function printDefectTrace(PHPUnit\Framework\TestFailure $defect): void {
+    protected function printDefectTrace(PHPUnit\Framework\TestFailure $defect) {
         global $CFG;
 
         parent::printDefectTrace($defect);

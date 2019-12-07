@@ -213,7 +213,16 @@ class provider implements
             return;
         }
 
-        $userlist->add_user($context->instanceid);
+        $params = [
+            'contextid' => $context->id,
+            'contextuser' => CONTEXT_USER,
+        ];
+
+        $sql = "SELECT instanceid as userid
+                  FROM {context}
+                 WHERE id = :contextid and contextlevel = :contextuser";
+
+        $userlist->add_from_sql('userid', $sql, $params);
     }
 
     /**
@@ -385,10 +394,10 @@ class provider implements
             'calendartype' => $user->calendartype,
             'theme' => $user->theme,
             'timezone' => $user->timezone,
-            'firstaccess' => $user->firstaccess ? transform::datetime($user->firstaccess) : null,
-            'lastaccess' => $user->lastaccess ? transform::datetime($user->lastaccess) : null,
-            'lastlogin' => $user->lastlogin ? transform::datetime($user->lastlogin) : null,
-            'currentlogin' => $user->currentlogin ? transform::datetime($user->currentlogin) : null,
+            'firstaccess' => transform::datetime($user->firstaccess),
+            'lastaccess' => transform::datetime($user->lastaccess),
+            'lastlogin' => transform::datetime($user->lastlogin),
+            'currentlogin' => $user->currentlogin,
             'lastip' => $user->lastip,
             'secret' => $user->secret,
             'picture' => $user->picture,

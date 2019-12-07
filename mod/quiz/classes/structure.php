@@ -47,6 +47,9 @@ class structure {
      */
     protected $questions = array();
 
+    /** @var \stdClass[] quiz_slots.id => the quiz_slots rows for this quiz, agumented by sectionid. */
+    protected $slots = array();
+
     /** @var \stdClass[] quiz_slots.slot => the quiz_slots rows for this quiz, agumented by sectionid. */
     protected $slotsinorder = array();
 
@@ -58,9 +61,6 @@ class structure {
 
     /** @var bool caches the results of can_be_edited. */
     protected $canbeedited = null;
-
-    /** @var bool caches the results of can_add_random_question. */
-    protected $canaddrandom = null;
 
     /** @var bool tracks whether tags have been loaded */
     protected $hasloadedtags = false;
@@ -314,7 +314,7 @@ class structure {
      * @return \stdClass[] the slots in this quiz.
      */
     public function get_slots() {
-        return array_column($this->slotsinorder, null, 'id');
+        return $this->slots;
     }
 
     /**
@@ -409,16 +409,12 @@ class structure {
      * Get a slot by it's id. Throws an exception if it is missing.
      * @param int $slotid the slot id.
      * @return \stdClass the requested quiz_slots row.
-     * @throws \coding_exception
      */
     public function get_slot_by_id($slotid) {
-        foreach ($this->slotsinorder as $slot) {
-            if ($slot->id == $slotid) {
-                return $slot;
-            }
+        if (!array_key_exists($slotid, $this->slots)) {
+            throw new \coding_exception('The \'slotid\' could not be found.');
         }
-
-        throw new \coding_exception('The \'slotid\' could not be found.');
+        return $this->slots[$slotid];
     }
 
     /**
@@ -429,10 +425,13 @@ class structure {
      * @throws \coding_exception
      */
     public function get_slot_by_number($slotnumber) {
-        if (!array_key_exists($slotnumber, $this->slotsinorder)) {
-            throw new \coding_exception('The \'slotnumber\' could not be found.');
+        foreach ($this->slots as $slot) {
+            if ($slot->slot == $slotnumber) {
+                return $slot;
+            }
         }
-        return $this->slotsinorder[$slotnumber];
+
+        throw new \coding_exception('The \'slotnumber\' could not be found.');
     }
 
     /**
@@ -618,6 +617,7 @@ class structure {
         $slots = $this->populate_missing_questions($slots);
 
         $this->questions = array();
+        $this->slots = array();
         $this->slotsinorder = array();
         foreach ($slots as $slotdata) {
             $this->questions[$slotdata->questionid] = $slotdata;
@@ -631,6 +631,7 @@ class structure {
             $slot->maxmark = $slotdata->maxmark;
             $slot->requireprevious = $slotdata->requireprevious;
 
+            $this->slots[$slot->id] = $slot;
             $this->slotsinorder[$slot->slot] = $slot;
         }
 
@@ -691,7 +692,7 @@ class structure {
      */
     protected function populate_question_numbers() {
         $number = 1;
-        foreach ($this->slotsinorder as $slot) {
+        foreach ($this->slots as $slot) {
             if ($this->questions[$slot->questionid]->length == 0) {
                 $slot->displayednumber = get_string('infoshort', 'quiz');
             } else {
@@ -719,7 +720,7 @@ class structure {
 
         $this->check_can_be_edited();
 
-        $movingslot = $this->get_slot_by_id($idmove);
+        $movingslot = $this->slots[$idmove];
         if (empty($movingslot)) {
             throw new \moodle_exception('Bad slot ID ' . $idmove);
         }
@@ -729,7 +730,7 @@ class structure {
         if (empty($idmoveafter)) {
             $moveafterslotnumber = 0;
         } else {
-            $moveafterslotnumber = (int) $this->get_slot_by_id($idmoveafter)->slot;
+            $moveafterslotnumber = (int) $this->slots[$idmoveafter]->slot;
         }
 
         // If the action came in as moving a slot to itself, normalise this to
@@ -903,9 +904,7 @@ class structure {
 
     /**
      * Remove a slot from a quiz
-     *
      * @param int $slotnumber The number of the slot to be deleted.
-     * @throws \coding_exception
      */
     public function remove_slot($slotnumber) {
         global $DB;
@@ -928,9 +927,6 @@ class structure {
         for ($i = $slot->slot + 1; $i <= $maxslot; $i++) {
             $DB->set_field('quiz_slots', 'slot', $i - 1,
                     array('quizid' => $this->get_quizid(), 'slot' => $i));
-            $this->slotsinorder[$i]->slot = $i - 1;
-            $this->slotsinorder[$i - 1] = $this->slotsinorder[$i];
-            unset($this->slotsinorder[$i]);
         }
 
         $qtype = $DB->get_field('question', 'qtype', array('id' => $slot->questionid));
@@ -940,13 +936,6 @@ class structure {
         }
 
         quiz_update_section_firstslots($this->get_quizid(), -1, $slotnumber);
-        foreach ($this->sections as $key => $section) {
-            if ($section->firstslot > $slotnumber) {
-                $this->sections[$key]->firstslot--;
-            }
-        }
-        $this->populate_slots_with_sections();
-        $this->populate_question_numbers();
         unset($this->questions[$slot->questionid]);
 
         $this->refresh_page_numbers_and_update_db();
@@ -1077,7 +1066,7 @@ class structure {
      * Set up this class with the slot tags for each of the slots.
      */
     protected function populate_slot_tags() {
-        $slotids = array_column($this->slotsinorder, 'id');
+        $slotids = array_keys($this->slots);
         $this->slottags = quiz_retrieve_tags_for_slot_ids($slotids);
     }
 
@@ -1095,24 +1084,5 @@ class structure {
         }
 
         return isset($this->slottags[$slotid]) ? $this->slottags[$slotid] : [];
-    }
-
-    /**
-     * Whether the current user can add random questions to the quiz or not.
-     * It is only possible to add a random question if the user has the moodle/question:useall capability
-     * on at least one of the contexts related to the one where we are currently editing questions.
-     *
-     * @return bool
-     */
-    public function can_add_random_questions() {
-        if ($this->canaddrandom === null) {
-            $quizcontext = $this->quizobj->get_context();
-            $relatedcontexts = new \question_edit_contexts($quizcontext);
-            $usablecontexts = $relatedcontexts->having_cap('moodle/question:useall');
-
-            $this->canaddrandom = !empty($usablecontexts);
-        }
-
-        return $this->canaddrandom;
     }
 }

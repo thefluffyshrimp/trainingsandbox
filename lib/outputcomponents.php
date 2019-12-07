@@ -207,8 +207,7 @@ class user_picture implements renderable {
     public $includefullname = false;
 
     /**
-     * @var mixed Include user authentication token. True indicates to generate a token for current user, and integer value
-     * indicates to generate a token for the user whose id is the value indicated.
+     * @var bool Include user authentication token.
      */
     public $includetoken = false;
 
@@ -228,7 +227,7 @@ class user_picture implements renderable {
         // only touch the DB if we are missing data and complain loudly...
         $needrec = false;
         foreach (self::$fields as $field) {
-            if (!property_exists($user, $field)) {
+            if (!array_key_exists($field, $user)) {
                 $needrec = true;
                 debugging('Missing '.$field.' property in $user object, this is a performance problem that needs to be fixed by a developer. '
                           .'Please use user_picture::fields() to get the full list of required fields.', DEBUG_DEVELOPER);
@@ -702,11 +701,6 @@ class pix_icon implements renderable, templatable {
             // and some browsers might overwrite it with an empty title.
             unset($this->attributes['title']);
         }
-
-        // Hide icons from screen readers that have no alt.
-        if (empty($this->attributes['alt'])) {
-            $this->attributes['aria-hidden'] = 'true';
-        }
     }
 
     /**
@@ -868,23 +862,16 @@ class single_button implements renderable {
     public $actionid;
 
     /**
-     * @var array
-     */
-    protected $attributes = [];
-
-    /**
      * Constructor
      * @param moodle_url $url
      * @param string $label button text
      * @param string $method get or post submit method
-     * @param array $attributes Attributes for the HTML button tag
      */
-    public function __construct(moodle_url $url, $label, $method='post', $primary=false, $attributes = []) {
+    public function __construct(moodle_url $url, $label, $method='post', $primary=false) {
         $this->url    = clone($url);
         $this->label  = $label;
         $this->method = $method;
         $this->primary = $primary;
-        $this->attributes = $attributes;
     }
 
     /**
@@ -906,17 +893,6 @@ class single_button implements renderable {
     }
 
     /**
-     * Sets an attribute for the HTML button tag.
-     *
-     * @param  string $name  The attribute name
-     * @param  mixed  $value The value
-     * @return null
-     */
-    public function set_attribute($name, $value) {
-        $this->attributes[$name] = $value;
-    }
-
-    /**
      * Export data.
      *
      * @param renderer_base $output Renderer.
@@ -935,11 +911,6 @@ class single_button implements renderable {
         $data->disabled = $this->disabled;
         $data->tooltip = $this->tooltip;
         $data->primary = $this->primary;
-
-        $data->attributes = [];
-        foreach ($this->attributes as $key => $value) {
-            $data->attributes[] = ['name' => $key, 'value' => $value];
-        }
 
         // Form parameters.
         $params = $this->url->params();
@@ -1044,7 +1015,7 @@ class single_select implements renderable, templatable {
     var $formid = null;
 
     /**
-     * @var help_icon The help icon for this element.
+     * @var array List of attached actions
      */
     var $helpicon = null;
 
@@ -1135,19 +1106,7 @@ class single_select implements renderable, templatable {
         $data->title = $this->tooltip;
         $data->formid = !empty($this->formid) ? $this->formid : html_writer::random_id('single_select_f');
         $data->id = !empty($attributes['id']) ? $attributes['id'] : html_writer::random_id('single_select');
-
-        // Select element attributes.
-        // Unset attributes that are already predefined in the template.
         unset($attributes['id']);
-        unset($attributes['class']);
-        unset($attributes['name']);
-        unset($attributes['title']);
-        unset($attributes['disabled']);
-
-        // Map the attributes.
-        $data->attributes = array_map(function($key) use ($attributes) {
-            return ['name' => $key, 'value' => $attributes[$key]];
-        }, array_keys($attributes));
 
         // Form parameters.
         $params = $this->url->params();
@@ -1221,11 +1180,8 @@ class single_select implements renderable, templatable {
 
         // Label attributes.
         $data->labelattributes = [];
-        // Unset label attributes that are already in the template.
-        unset($this->labelattributes['for']);
-        // Map the label attributes.
         foreach ($this->labelattributes as $key => $value) {
-            $data->labelattributes[] = ['name' => $key, 'value' => $value];
+            $data->labelattributes = ['name' => $key, 'value' => $value];
         }
 
         // Help icon.
@@ -1299,7 +1255,7 @@ class url_select implements renderable, templatable {
     var $formid = null;
 
     /**
-     * @var help_icon The help icon for this element.
+     * @var array List of attached actions
      */
     var $helpicon = null;
 
@@ -1462,7 +1418,6 @@ class url_select implements renderable, templatable {
         unset($attributes['id']);
         unset($attributes['name']);
         unset($attributes['title']);
-        unset($attributes['disabled']);
 
         $data->showbutton = $this->showbutton;
 
@@ -1482,9 +1437,6 @@ class url_select implements renderable, templatable {
 
         // Label attributes.
         $data->labelattributes = [];
-        // Unset label attributes that are already in the template.
-        unset($this->labelattributes['for']);
-        // Map the label attributes.
         foreach ($this->labelattributes as $key => $value) {
             $data->labelattributes[] = ['name' => $key, 'value' => $value];
         }
@@ -1494,8 +1446,8 @@ class url_select implements renderable, templatable {
 
         // Finally all the remaining attributes.
         $data->attributes = [];
-        foreach ($attributes as $key => $value) {
-            $data->attributes[] = ['name' => $key, 'value' => $value];
+        foreach ($this->attributes as $key => $value) {
+            $data->attributes = ['name' => $key, 'value' => $value];
         }
 
         return $data;
@@ -1808,12 +1760,10 @@ class html_writer {
      * @param bool $checked Whether the checkbox is checked
      * @param string $label The label for the checkbox
      * @param array $attributes Any attributes to apply to the checkbox
-     * @param array $labelattributes Any attributes to apply to the label, if present
      * @return string html fragment
      */
-    public static function checkbox($name, $value, $checked = true, $label = '',
-            array $attributes = null, array $labelattributes = null) {
-        $attributes = (array) $attributes;
+    public static function checkbox($name, $value, $checked = true, $label = '', array $attributes = null) {
+        $attributes = (array)$attributes;
         $output = '';
 
         if ($label !== '' and !is_null($label)) {
@@ -1829,9 +1779,7 @@ class html_writer {
         $output .= self::empty_tag('input', $attributes);
 
         if ($label !== '' and !is_null($label)) {
-            $labelattributes = (array) $labelattributes;
-            $labelattributes['for'] = $attributes['id'];
-            $output .= self::tag('label', $label, $labelattributes);
+            $output .= self::tag('label', $label, array('for'=>$attributes['id']));
         }
 
         return $output;
@@ -3251,9 +3199,6 @@ class initials_bar implements renderable, templatable {
             if ($letter == $this->current) {
                 $groupletter->selected = $this->current;
             }
-            if (!isset($data->group[$groupnumber])) {
-                $data->group[$groupnumber] = new stdClass();
-            }
             $data->group[$groupnumber]->letter[] = $groupletter;
         }
 
@@ -4203,32 +4148,32 @@ class action_menu implements renderable, templatable {
 
     /**
      * An icon to use for the toggling the secondary menu (dropdown).
-     * @var pix_icon
+     * @var actionicon
      */
     public $actionicon;
 
     /**
      * Any text to use for the toggling the secondary menu (dropdown).
-     * @var string
+     * @var menutrigger
      */
     public $menutrigger = '';
 
     /**
      * Any extra classes for toggling to the secondary menu.
-     * @var string
+     * @var triggerextraclasses
      */
     public $triggerextraclasses = '';
 
     /**
      * Place the action menu before all other actions.
-     * @var bool
+     * @var prioritise
      */
     public $prioritise = false;
 
     /**
      * Constructs the action menu with the given items.
      *
-     * @param array $actions An array of actions (action_menu_link|pix_icon|string).
+     * @param array $actions An array of actions.
      */
     public function __construct(array $actions = array()) {
         static $initialised = 0;
@@ -4262,6 +4207,7 @@ class action_menu implements renderable, templatable {
      * Sets the label for the menu trigger.
      *
      * @param string $label The text
+     * @return null
      */
     public function set_action_label($label) {
         $this->actionlabel = $label;
@@ -4272,6 +4218,7 @@ class action_menu implements renderable, templatable {
      *
      * @param string $trigger The text
      * @param string $extraclasses Extra classes to style the secondary menu toggle.
+     * @return null
      */
     public function set_menu_trigger($trigger, $extraclasses = '') {
         $this->menutrigger = $trigger;

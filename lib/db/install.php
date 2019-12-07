@@ -284,10 +284,9 @@ function xmldb_main_install() {
     set_role_contextlevels($guestrole,          get_default_contextlevels('guest'));
     set_role_contextlevels($userrole,           get_default_contextlevels('user'));
 
-    // Init theme, JS and template revisions.
+    // Init theme and JS revisions
     set_config('themerev', time());
     set_config('jsrev', time());
-    set_config('templaterev', time());
 
     // No admin setting for this any more, GD is now required, remove in Moodle 2.6.
     set_config('gdversion', 2);
@@ -321,6 +320,6 @@ function xmldb_main_install() {
     make_default_scale();
     make_competence_scale();
 
-    require_once($CFG->dirroot . '/badges/upgradelib.php'); // Core install and upgrade related functions only for badges.
-    badges_install_default_backpacks();
+    // Add built-in prediction models.
+    \core_analytics\manager::add_builtin_models();
 }

@@ -42,7 +42,6 @@ Feature: Browse course list and return back from enrolment page
     And I press "Save changes"
     And I log out
     When I log in as "user2"
-    And I change window size to "large"
     And I open my profile in edit mode
     And I expand "Courses" node
     And I expand "Sample category" node

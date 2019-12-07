@@ -551,9 +551,6 @@ class quiz_grading_report extends quiz_default_report {
                 case "studentfirstname":
                     $orderby = "u.firstname, u.lastname";
                     break;
-                case "idnumber":
-                    $orderby = "u.idnumber";
-                    break;
             }
         }
 

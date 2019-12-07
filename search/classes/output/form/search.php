@@ -24,8 +24,6 @@
 
 namespace core_search\output\form;
 
-use core_search\manager;
-
 defined('MOODLE_INTERNAL') || die;
 
 require_once($CFG->libdir . '/formslib.php');
@@ -42,13 +40,6 @@ class search extends \moodleform {
         global $USER, $DB, $OUTPUT;
 
         $mform =& $this->_form;
-
-        if (\core_search\manager::is_search_area_categories_enabled() && !empty($this->_customdata['cat'])) {
-            $mform->addElement('hidden', 'cat');
-            $mform->setType('cat', PARAM_NOTAGS);
-            $mform->setDefault('cat', $this->_customdata['cat']);
-        }
-
         $mform->disable_form_change_checker();
         $mform->addElement('header', 'search', get_string('search', 'search'));
 
@@ -81,21 +72,11 @@ class search extends \moodleform {
         $mform->setType('title', PARAM_TEXT);
 
         $search = \core_search\manager::instance(true);
-        $enabledsearchareas = \core_search\manager::get_search_areas_list(true);
-        $areanames = array();
 
-        if (\core_search\manager::is_search_area_categories_enabled() && !empty($this->_customdata['cat'])) {
-            $searchareacategory = \core_search\manager::get_search_area_category_by_name($this->_customdata['cat']);
-            $searchareas = $searchareacategory->get_areas();
-            foreach ($searchareas as $areaid => $searcharea) {
-                if (key_exists($areaid, $enabledsearchareas)) {
-                    $areanames[$areaid] = $searcharea->get_visible_name();
-                }
-            }
-        } else {
-            foreach ($enabledsearchareas as $areaid => $searcharea) {
-                $areanames[$areaid] = $searcharea->get_visible_name();
-            }
+        $searchareas = \core_search\manager::get_search_areas_list(true);
+        $areanames = array();
+        foreach ($searchareas as $areaid => $searcharea) {
+            $areanames[$areaid] = $searcharea->get_visible_name();
         }
 
         // Sort the array by the text.
@@ -107,24 +88,13 @@ class search extends \moodleform {
         );
         $mform->addElement('autocomplete', 'areaids', get_string('searcharea', 'search'), $areanames, $options);
 
-        if (is_siteadmin()) {
-            $limittoenrolled = false;
-        } else {
-            $limittoenrolled = !manager::include_all_courses();
-        }
-
         $options = array(
             'multiple' => true,
-            'limittoenrolled' => $limittoenrolled,
+            'limittoenrolled' => !is_siteadmin(),
             'noselectionstring' => get_string('allcourses', 'search'),
         );
         $mform->addElement('course', 'courseids', get_string('courses', 'core'), $options);
         $mform->setType('courseids', PARAM_INT);
-
-        if (manager::include_all_courses() || !empty(get_config('core', 'searchallavailablecourses'))) {
-            $mform->addElement('checkbox', 'mycoursesonly', get_string('mycoursesonly', 'search'));
-            $mform->setType('mycoursesonly', PARAM_INT);
-        }
 
         // If the search engine can search by user, and the user is logged in (so we have
         // permission to call the user-listing web service) then show the user selector.

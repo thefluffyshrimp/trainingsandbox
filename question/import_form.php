@@ -112,7 +112,6 @@ class question_import_form extends moodleform {
      * @param array $data the submitted data.
      * @param array $errors the errors so far.
      * @return array the updated errors.
-     * @throws moodle_exception
      */
     protected function validate_uploaded_file($data, $errors) {
         if (empty($data['newfile'])) {
@@ -121,7 +120,7 @@ class question_import_form extends moodleform {
         }
 
         $files = $this->get_draft_files('newfile');
-        if (!is_array($files) || count($files) < 1) {
+        if (count($files) < 1) {
             $errors['newfile'] = get_string('required');
             return $errors;
         }

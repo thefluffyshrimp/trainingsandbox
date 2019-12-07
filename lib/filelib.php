@@ -29,12 +29,6 @@ defined('MOODLE_INTERNAL') || die();
  */
 define('BYTESERVING_BOUNDARY', 's1k2o3d4a5k6s7');
 
-
-/**
- * Do not process file merging when working with draft area files.
- */
-define('IGNORE_FILE_MERGE', -1);
-
 /**
  * Unlimited area size constant
  */
@@ -470,7 +464,7 @@ function file_prepare_draft_area(&$draftitemid, $contextid, $component, $fileare
  * @param   array   $options
  *          bool    $options.forcehttps Force the user of https
  *          bool    $options.reverse Reverse the behaviour of the function
- *          mixed   $options.includetoken Use a token for authentication. True for current user, int value for other user id.
+ *          bool    $options.includetoken Use a token for authentication
  *          string  The processed text.
  */
 function file_rewrite_pluginfile_urls($text, $file, $contextid, $component, $filearea, $itemid, array $options=null) {
@@ -483,8 +477,7 @@ function file_rewrite_pluginfile_urls($text, $file, $contextid, $component, $fil
 
     $baseurl = "{$CFG->wwwroot}/{$file}";
     if (!empty($options['includetoken'])) {
-        $userid = $options['includetoken'] === true ? $USER->id : $options['includetoken'];
-        $token = get_user_key('core_files', $userid);
+        $token = get_user_key('core_files', $USER->id);
         $finalfile = basename($file);
         $tokenfile = "token{$finalfile}";
         $file = substr($file, 0, strlen($file) - strlen($finalfile)) . $tokenfile;
@@ -895,7 +888,6 @@ function file_remove_editor_orphaned_files($editor) {
  *
  * @category files
  * @param int $draftitemid the id of the primary draft area.
- *            When set to -1 (probably, by a WebService) it won't process file merging, keeping the original state of the file area.
  * @param int $usercontextid the user's context id.
  * @param string $text some html content that needs to have files copied to the correct draft area.
  * @param bool $forcehttps force https urls.
@@ -904,11 +896,6 @@ function file_remove_editor_orphaned_files($editor) {
  */
 function file_merge_draft_areas($draftitemid, $usercontextid, $text, $forcehttps = false) {
     if (is_null($text)) {
-        return null;
-    }
-
-    // Do not merge files, leave it as it was.
-    if ($draftitemid === IGNORE_FILE_MERGE) {
         return null;
     }
 
@@ -1028,7 +1015,6 @@ function file_copy_file_to_file_area($file, $filename, $itemid) {
  * @global stdClass $USER
  * @param int $draftitemid the id of the draft area to use. Normally obtained
  *      from file_get_submitted_draft_itemid('elementname') or similar.
- *      When set to -1 (probably, by a WebService) it won't process file merging, keeping the original state of the file area.
  * @param int $contextid This parameter and the next two identify the file area to save to.
  * @param string $component
  * @param string $filearea indentifies the file area.
@@ -1041,12 +1027,6 @@ function file_copy_file_to_file_area($file, $filename, $itemid) {
  */
 function file_save_draft_area_files($draftitemid, $contextid, $component, $filearea, $itemid, array $options=null, $text=null, $forcehttps=false) {
     global $USER;
-
-    // Do not merge files, leave it as it was.
-    if ($draftitemid === IGNORE_FILE_MERGE) {
-        // Safely return $text, no need to rewrite pluginfile because this is mostly comming from an external client like the app.
-        return $text;
-    }
 
     $usercontext = context_user::instance($USER->id);
     $fs = get_file_storage();
@@ -2159,26 +2139,23 @@ function readfile_accel($file, $mimetype, $accelerate) {
         }
     }
 
-    if ($accelerate and empty($CFG->disablebyteserving) and $mimetype !== 'text/plain') {
-        header('Accept-Ranges: bytes');
-    } else {
-        header('Accept-Ranges: none');
-    }
+    if ($accelerate and !empty($CFG->xsendfile)) {
+        if (empty($CFG->disablebyteserving) and $mimetype !== 'text/plain') {
+            header('Accept-Ranges: bytes');
+        } else {
+            header('Accept-Ranges: none');
+        }
 
-    if ($accelerate) {
         if (is_object($file)) {
             $fs = get_file_storage();
-            if ($fs->supports_xsendfile()) {
-                if ($fs->xsendfile($file->get_contenthash())) {
-                    return;
-                }
+            if ($fs->xsendfile($file->get_contenthash())) {
+                return;
             }
+
         } else {
-            if (!empty($CFG->xsendfile)) {
-                require_once("$CFG->libdir/xsendfilelib.php");
-                if (xsendfile($file)) {
-                    return;
-                }
+            require_once("$CFG->libdir/xsendfilelib.php");
+            if (xsendfile($file)) {
+                return;
             }
         }
     }
@@ -2188,6 +2165,7 @@ function readfile_accel($file, $mimetype, $accelerate) {
     header('Last-Modified: '. gmdate('D, d M Y H:i:s', $lastmodified) .' GMT');
 
     if ($accelerate and empty($CFG->disablebyteserving) and $mimetype !== 'text/plain') {
+        header('Accept-Ranges: bytes');
 
         if (!empty($_SERVER['HTTP_RANGE']) and strpos($_SERVER['HTTP_RANGE'],'bytes=') !== FALSE) {
             // byteserving stuff - for acrobat reader and download accelerators
@@ -2225,6 +2203,9 @@ function readfile_accel($file, $mimetype, $accelerate) {
                 byteserving_send_file($handle, $mimetype, $ranges, $filesize);
             }
         }
+    } else {
+        // Do not byteserve
+        header('Accept-Ranges: none');
     }
 
     header('Content-Length: '.$filesize);
@@ -2250,10 +2231,10 @@ function readfile_accel($file, $mimetype, $accelerate) {
  * Similar to readfile_accel() but designed for strings.
  * @param string $string
  * @param string $mimetype
- * @param bool $accelerate Ignored
+ * @param bool $accelerate
  * @return void
  */
-function readstring_accel($string, $mimetype, $accelerate = false) {
+function readstring_accel($string, $mimetype, $accelerate) {
     global $CFG;
 
     if ($mimetype === 'text/plain') {
@@ -2264,6 +2245,14 @@ function readstring_accel($string, $mimetype, $accelerate = false) {
     }
     header('Last-Modified: '. gmdate('D, d M Y H:i:s', time()) .' GMT');
     header('Accept-Ranges: none');
+
+    if ($accelerate and !empty($CFG->xsendfile)) {
+        $fs = get_file_storage();
+        if ($fs->xsendfile(sha1($string))) {
+            return;
+        }
+    }
+
     header('Content-Length: '.strlen($string));
     echo $string;
 }
@@ -2299,9 +2288,6 @@ function send_temp_file($path, $filename, $pathisstring=false) {
         $filename = urlencode($filename);
     }
 
-    // If this file was requested from a form, then mark download as complete.
-    \core_form\util::form_download_complete();
-
     header('Content-Disposition: attachment; filename="'.$filename.'"');
     if (is_https()) { // HTTPS sites - watch out for IE! KB812935 and KB316431.
         header('Cache-Control: private, max-age=10, no-transform');
@@ -2315,7 +2301,7 @@ function send_temp_file($path, $filename, $pathisstring=false) {
 
     // send the contents - we can not accelerate this because the file will be deleted asap
     if ($pathisstring) {
-        readstring_accel($path, $mimetype);
+        readstring_accel($path, $mimetype, false);
     } else {
         readfile_accel($path, $mimetype, false);
         @unlink($path);
@@ -2453,9 +2439,6 @@ function send_file($path, $filename, $lifetime = null , $filter=0, $pathisstring
 
     if ($forcedownload) {
         header('Content-Disposition: attachment; filename="'.$filename.'"');
-
-        // If this file was requested from a form, then mark download as complete.
-        \core_form\util::form_download_complete();
     } else if ($mimetype !== 'application/x-shockwave-flash') {
         // If this is an swf don't pass content-disposition with filename as this makes the flash player treat the file
         // as an upload and enforces security that may prevent the file from being loaded.
@@ -2504,7 +2487,7 @@ function send_file($path, $filename, $lifetime = null , $filter=0, $pathisstring
     if (empty($filter)) {
         // send the contents
         if ($pathisstring) {
-            readstring_accel($path, $mimetype);
+            readstring_accel($path, $mimetype, !$dontdie);
         } else {
             readfile_accel($path, $mimetype, !$dontdie);
         }
@@ -2524,7 +2507,7 @@ function send_file($path, $filename, $lifetime = null , $filter=0, $pathisstring
             }
             $output = format_text($text, FORMAT_HTML, $options, $COURSE->id);
 
-            readstring_accel($output, $mimetype);
+            readstring_accel($output, $mimetype, false);
 
         } else if (($mimetype == 'text/plain') and ($filter == 1)) {
             // only filter text if filter all files is selected
@@ -2540,12 +2523,12 @@ function send_file($path, $filename, $lifetime = null , $filter=0, $pathisstring
             }
             $output = '<pre>'. format_text($text, FORMAT_MOODLE, $options, $COURSE->id) .'</pre>';
 
-            readstring_accel($output, $mimetype);
+            readstring_accel($output, $mimetype, false);
 
         } else {
             // send the contents
             if ($pathisstring) {
-                readstring_accel($path, $mimetype);
+                readstring_accel($path, $mimetype, !$dontdie);
             } else {
                 readfile_accel($path, $mimetype, !$dontdie);
             }
@@ -3100,7 +3083,7 @@ class curl {
      */
     public function resetopt() {
         $this->options = array();
-        $this->options['CURLOPT_USERAGENT']         = \core_useragent::get_moodlebot_useragent();
+        $this->options['CURLOPT_USERAGENT']         = 'MoodleBot/1.0';
         // True to include the header in the output
         $this->options['CURLOPT_HEADER']            = 0;
         // True to Exclude the body from the output
@@ -3343,7 +3326,7 @@ class curl {
         } else if (!empty($this->options['CURLOPT_USERAGENT'])) {
             $useragent = $this->options['CURLOPT_USERAGENT'];
         } else {
-            $useragent = \core_useragent::get_moodlebot_useragent();
+            $useragent = 'MoodleBot/1.0';
         }
 
         // Set headers.
@@ -3544,7 +3527,7 @@ class curl {
         if ((defined('PHPUNIT_TEST') && PHPUNIT_TEST)) {
             array_push(self::$mockresponses, $response);
         } else {
-            throw new coding_exception('mock_response function is only available for unit tests.');
+            throw new coding_excpetion('mock_response function is only available for unit tests.');
         }
     }
 
@@ -4235,7 +4218,7 @@ function file_pluginfile($relativepath, $forcedownload, $preview = null, $offlin
 
         } else if ($filearea == GRADE_FEEDBACK_FILEAREA || $filearea == GRADE_HISTORY_FEEDBACK_FILEAREA) {
             if ($context->contextlevel != CONTEXT_MODULE) {
-                send_file_not_found();
+                send_file_not_found;
             }
 
             require_login($course, false);
@@ -4625,8 +4608,11 @@ function file_pluginfile($relativepath, $forcedownload, $preview = null, $offlin
             }
 
             // Check if user can view this category.
-            if (!core_course_category::get($context->instanceid, IGNORE_MISSING)) {
-                send_file_not_found();
+            if (!has_capability('moodle/category:viewhiddencategories', $context)) {
+                $coursecatvisible = $DB->get_field('course_categories', 'visible', array('id' => $context->instanceid));
+                if (!$coursecatvisible) {
+                    send_file_not_found();
+                }
             }
 
             $filename = array_pop($args);

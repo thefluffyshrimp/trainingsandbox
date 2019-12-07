@@ -77,22 +77,18 @@ class provider implements
             }
 
             if ($descriptionidentifier !== null) {
-                try {
-                    $tour = \tool_usertours\tour::instance($tourid);
-                    $time = transform::datetime($value);
+                $time = transform::datetime($value);
+                $tour = \tool_usertours\tour::instance($tourid);
 
-                    writer::export_user_preference(
-                        'tool_usertours',
-                        $name,
-                        $time,
-                        get_string($descriptionidentifier, 'tool_usertours', (object) [
-                            'name' => $tour->get_name(),
-                            'time' => $time,
-                        ])
-                    );
-                } catch (\dml_missing_record_exception $ex) {
-                    // The tour related to this user preference no longer exists.
-                }
+                writer::export_user_preference(
+                    'tool_usertours',
+                    $name,
+                    $time,
+                    get_string($descriptionidentifier, 'tool_usertours', (object) [
+                        'name' => $tour->get_name(),
+                        'time' => $time,
+                    ])
+                );
             }
         }
     }

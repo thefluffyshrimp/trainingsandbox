@@ -88,18 +88,13 @@ class block_starredcourses_external extends core_course_external {
             return ($a->timemodified > $b->timemodified) ? -1 : 1;
         });
 
-        $formattedcourses = array();
-        foreach ($favourites as $favourite) {
+        $formattedcourses = array_map(function($favourite) use ($renderer) {
             $course = get_course($favourite->itemid);
             $context = \context_course::instance($favourite->itemid);
-            $canviewhiddencourses = has_capability('moodle/course:viewhiddencourses', $context);
 
-            if ($course->visible || $canviewhiddencourses) {
-                $exporter = new course_summary_exporter($course, ['context' => $context, 'isfavourite' => true]);
-                $formattedcourse = $exporter->export($renderer);
-                $formattedcourses[] = $formattedcourse;
-            }
-        }
+            $exporter = new course_summary_exporter($course, ['context' => $context, 'isfavourite' => true]);
+            return $exporter->export($renderer);
+        }, $favourites);
 
         return $formattedcourses;
     }

@@ -245,9 +245,6 @@ class restore_gradebook_structure_step extends restore_structure_step {
             }
 
             $newitemid = $DB->insert_record('grade_items', $data);
-            $data->id = $newitemid;
-            $gradeitem = new grade_item($data);
-            core\event\grade_item_created::create_from_grade_item($gradeitem)->trigger();
         }
         $this->set_mapping('grade_item', $oldid, $newitemid);
     }
@@ -487,9 +484,6 @@ class restore_gradebook_structure_step extends restore_structure_step {
 
         // Freeze gradebook calculations if needed.
         $this->gradebook_calculation_freeze();
-
-        // Ensure the module cache is current when recalculating grades.
-        rebuild_course_cache($this->get_courseid(), true);
 
         // Restore marks items as needing update. Update everything now.
         grade_regrade_final_grades($this->get_courseid());
@@ -1791,7 +1785,6 @@ class restore_course_structure_step extends restore_structure_step {
         $course = new restore_path_element('course', '/course');
         $category = new restore_path_element('category', '/course/category');
         $tag = new restore_path_element('tag', '/course/tags/tag');
-        $customfield = new restore_path_element('customfield', '/course/customfields/customfield');
         $allowed_module = new restore_path_element('allowed_module', '/course/allowed_modules/module');
 
         // Apply for 'format' plugins optional paths at course level
@@ -1815,7 +1808,7 @@ class restore_course_structure_step extends restore_structure_step {
         // Apply for admin tool plugins optional paths at course level.
         $this->add_plugin_structure('tool', $course);
 
-        return array($course, $category, $tag, $customfield, $allowed_module);
+        return array($course, $category, $tag, $allowed_module);
     }
 
     /**
@@ -1939,16 +1932,6 @@ class restore_course_structure_step extends restore_structure_step {
                 context_course::instance($this->get_courseid()), $data->rawname);
     }
 
-    /**
-     * Process custom fields
-     *
-     * @param array $data
-     */
-    public function process_customfield($data) {
-        $handler = core_course\customfield\course_handler::create();
-        $handler->restore_instance_data_from_backup($this->task, $data);
-    }
-
     public function process_allowed_module($data) {
         $data = (object)$data;
 
@@ -1983,12 +1966,6 @@ class restore_course_structure_step extends restore_structure_step {
                 }
 
                 $capability = 'mod/' . $modname . ':addinstance';
-
-                if (!get_capability_info($capability)) {
-                    $this->log("Capability '{$capability}' was not found!", backup::LOG_WARNING);
-                    continue;
-                }
-
                 foreach ($roleids as $roleid) {
                     assign_capability($capability, CAP_PREVENT, $roleid, $context);
                 }
@@ -2116,12 +2093,9 @@ class restore_ras_and_caps_structure_step extends restore_structure_step {
         $newroleid = $this->get_mappingid('role', $data->roleid);
         // If newroleid and context are valid assign it via API (it handles dupes and so on)
         if ($newroleid && $this->task->get_contextid()) {
-            if (!get_capability_info($data->capability)) {
-                $this->log("Capability '{$data->capability}' was not found!", backup::LOG_WARNING);
-            } else {
-                // TODO: assign_capability() needs one userid param to be able to specify our restore userid.
-                assign_capability($data->capability, $data->permission, $newroleid, $this->task->get_contextid());
-            }
+            // TODO: assign_capability() needs one userid param to be able to specify our restore userid
+            // TODO: it seems that assign_capability() doesn't check for valid capabilities at all ???
+            assign_capability($data->capability, $data->permission, $newroleid, $this->task->get_contextid());
         }
     }
 }
@@ -2529,9 +2503,6 @@ class restore_badges_structure_step extends restore_structure_step {
         $paths[] = new restore_path_element('badge', '/badges/badge');
         $paths[] = new restore_path_element('criterion', '/badges/badge/criteria/criterion');
         $paths[] = new restore_path_element('parameter', '/badges/badge/criteria/criterion/parameters/parameter');
-        $paths[] = new restore_path_element('endorsement', '/badges/badge/endorsement');
-        $paths[] = new restore_path_element('alignment', '/badges/badge/alignments/alignment');
-        $paths[] = new restore_path_element('relatedbadge', '/badges/badge/relatedbadges/relatedbadge');
         $paths[] = new restore_path_element('manual_award', '/badges/badge/manual_awards/manual_award');
 
         return $paths;
@@ -2576,85 +2547,11 @@ class restore_badges_structure_step extends restore_structure_step {
                 'attachment'     => $data->attachment,
                 'notification'   => $data->notification,
                 'status'         => BADGE_STATUS_INACTIVE,
-                'nextcron'       => $data->nextcron,
-                'version'        => $data->version,
-                'language'       => $data->language,
-                'imageauthorname' => $data->imageauthorname,
-                'imageauthoremail' => $data->imageauthoremail,
-                'imageauthorurl' => $data->imageauthorurl,
-                'imagecaption'   => $data->imagecaption
+                'nextcron'       => $data->nextcron
         );
 
         $newid = $DB->insert_record('badge', $params);
         $this->set_mapping('badge', $data->id, $newid, $restorefiles);
-    }
-
-    /**
-     * Create an endorsement for a badge.
-     *
-     * @param mixed $data
-     * @return void
-     */
-    public function process_endorsement($data) {
-        global $DB;
-
-        $data = (object)$data;
-
-        $params = [
-            'badgeid' => $this->get_new_parentid('badge'),
-            'issuername' => $data->issuername,
-            'issuerurl' => $data->issuerurl,
-            'issueremail' => $data->issueremail,
-            'claimid' => $data->claimid,
-            'claimcomment' => $data->claimcomment,
-            'dateissued' => $this->apply_date_offset($data->dateissued)
-        ];
-        $newid = $DB->insert_record('badge_endorsement', $params);
-        $this->set_mapping('endorsement', $data->id, $newid);
-    }
-
-    /**
-     * Link to related badges for a badge. This relies on post processing in after_execute().
-     *
-     * @param mixed $data
-     * @return void
-     */
-    public function process_relatedbadge($data) {
-        global $DB;
-
-        $data = (object)$data;
-        $relatedbadgeid = $data->relatedbadgeid;
-
-        if ($relatedbadgeid) {
-            // Only backup and restore related badges if they are contained in the backup file.
-            $params = array(
-                    'badgeid'           => $this->get_new_parentid('badge'),
-                    'relatedbadgeid'    => $relatedbadgeid
-            );
-            $newid = $DB->insert_record('badge_related', $params);
-        }
-    }
-
-    /**
-     * Link to an alignment for a badge.
-     *
-     * @param mixed $data
-     * @return void
-     */
-    public function process_alignment($data) {
-        global $DB;
-
-        $data = (object)$data;
-        $params = array(
-                'badgeid'           => $this->get_new_parentid('badge'),
-                'targetname'        => $data->targetname,
-                'targeturl'         => $data->targeturl,
-                'targetdescription' => $data->targetdescription,
-                'targetframework'   => $data->targetframework,
-                'targetcode'        => $data->targetcode
-        );
-        $newid = $DB->insert_record('badge_alignment', $params);
-        $this->set_mapping('alignment', $data->id, $newid);
     }
 
     public function process_criterion($data) {
@@ -2669,7 +2566,6 @@ class restore_badges_structure_step extends restore_structure_step {
                 'description'       => isset($data->description) ? $data->description : '',
                 'descriptionformat' => isset($data->descriptionformat) ? $data->descriptionformat : 0,
         );
-
         $newid = $DB->insert_record('badge_criteria', $params);
         $this->set_mapping('criterion', $data->id, $newid);
     }
@@ -2700,14 +2596,6 @@ class restore_badges_structure_step extends restore_structure_step {
             if (!empty($role)) {
                 $params['name'] = 'role_' . $role;
                 $params['value'] = $role;
-            } else {
-                return;
-            }
-        } else if ($data->criteriatype == BADGE_CRITERIA_TYPE_COMPETENCY) {
-            $competencyid = $this->get_mappingid('competency', $data->value);
-            if (!empty($competencyid)) {
-                $params['name'] = 'competency_' . $competencyid;
-                $params['value'] = $competencyid;
             } else {
                 return;
             }
@@ -2743,38 +2631,8 @@ class restore_badges_structure_step extends restore_structure_step {
     }
 
     protected function after_execute() {
-        global $DB;
         // Add related files.
         $this->add_related_files('badges', 'badgeimage', 'badge');
-
-        $badgeid = $this->get_new_parentid('badge');
-        // Remap any related badges.
-        // We do this in the DB directly because this is backup/restore it is not valid to call into
-        // the component API.
-        $params = array('badgeid' => $badgeid);
-        $query = "SELECT DISTINCT br.id, br.badgeid, br.relatedbadgeid
-                    FROM {badge_related} br
-                   WHERE (br.badgeid = :badgeid)";
-        $relatedbadges = $DB->get_records_sql($query, $params);
-        $newrelatedids = [];
-        foreach ($relatedbadges as $relatedbadge) {
-            $relatedid = $this->get_mappingid('badge', $relatedbadge->relatedbadgeid);
-            $params['relatedbadgeid'] = $relatedbadge->relatedbadgeid;
-            $DB->delete_records_select('badge_related', '(badgeid = :badgeid AND relatedbadgeid = :relatedbadgeid)', $params);
-            if ($relatedid) {
-                $newrelatedids[] = $relatedid;
-            }
-        }
-        if (!empty($newrelatedids)) {
-            $relatedbadges = [];
-            foreach ($newrelatedids as $relatedid) {
-                $relatedbadge = new stdClass();
-                $relatedbadge->badgeid = $badgeid;
-                $relatedbadge->relatedbadgeid = $relatedid;
-                $relatedbadges[] = $relatedbadge;
-            }
-            $DB->insert_records('badge_related', $relatedbadges);
-        }
     }
 }
 
@@ -4180,9 +4038,6 @@ class restore_module_structure_step extends restore_structure_step {
         // Apply for 'format' plugins optional paths at module level
         $this->add_plugin_structure('format', $module);
 
-        // Apply for 'report' plugins optional paths at module level.
-        $this->add_plugin_structure('report', $module);
-
         // Apply for 'plagiarism' plugins optional paths at module level
         $this->add_plugin_structure('plagiarism', $module);
 
@@ -5326,9 +5181,10 @@ class restore_process_file_aliases_queue extends restore_execution_step {
 
 
 /**
- * Helper code for use by any plugin that stores question attempt data that it needs to back up.
+ * Abstract structure step, to be used by all the activities using core questions stuff
+ * (like the quiz module), to support qtype plugins, states and sessions
  */
-trait restore_questions_attempt_data_trait {
+abstract class restore_questions_activity_structure_step extends restore_activity_structure_step {
     /** @var array question_attempt->id to qtype. */
     protected $qtypes = array();
     /** @var array question_attempt->id to questionid. */
@@ -5380,26 +5236,26 @@ trait restore_questions_attempt_data_trait {
     /**
      * Process question_usages
      */
-    public function process_question_usage($data) {
+    protected function process_question_usage($data) {
         $this->restore_question_usage_worker($data, '');
     }
 
     /**
      * Process question_attempts
      */
-    public function process_question_attempt($data) {
+    protected function process_question_attempt($data) {
         $this->restore_question_attempt_worker($data, '');
     }
 
     /**
      * Process question_attempt_steps
      */
-    public function process_question_attempt_step($data) {
+    protected function process_question_attempt_step($data) {
         $this->restore_question_attempt_step_worker($data, '');
     }
 
     /**
-     * This method does the actual work for process_question_usage or
+     * This method does the acutal work for process_question_usage or
      * process_{nameprefix}_question_usage.
      * @param array $data the data from the XML file.
      * @param string $nameprefix the element name prefix.
@@ -5414,7 +5270,8 @@ trait restore_questions_attempt_data_trait {
         $data = (object)$data;
         $oldid = $data->id;
 
-        $data->contextid  = $this->task->get_contextid();
+        $oldcontextid = $this->get_task()->get_old_contextid();
+        $data->contextid  = $this->get_mappingid('context', $this->task->get_old_contextid());
 
         // Everything ready, insert (no mapping needed)
         $newitemid = $DB->insert_record('question_usages', $data);
@@ -5433,7 +5290,7 @@ trait restore_questions_attempt_data_trait {
     abstract protected function inform_new_usage_id($newusageid);
 
     /**
-     * This method does the actual work for process_question_attempt or
+     * This method does the acutal work for process_question_attempt or
      * process_{nameprefix}_question_attempt.
      * @param array $data the data from the XML file.
      * @param string $nameprefix the element name prefix.
@@ -5463,7 +5320,7 @@ trait restore_questions_attempt_data_trait {
     }
 
     /**
-     * This method does the actual work for process_question_attempt_step or
+     * This method does the acutal work for process_question_attempt_step or
      * process_{nameprefix}_question_attempt_step.
      * @param array $data the data from the XML file.
      * @param string $nameprefix the element name prefix.
@@ -5570,17 +5427,6 @@ trait restore_questions_attempt_data_trait {
             $this->add_related_files('question', $filearea, 'question_attempt_step');
         }
     }
-}
-
-
-/**
- * Abstract structure step to help activities that store question attempt data.
- *
- * @copyright 2011 The Open University
- * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- */
-abstract class restore_questions_activity_structure_step extends restore_activity_structure_step {
-    use restore_questions_attempt_data_trait;
 
     /**
      * Attach below $element (usually attempts) the needed restore_path_elements
@@ -5624,7 +5470,7 @@ abstract class restore_questions_activity_structure_step extends restore_activit
     /**
      * Process the attempt data defined by {@link add_legacy_question_attempt_data()}.
      * @param object $data contains all the grouped attempt data to process.
-     * @param object $quiz data about the activity the attempts belong to. Required
+     * @param pbject $quiz data about the activity the attempts belong to. Required
      * fields are (basically this only works for the quiz module):
      *      oldquestions => list of question ids in this activity - using old ids.
      *      preferredbehaviour => the behaviour to use for questionattempts.
@@ -5686,7 +5532,7 @@ abstract class restore_questions_activity_structure_step extends restore_activit
 
         $data->uniqueid = $usage->id;
         $upgrader->save_usage($quiz->preferredbehaviour, $data, $qas,
-                $this->questions_recode_layout($quiz->oldquestions));
+                 $this->questions_recode_layout($quiz->oldquestions));
     }
 
     protected function find_question_session_and_states($data, $questionid) {
@@ -5745,7 +5591,6 @@ abstract class restore_questions_activity_structure_step extends restore_activit
         }
     }
 }
-
 
 /**
  * Restore completion defaults for each module type

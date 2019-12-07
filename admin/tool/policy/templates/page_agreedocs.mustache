@@ -60,19 +60,19 @@
 
 {{#behalfuser}}
 <div class="clearfix">
-    <div class="float-right mb-2">
+    <div class="pull-right m-b-2">
         {{# str }} viewconsentpageforuser, tool_policy, {{{ . }}} {{/ str }}
     </div>
 </div>
 {{/behalfuser}}
 
 <div class="clearfix">
-    <div class="float-left">
+    <div class="pull-left">
         <h2>{{# str }}consentpagetitle, tool_policy{{/ str }}</h2>
     </div>
 </div>
 
-<div class="clearfix mt-2">
+<div class="clearfix m-t-2">
     <h3>{{# str }}agreepolicies, tool_policy {{/ str }}</h3>
 </div>
 <hr>
@@ -82,16 +82,16 @@
 
 <input value="{{id}}" name="listdoc[]" type="hidden">
 
-<div class="agreedoc-policy clearfix mt-2 mb-1">
+<div class="agreedoc-policy clearfix m-t-2 m-b-1">
     <h3>{{{name}}}</h3>
     <div class="agreedoc-content">
-        <div class="agreedoc-summary mb-2">
+        <div class="agreedoc-summary m-b-2">
           {{{summary}}}
         </div>
         <div class="agreedoc-msg">
             {{# str }}refertofullpolicytext, tool_policy, {{{policymodal}}} {{/ str }}
         </div>
-        <div class="agreedoc-form mt-1">
+        <div class="agreedoc-form m-t-1">
             {{#optional}}
             <div class="agreedoc-radios">
                 <div class="agreedoc-radios-1">
@@ -143,6 +143,6 @@
 {{#js}}
 // Initialise the JS for the modal window which displays the policy versions.
 require(['tool_policy/policyactions'], function(ActionsMod) {
-    ActionsMod.init('[data-action="view"]');
+    ActionsMod.init();
 });
 {{/js}}

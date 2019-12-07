@@ -24,7 +24,6 @@
  */
 
 require_once(__DIR__.'/../../testing/classes/util.php');
-require_once(__DIR__ . "/coverage_info.php");
 
 /**
  * Collection of utility methods.
@@ -490,62 +489,29 @@ class phpunit_util extends testing_util {
         <testsuite name="@component@_testsuite">
             <directory suffix="_test.php">@dir@</directory>
         </testsuite>';
-        $filtertemplate = '
-        <testsuite name="@component@_testsuite">
-            <directory suffix="_test.php">@dir@</directory>
-        </testsuite>';
         $data = file_get_contents("$CFG->dirroot/phpunit.xml.dist");
 
         $suites = '';
-        $whitelists = [];
-        $excludelists = [];
-
-        $subsystems = core_component::get_core_subsystems();
-        $subsystems['core'] = $CFG->dirroot . '/lib';
-        foreach ($subsystems as $subsystem => $fulldir) {
-            if (empty($fulldir)) {
-                continue;
-            }
-            if (!file_exists("{$fulldir}/tests/")) {
-                // There are no tests - skip this directory.
-                continue;
-            }
-
-            $dir = substr($fulldir, strlen($CFG->dirroot) + 1);
-            if ($coverageinfo = self::get_coverage_info($fulldir)) {
-                $whitelists = array_merge($whitelists, $coverageinfo->get_whitelists($dir));
-                $excludelists = array_merge($excludelists, $coverageinfo->get_excludelists($dir));
-            }
-        }
 
         $plugintypes = core_component::get_plugin_types();
         ksort($plugintypes);
-        foreach (array_keys($plugintypes) as $type) {
+        foreach ($plugintypes as $type=>$unused) {
             $plugs = core_component::get_plugin_list($type);
             ksort($plugs);
-            foreach ($plugs as $plug => $plugindir) {
-                if (!file_exists("{$plugindir}/tests/")) {
-                    // There are no tests - skip this directory.
+            foreach ($plugs as $plug=>$fullplug) {
+                if (!file_exists("$fullplug/tests/")) {
                     continue;
                 }
-
-                $dir = substr($plugindir, strlen($CFG->dirroot) + 1);
-                $testdir = "{$dir}/tests";
-                $component = "{$type}_{$plug}";
+                $dir = substr($fullplug, strlen($CFG->dirroot)+1);
+                $dir .= '/tests';
+                $component = $type.'_'.$plug;
 
                 $suite = str_replace('@component@', $component, $template);
-                $suite = str_replace('@dir@', $testdir, $suite);
+                $suite = str_replace('@dir@', $dir, $suite);
 
                 $suites .= $suite;
-
-                if ($coverageinfo = self::get_coverage_info($plugindir)) {
-
-                    $whitelists = array_merge($whitelists, $coverageinfo->get_whitelists($dir));
-                    $excludelists = array_merge($excludelists, $coverageinfo->get_excludelists($dir));
-                }
             }
         }
-
         // Start a sequence between 100000 and 199000 to ensure each call to init produces
         // different ids in the database.  This reduces the risk that hard coded values will
         // end up being placed in phpunit or behat test code.
@@ -556,9 +522,6 @@ class phpunit_util extends testing_util {
             '<const name="PHPUNIT_SEQUENCE_START" value=""/>',
             '<const name="PHPUNIT_SEQUENCE_START" value="' . $sequencestart . '"/>',
             $data);
-
-        $filters = self::get_filter_config($whitelists, $excludelists);
-        $data = str_replace('<!--@filterlist@-->', $filters, $data);
 
         $result = false;
         if (is_writable($CFG->dirroot)) {
@@ -588,18 +551,19 @@ class phpunit_util extends testing_util {
         global $CFG;
 
         $template = '
-    <testsuites>
-        <testsuite name="@component@_testsuite">
-            <directory suffix="_test.php">.</directory>
-        </testsuite>
-    </testsuites>';
-        $filterdefault = '
+        <testsuites>
+            <testsuite name="@component@_testsuite">
+                <directory suffix="_test.php">.</directory>
+            </testsuite>
+        </testsuites>
+        <filter>
             <whitelist processUncoveredFilesFromWhitelist="false">
                 <directory suffix=".php">.</directory>
                 <exclude>
                     <directory suffix="_test.php">.</directory>
                 </exclude>
-            </whitelist>';
+            </whitelist>
+        </filter>';
 
         // Start a sequence between 100000 and 199000 to ensure each call to init produces
         // different ids in the database.  This reduces the risk that hard coded values will
@@ -619,17 +583,8 @@ class phpunit_util extends testing_util {
             $ctemplate = $template;
             $ctemplate = str_replace('@component@', $cname, $ctemplate);
 
+            // Apply it to the file template
             $fcontents = str_replace('<!--@component_suite@-->', $ctemplate, $ftemplate);
-
-            // Check for filter configurations.
-            if ($coverageinfo = self::get_coverage_info($cpath)) {
-                $filters = self::get_filter_config($coverageinfo->get_whitelists(''), $coverageinfo->get_excludelists(''));
-            } else {
-                $filters = $filterdefault;
-            }
-            $fcontents = str_replace('<!--@filterlist@-->', $filters, $fcontents);
-
-            // Apply it to the file template.
             $fcontents = str_replace(
                 '<const name="PHPUNIT_SEQUENCE_START" value=""/>',
                 '<const name="PHPUNIT_SEQUENCE_START" value="' . $sequencestart . '"/>',
@@ -925,75 +880,5 @@ class phpunit_util extends testing_util {
         $method = $reflection->getMethod($methodname);
         $method->setAccessible(true);
         return $method->invokeArgs($object, $params);
-    }
-
-    /**
-     * Pad the supplied string with $level levels of indentation.
-     *
-     * @param   string  $string The string to pad
-     * @param   int     $level The number of levels of indentation to pad
-     * @return  string
-     */
-    protected static function pad(string $string, int $level) : string {
-        return str_repeat(" ", $level * 4) . "{$string}\n";
-    }
-
-    /**
-     * Get the filter config for the supplied whitelist and excludelist configuration.
-     *
-     * @param   array[] $whitelists The list of files/folders in the whitelist.
-     * @param   array[] $excludelists The list of files/folders in the excludelist.
-     * @return  string
-     */
-    protected static function get_filter_config(array $whitelists, array $excludelists) : string {
-        $filters = '';
-        if (!empty($whitelists)) {
-            $filters .= self::pad("<whitelist>", 2);
-            foreach ($whitelists as $line) {
-                $filters .= self::pad($line, 3);
-            }
-            if (!empty($excludelists)) {
-                $filters .= self::pad("<exclude>", 3);
-                foreach ($excludelists as $line) {
-                    $filters .= self::pad($line, 4);
-                }
-                $filters .= self::pad("</exclude>", 3);
-            }
-            $filters .= self::pad("</whitelist>", 2);
-        }
-
-        return $filters;
-    }
-
-    /**
-     * Get the phpunit_coverage_info for the specified plugin or subsystem directory.
-     *
-     * @param   string  $fulldir The directory to find the coverage info file in.
-     * @return  phpunit_coverage_info
-     */
-    protected static function get_coverage_info(string $fulldir): ?phpunit_coverage_info {
-        $coverageconfig = "{$fulldir}/tests/coverage.php";
-        if (file_exists($coverageconfig)) {
-            $coverageinfo = require($coverageconfig);
-            if (!$coverageinfo instanceof phpunit_coverage_info) {
-                throw new \coding_exception("{$coverageconfig} does not return a phpunit_coverage_info");
-            }
-
-            return $coverageinfo;
-        }
-
-        return null;
-    }
-
-    /**
-     * Whether the current process is an isolated test process.
-     *
-     * @return bool
-     */
-    public static function is_in_isolated_process(): bool {
-        // Note: There is no function to call, or much to go by in order to tell whether we are in an isolated process
-        // during Bootstrap, when this function is called.
-        // We can do so by testing the existence of the wrapper function, but there is nothing set until that point.
-        return function_exists('__phpunit_run_isolated_test');
     }
 }

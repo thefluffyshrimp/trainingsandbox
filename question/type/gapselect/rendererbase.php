@@ -47,11 +47,7 @@ abstract class qtype_elements_embedded_in_question_text_renderer
         foreach ($question->textfragments as $i => $fragment) {
             if ($i > 0) {
                 $questiontext .= $placeholders[$i];
-                // There is a preg_replace 11 lines ahead where the $embeddedelements is used as the replace.
-                // If there are currency like options ($4) in the select then the preg_replace treats them as backreferences.
-                // So we need to escape the backreferences here.
-                $embeddedelements[$placeholders[$i]] =
-                        preg_replace('/\$(\d)/', '\\\$$1', $this->embedded_element($qa, $i, $options));
+                $embeddedelements[$placeholders[$i]] = $this->embedded_element($qa, $i, $options);
             }
             $questiontext .= $fragment;
         }

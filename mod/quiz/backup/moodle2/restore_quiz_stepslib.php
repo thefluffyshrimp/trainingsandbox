@@ -285,7 +285,7 @@ class restore_quiz_activity_structure_step extends restore_questions_activity_st
 
         if (!property_exists($data, 'slot')) {
             // There was a question_instance in the backup file for a question
-            // that was not actually in the quiz. Drop it.
+            // that was not acutally in the quiz. Drop it.
             $this->log('question ' . $data->questionid . ' was associated with quiz ' .
                     $this->get_new_parentid('quiz') . ' but not actually used. ' .
                     'The instance has been ignored.', backup::LOG_INFO);
@@ -375,11 +375,6 @@ class restore_quiz_activity_structure_step extends restore_questions_activity_st
 
         if ($data->groupid !== null) {
             $data->groupid = $this->get_mappingid('group', $data->groupid);
-        }
-
-        // Skip if there is no user and no group data.
-        if (empty($data->userid) && empty($data->groupid)) {
-            return;
         }
 
         $data->timeopen = $this->apply_date_offset($data->timeopen);

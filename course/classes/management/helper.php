@@ -403,10 +403,12 @@ class helper {
         $baseurl = new \moodle_url('/course/management.php', $params);
         $actions = array();
         // View.
-        $actions['view'] = array(
-            'url' => new \moodle_url('/course/view.php', array('id' => $course->id)),
-            'string' => \get_string('view')
-        );
+        if ($course->is_uservisible()) {
+            $actions['view'] = array(
+                'url' => new \moodle_url('/course/view.php', array('id' => $course->id)),
+                'string' => \get_string('view')
+            );
+        }
         // Edit.
         if ($course->can_edit()) {
             $actions['edit'] = array(
@@ -764,7 +766,7 @@ class helper {
      */
     public static function get_management_viewmodes() {
         return array(
-            'combined' => new \lang_string('categoriesandcourses'),
+            'combined' => new \lang_string('categoriesandcoures'),
             'categories' => new \lang_string('categories'),
             'courses' => new \lang_string('courses')
         );
@@ -800,14 +802,13 @@ class helper {
             $searchcriteria = array('modulelist' => $modulelist);
         }
 
-        $topcat = \core_course_category::top();
-        $courses = $topcat->search_courses($searchcriteria, array(
+        $courses = \core_course_category::get(0)->search_courses($searchcriteria, array(
             'recursive' => true,
             'offset' => $page * $perpage,
             'limit' => $perpage,
             'sort' => array('fullname' => 1)
         ));
-        $totalcount = $topcat->search_courses_count($searchcriteria, array('recursive' => true));
+        $totalcount = \core_course_category::get(0)->search_courses_count($searchcriteria, array('recursive' => true));
 
         return array($courses, \count($courses), $totalcount);
     }

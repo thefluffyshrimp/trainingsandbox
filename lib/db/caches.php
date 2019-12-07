@@ -384,35 +384,4 @@ $definitions = array(
         'simpledata' => true,
         'ttl' => 1800
     ),
-
-    // Caches the first time we analysed models' analysables.
-    'modelfirstanalyses' => array(
-        'mode' => cache_store::MODE_REQUEST,
-        'simplekeys' => true,
-        'simpledata' => true,
-    ),
-
-    // Cache the list of portfolio instances for the logged in user
-    // in the portfolio_add_button constructor to avoid loading the
-    // same data multiple times.
-    'portfolio_add_button_portfolio_instances' => [
-        'mode' => cache_store::MODE_REQUEST,
-        'simplekeys' => true,
-        'staticacceleration' => true
-    ],
-
-    // Cache the user dates for courses set to relative dates mode.
-    'course_user_dates' => [
-        'mode' => cache_store::MODE_REQUEST,
-        'simplekeys' => true,
-        'simpledata' => true,
-        'staticacceleration' => true
-    ],
-
-    // Information generated during the calculation of indicators.
-    'calculablesinfo' => [
-        'mode' => cache_store::MODE_REQUEST,
-        'simplekeys' => false,
-        'simpledata' => false,
-    ],
 );

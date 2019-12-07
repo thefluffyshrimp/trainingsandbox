@@ -28,14 +28,6 @@ define(['jquery', 'core/url', 'core/str'], function($, url, str) {
     var expandedImage = $('<img alt="" src="' + url.imageUrl('t/expanded') + '"/>');
     var collapsedImage = $('<img alt="" src="' + url.imageUrl('t/collapsed') + '"/>');
 
-    /*
-     * Class names to apply when expanding/collapsing nodes.
-     */
-    var CLASSES = {
-        EXPAND: 'fa-caret-right',
-        COLLAPSE: 'fa-caret-down'
-    };
-
     return /** @alias module:tool_dataprivacy/expand-collapse */ {
         /**
          * Expand or collapse a selected node.
@@ -48,15 +40,15 @@ define(['jquery', 'core/url', 'core/str'], function($, url, str) {
                 targetnode.removeClass('hide');
                 targetnode.addClass('visible');
                 targetnode.attr('aria-expanded', true);
-                thisnode.find(':header i.fa').removeClass(CLASSES.EXPAND);
-                thisnode.find(':header i.fa').addClass(CLASSES.COLLAPSE);
+                thisnode.find(':header i.fa').removeClass('fa-plus-square');
+                thisnode.find(':header i.fa').addClass('fa-minus-square');
                 thisnode.find(':header img.icon').attr('src', expandedImage.attr('src'));
             } else {
                 targetnode.removeClass('visible');
                 targetnode.addClass('hide');
                 targetnode.attr('aria-expanded', false);
-                thisnode.find(':header i.fa').removeClass(CLASSES.COLLAPSE);
-                thisnode.find(':header i.fa').addClass(CLASSES.EXPAND);
+                thisnode.find(':header i.fa').removeClass('fa-minus-square');
+                thisnode.find(':header i.fa').addClass('fa-plus-square');
                 thisnode.find(':header img.icon').attr('src', collapsedImage.attr('src'));
             }
         },
@@ -69,8 +61,8 @@ define(['jquery', 'core/url', 'core/str'], function($, url, str) {
         expandCollapseAll: function(nextstate) {
             var currentstate = (nextstate == 'visible') ? 'hide' : 'visible';
             var ariaexpandedstate = (nextstate == 'visible') ? true : false;
-            var iconclassnow = (nextstate == 'visible') ? CLASSES.EXPAND : CLASSES.COLLAPSE;
-            var iconclassnext = (nextstate == 'visible') ? CLASSES.COLLAPSE : CLASSES.EXPAND;
+            var iconclassnow = (nextstate == 'visible') ? 'fa-plus-square' : 'fa-minus-square';
+            var iconclassnext = (nextstate == 'visible') ? 'fa-minus-square' : 'fa-plus-square';
             var imagenow = (nextstate == 'visible') ? expandedImage.attr('src') : collapsedImage.attr('src');
             $('.' + currentstate).each(function() {
                 $(this).removeClass(currentstate);

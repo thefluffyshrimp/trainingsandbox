@@ -64,7 +64,7 @@ function user_create_user($user, $updatepassword = true, $triggerevent = true) {
     if ($updatepassword && isset($user->password)) {
 
         // Check password toward the password policy.
-        if (!check_password_policy($user->password, $errmsg, $user)) {
+        if (!check_password_policy($user->password, $errmsg)) {
             throw new moodle_exception($errmsg);
         }
 
@@ -126,9 +126,12 @@ function user_create_user($user, $updatepassword = true, $triggerevent = true) {
         \core\event\user_created::create_from_userid($newuserid)->trigger();
     }
 
-    // Purge the associated caches for the current user only.
-    $presignupcache = \cache::make('core', 'presignup');
-    $presignupcache->purge_current_user();
+// Purge the associated caches for the current user only.
+$presignupcache = \cache::make('core', 'presignup');
+
+if (get_class($presignupcache) !== 'cache_disabled') {
+$presignupcache->purge_current_user();
+}
 
     return $newuserid;
 }
@@ -165,7 +168,7 @@ function user_update_user($user, $updatepassword = true, $triggerevent = true) {
     if ($updatepassword && isset($user->password)) {
 
         // Check password toward the password policy.
-        if (!check_password_policy($user->password, $errmsg, $user)) {
+        if (!check_password_policy($user->password, $errmsg)) {
             throw new moodle_exception($errmsg);
         }
 
@@ -246,7 +249,7 @@ function user_get_default_fields() {
         'institution', 'interests', 'firstaccess', 'lastaccess', 'auth', 'confirmed',
         'idnumber', 'lang', 'theme', 'timezone', 'mailformat', 'description', 'descriptionformat',
         'city', 'url', 'country', 'profileimageurlsmall', 'profileimageurl', 'customfields',
-        'groups', 'roles', 'preferences', 'enrolledcourses', 'suspended', 'lastcourseaccess'
+        'groups', 'roles', 'preferences', 'enrolledcourses', 'suspended'
     );
 }
 
@@ -471,15 +474,6 @@ function user_get_user_details($user, $course = null, array $userfields = array(
         }
     }
 
-    // Hidden fields restriction to lastaccess field applies to both site and course access time.
-    if (in_array('lastcourseaccess', $userfields) && (!isset($hiddenfields['lastaccess']) or $isadmin)) {
-        if (isset($user->lastcourseaccess)) {
-            $userdetails['lastcourseaccess'] = $user->lastcourseaccess;
-        } else {
-            $userdetails['lastcourseaccess'] = 0;
-        }
-    }
-
     if (in_array('email', $userfields) && (
             $currentuser
             or (!isset($hiddenfields['email']) and (
@@ -606,6 +600,9 @@ function user_get_user_details_courses($user) {
     global $USER;
     $userdetails = null;
 
+    // Get the courses that the user is enrolled in (only active).
+    $courses = enrol_get_users_courses($user->id, true);
+
     $systemprofile = false;
     if (can_view_user_details_cap($user) || ($user->id == $USER->id) || has_coursecontact_role($user->id)) {
         $systemprofile = true;
@@ -616,10 +613,8 @@ function user_get_user_details_courses($user) {
         $userdetails = user_get_user_details($user, null);
     } else {
         // Try through course profile.
-        // Get the courses that the user is enrolled in (only active).
-        $courses = enrol_get_users_courses($user->id, true);
         foreach ($courses as $course) {
-            if (user_can_view_profile($user, $course)) {
+            if (can_view_user_details_cap($user, $course) || ($user->id == $USER->id) || has_coursecontact_role($user->id)) {
                 $userdetails = user_get_user_details($user, $course);
             }
         }
@@ -1293,7 +1288,7 @@ function user_get_tagged_users($tag, $exclusivemode = false, $fromctx = 0, $ctx 
  * @param int $courseid The course id
  * @param int $groupid The groupid, 0 means all groups and USERSWITHOUTGROUP no group
  * @param int $accesssince The time since last access, 0 means any time
- * @param int $roleid The role id, 0 means all roles and -1 no roles
+ * @param int $roleid The role id, 0 means all roles
  * @param int $enrolid The enrolment id, 0 means all enrolment methods will be returned.
  * @param int $statusid The user enrolment status, -1 means all enrolments regardless of the status will be returned, if allowed.
  * @param string|array $search The search that was performed, empty means perform no search
@@ -1313,7 +1308,7 @@ function user_get_participants_sql($courseid, $groupid = 0, $accesssince = 0, $r
     // Default filter settings. We only show active by default, especially if the user has no capability to review enrolments.
     $onlyactive = true;
     $onlysuspended = false;
-    if (has_capability('moodle/course:enrolreview', $context) && (has_capability('moodle/course:viewsuspendedusers', $context))) {
+    if (has_capability('moodle/course:enrolreview', $context)) {
         switch ($statusid) {
             case ENROL_USER_ACTIVE:
                 // Nothing to do here.
@@ -1367,14 +1362,8 @@ function user_get_participants_sql($courseid, $groupid = 0, $accesssince = 0, $r
         list($relatedctxsql, $relatedctxparams) = $DB->get_in_or_equal($context->get_parent_context_ids(true),
             SQL_PARAMS_NAMED, 'relatedctx');
 
-        // Get users without any role.
-        if ($roleid == -1) {
-            $wheres[] = "u.id NOT IN (SELECT userid FROM {role_assignments} WHERE contextid $relatedctxsql)";
-            $params = array_merge($params, $relatedctxparams);
-        } else {
-            $wheres[] = "u.id IN (SELECT userid FROM {role_assignments} WHERE roleid = :roleid AND contextid $relatedctxsql)";
-            $params = array_merge($params, array('roleid' => $roleid), $relatedctxparams);
-        }
+        $wheres[] = "u.id IN (SELECT userid FROM {role_assignments} WHERE roleid = :roleid AND contextid $relatedctxsql)";
+        $params = array_merge($params, array('roleid' => $roleid), $relatedctxparams);
     }
 
     if (!empty($search)) {
@@ -1587,39 +1576,3 @@ function core_user_inplace_editable($itemtype, $itemid, $newvalue) {
         return \core_user\output\user_roles_editable::update($itemid, $newvalue);
     }
 }
-
-/**
- * Map an internal field name to a valid purpose from: "https://www.w3.org/TR/WCAG21/#input-purposes"
- *
- * @param integer $userid
- * @param string $fieldname
- * @return string $purpose (empty string if there is no mapping).
- */
-function user_edit_map_field_purpose($userid, $fieldname) {
-    global $USER;
-
-    $currentuser = ($userid == $USER->id) && !\core\session\manager::is_loggedinas();
-    // These are the fields considered valid to map and auto fill from a browser.
-    // We do not include fields that are in a collapsed section by default because
-    // the browser could auto-fill the field and cause a new value to be saved when
-    // that field was never visible.
-    $validmappings = array(
-        'username' => 'username',
-        'password' => 'current-password',
-        'firstname' => 'given-name',
-        'lastname' => 'family-name',
-        'middlename' => 'additional-name',
-        'email' => 'email',
-        'country' => 'country',
-        'lang' => 'language'
-    );
-
-    $purpose = '';
-    // Only set a purpose when editing your own user details.
-    if ($currentuser && isset($validmappings[$fieldname])) {
-        $purpose = ' autocomplete="' . $validmappings[$fieldname] . '" ';
-    }
-
-    return $purpose;
-}
-

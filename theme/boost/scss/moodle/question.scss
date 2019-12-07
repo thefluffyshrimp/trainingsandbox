@@ -174,10 +174,6 @@
         }
     }
 
-    .highlight {
-        @extend .text-dark;
-    }
-
     label {
         margin: 0;
         display: block;
@@ -310,14 +306,6 @@ body.path-question-type {
 .que.multichoice .answer div.r1 .icon.fa-remove {
     text-indent: 0;
 }
-.qtype_multichoice_clearchoice {
-    padding-top: 10px;
-    a {
-        cursor: pointer;
-        text-decoration: underline;
-        padding-left: 30px;
-    }
-}
 
 .formulation input[type="text"],
 .formulation select {
@@ -416,8 +404,6 @@ body.path-question-type {
 
 .que input.questionflagimage {
     padding-right: 3px;
-    height: 16px;
-    width: 16px;
 }
 
 .importerror {
@@ -443,15 +429,6 @@ body.path-question-type {
     }
     img.activityicon {
         margin-left: 0;
-        width: 16px;
-        height: 16px;
-        padding-right: 4px;
-    }
-}
-
-#page-mod-quiz-edit .activity {
-    img.activityicon {
-        vertical-align: text-top;
     }
 }
 
@@ -619,10 +596,6 @@ body.path-question-type {
     width: auto;
 }
 
-.questionbankwindow .form-autocomplete-selection {
-    margin-left: 0;
-}
-
 #page-mod-quiz-edit div.editq div.question div.content {
     background-color: $body-bg;
     border: 1px solid #ddd;
@@ -633,7 +606,6 @@ body.path-question-type {
 
 #page-mod-quiz-edit ul.slots .activityinstance img.activityicon {
     margin-top: 0;
-    padding-right: 4px;
 }
 
 .path-mod-quiz .statedetails {

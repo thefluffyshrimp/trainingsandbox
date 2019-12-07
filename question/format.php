@@ -426,8 +426,6 @@ class qformat_default {
                 );
 
             $question->id = $DB->insert_record('question', $question);
-            $event = \core\event\question_created::create_from_question_instance($question, $this->importcontext);
-            $event->trigger();
 
             if (isset($question->questiontextitemid)) {
                 $question->questiontext = file_save_draft_area_files($question->questiontextitemid,
@@ -575,22 +573,14 @@ class qformat_default {
                 $parent = $category->id;
             } else if ($category = $DB->get_record('question_categories',
                     array('name' => $catname, 'contextid' => $context->id, 'parent' => $parent))) {
-                // If this category is now the last one in the path we are processing ...
-                if ($key == (count($catnames) - 1) && $lastcategoryinfo) {
-                    // Do nothing unless the child category appears before the parent category
-                    // in the imported xml file. Because the parent was created without info being available
-                    // at that time, this allows the info to be added from the xml data.
-                    if (isset($lastcategoryinfo->info) && $lastcategoryinfo->info !== ''
-                            && $category->info === '') {
-                        $category->info = $lastcategoryinfo->info;
-                        if (isset($lastcategoryinfo->infoformat) && $lastcategoryinfo->infoformat !== '') {
-                            $category->infoformat = $lastcategoryinfo->infoformat;
-                        }
-                    }
-                    // Same for idnumber.
-                    if (isset($lastcategoryinfo->idnumber) && $lastcategoryinfo->idnumber !== ''
-                            && $category->idnumber === '') {
-                        $category->idnumber = $lastcategoryinfo->idnumber;
+                // Do nothing unless the child category appears before the parent category
+                // in the imported xml file. Because the parent was created without info being available
+                // at that time, this allows the info to be added from the xml data.
+                if ($key == (count($catnames) - 1) && $lastcategoryinfo && isset($lastcategoryinfo->info) &&
+                        $lastcategoryinfo->info !== '' && $category->info === '') {
+                    $category->info = $lastcategoryinfo->info;
+                    if (isset($lastcategoryinfo->infoformat) && $lastcategoryinfo->infoformat !== '') {
+                        $category->infoformat = $lastcategoryinfo->infoformat;
                     }
                     $DB->update_record('question_categories', $category);
                 }
@@ -611,16 +601,11 @@ class qformat_default {
                 $category->name = $catname;
                 $category->info = '';
                 // Only add info (category description) for the final category in the catpath.
-                if ($key == (count($catnames) - 1) && $lastcategoryinfo) {
-                    if (isset($lastcategoryinfo->info) && $lastcategoryinfo->info !== '') {
-                        $category->info = $lastcategoryinfo->info;
-                        if (isset($lastcategoryinfo->infoformat) && $lastcategoryinfo->infoformat !== '') {
-                            $category->infoformat = $lastcategoryinfo->infoformat;
-                        }
-                    }
-                    // Same for idnumber.
-                    if (isset($lastcategoryinfo->idnumber) && $lastcategoryinfo->idnumber !== '') {
-                        $category->idnumber = $lastcategoryinfo->idnumber;
+                if ($key == (count($catnames) - 1) && $lastcategoryinfo && isset($lastcategoryinfo->info) &&
+                        $lastcategoryinfo->info !== '') {
+                    $category->info = $lastcategoryinfo->info;
+                    if (isset($lastcategoryinfo->infoformat) && $lastcategoryinfo->infoformat !== '') {
+                        $category->infoformat = $lastcategoryinfo->infoformat;
                     }
                 }
                 $category->parent = $parent;
@@ -628,8 +613,6 @@ class qformat_default {
                 $category->stamp = make_unique_id_code();
                 $category->id = $DB->insert_record('question_categories', $category);
                 $parent = $category->id;
-                $event = \core\event\question_category_created::create_from_question_category_instance($category, $context);
-                $event->trigger();
             }
         }
         return $category;
@@ -873,10 +856,6 @@ class qformat_default {
     public function exportprocess($checkcapabilities = true) {
         global $CFG, $DB;
 
-        // Raise time and memory, as exporting can be quite intensive.
-        core_php_time_limit::raise();
-        raise_memory_limit(MEMORY_EXTRA);
-
         // Get the parents (from database) for this category.
         $parents = [];
         if ($this->category) {
@@ -937,7 +916,7 @@ class qformat_default {
                         if (!count($DB->get_records('question', array('category' => $trackcategoryparent)))) {
                             $categoryname = $this->get_category_path($trackcategoryparent, $this->contexttofile);
                             $categoryinfo = $DB->get_record('question_categories', array('id' => $trackcategoryparent),
-                                'name, info, infoformat, idnumber', MUST_EXIST);
+                                'name, info, infoformat', MUST_EXIST);
                             if ($categoryinfo->name != 'top') {
                                 // Create 'dummy' question for parent category.
                                 $dummyquestion = $this->create_dummy_question_representing_category($categoryname, $categoryinfo);
@@ -950,7 +929,7 @@ class qformat_default {
                 if ($addnewcat && !in_array($trackcategory, $writtencategories)) {
                     $categoryname = $this->get_category_path($trackcategory, $this->contexttofile);
                     $categoryinfo = $DB->get_record('question_categories', array('id' => $trackcategory),
-                            'info, infoformat, idnumber', MUST_EXIST);
+                            'info, infoformat', MUST_EXIST);
                     // Create 'dummy' question for category.
                     $dummyquestion = $this->create_dummy_question_representing_category($categoryname, $categoryinfo);
                     $expout .= $this->writequestion($dummyquestion) . "\n";
@@ -958,15 +937,11 @@ class qformat_default {
                 }
             }
 
-            // Add the question to result.
+            // export the question displaying message
+            $count++;
+
             if (!$checkcapabilities || question_has_capability_on($question, 'view')) {
-                $expquestion = $this->writequestion($question, $contextid);
-                // Don't add anything if witequestion returned nothing.
-                // This will permit qformat plugins to exclude some questions.
-                if ($expquestion !== null) {
-                    $expout .= $expquestion . "\n";
-                    $count++;
-                }
+                $expout .= $this->writequestion($question, $contextid) . "\n";
             }
         }
 
@@ -999,7 +974,6 @@ class qformat_default {
         $dummyquestion->contextid = 0;
         $dummyquestion->info = $categoryinfo->info;
         $dummyquestion->infoformat = $categoryinfo->infoformat;
-        $dummyquestion->idnumber = $categoryinfo->idnumber;
         $dummyquestion->name = 'Switch category to ' . $categoryname;
         return $dummyquestion;
     }

@@ -672,7 +672,7 @@ class manager {
         $attachment->charset        = $partdata->getCharset();
         $attachment->description    = $partdata->getDescription();
         $attachment->contentid      = $partdata->getContentId();
-        $attachment->filesize       = $partdata->getBytes();
+        $attachment->filesize       = $messagedata->getBodyPartSize($part);
 
         if (!empty($CFG->antiviruses)) {
             mtrace("--> Attempting virus scan of '{$attachment->filename}'");

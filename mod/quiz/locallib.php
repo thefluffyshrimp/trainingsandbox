@@ -1544,11 +1544,6 @@ function quiz_send_confirmation($recipient, $a) {
     $eventdata->smallmessage      = get_string('emailconfirmsmall', 'quiz', $a);
     $eventdata->contexturl        = $a->quizurl;
     $eventdata->contexturlname    = $a->quizname;
-    $eventdata->customdata        = [
-        'cmid' => $a->quizcmid,
-        'instance' => $a->quizid,
-        'attemptid' => $a->attemptid,
-    ];
 
     // ... and send it.
     return message_send($eventdata);
@@ -1563,7 +1558,6 @@ function quiz_send_confirmation($recipient, $a) {
  * @return int|false as for {@link message_send()}.
  */
 function quiz_send_notification($recipient, $submitter, $a) {
-    global $PAGE;
 
     // Recipient info for template.
     $a->useridnumber = $recipient->idnumber;
@@ -1587,15 +1581,6 @@ function quiz_send_notification($recipient, $submitter, $a) {
     $eventdata->smallmessage      = get_string('emailnotifysmall', 'quiz', $a);
     $eventdata->contexturl        = $a->quizreviewurl;
     $eventdata->contexturlname    = $a->quizname;
-    $userpicture = new user_picture($submitter);
-    $userpicture->size = 1; // Use f1 size.
-    $userpicture->includetoken = $recipient->id; // Generate an out-of-session token for the user receiving the message.
-    $eventdata->customdata        = [
-        'cmid' => $a->quizcmid,
-        'instance' => $a->quizid,
-        'attemptid' => $a->attemptid,
-        'notificationiconurl' => $userpicture->get_url($PAGE)->out(false),
-    ];
 
     // ... and send it.
     return message_send($eventdata);
@@ -1664,15 +1649,12 @@ function quiz_send_notification_messages($course, $quiz, $attempt, $context, $cm
             format_string($quiz->name) . ' report</a>';
     $a->quizurl         = $CFG->wwwroot . '/mod/quiz/view.php?id=' . $cm->id;
     $a->quizlink        = '<a href="' . $a->quizurl . '">' . format_string($quiz->name) . '</a>';
-    $a->quizid          = $quiz->id;
-    $a->quizcmid        = $cm->id;
     // Attempt info.
     $a->submissiontime  = userdate($attempt->timefinish);
     $a->timetaken       = format_time($attempt->timefinish - $attempt->timestart);
     $a->quizreviewurl   = $CFG->wwwroot . '/mod/quiz/review.php?attempt=' . $attempt->id;
     $a->quizreviewlink  = '<a href="' . $a->quizreviewurl . '">' .
             format_string($quiz->name) . ' review</a>';
-    $a->attemptid       = $attempt->id;
     // Student who sat the quiz info.
     $a->studentidnumber = $submitter->idnumber;
     $a->studentname     = fullname($submitter);
@@ -1766,11 +1748,6 @@ function quiz_send_overdue_message($attemptobj) {
     $eventdata->smallmessage      = get_string('emailoverduesmall', 'quiz', $a);
     $eventdata->contexturl        = $a->quizurl;
     $eventdata->contexturlname    = $a->quizname;
-    $eventdata->customdata        = [
-        'cmid' => $attemptobj->get_cmid(),
-        'instance' => $attemptobj->get_quizid(),
-        'attemptid' => $attemptobj->get_attemptid(),
-    ];
 
     // Send the message.
     return message_send($eventdata);
@@ -2048,43 +2025,17 @@ class qubaids_for_quiz_user extends qubaid_join {
  * @param bool $showicon If true, show the question's icon with the question. False by default.
  * @param bool $showquestiontext If true (default), show question text after question name.
  *       If false, show only question name.
- * @param bool $showidnumber If true, show the question's idnumber, if any. False by default.
- * @param core_tag_tag[]|bool $showtags if array passed, show those tags. Else, if true, get and show tags,
- *       else, don't show tags (which is the default).
- * @return string HTML fragment.
+ * @return string
  */
-function quiz_question_tostring($question, $showicon = false, $showquestiontext = true,
-        $showidnumber = false, $showtags = false) {
-    global $OUTPUT;
+function quiz_question_tostring($question, $showicon = false, $showquestiontext = true) {
     $result = '';
 
-    // Question name.
     $name = shorten_text(format_string($question->name), 200);
     if ($showicon) {
         $name .= print_question_icon($question) . ' ' . $name;
     }
     $result .= html_writer::span($name, 'questionname');
 
-    // Question idnumber.
-    if ($showidnumber && $question->idnumber !== null && $question->idnumber !== '') {
-        $result .= ' ' . html_writer::span(
-                html_writer::span(get_string('idnumber', 'question'), 'accesshide') .
-                ' ' . $question->idnumber, 'badge badge-primary');
-    }
-
-    // Question tags.
-    if (is_array($showtags)) {
-        $tags = $showtags;
-    } else if ($showtags) {
-        $tags = core_tag_tag::get_item_tags('core_question', 'question', $question->id);
-    } else {
-        $tags = [];
-    }
-    if ($tags) {
-        $result .= $OUTPUT->tag_list($tags, null, 'd-inline', 0, null, true);
-    }
-
-    // Question text.
     if ($showquestiontext) {
         $questiontext = question_utils::to_plain_text($question->questiontext,
                 $question->questiontextformat, array('noclean' => true, 'para' => false));
@@ -2362,8 +2313,8 @@ function quiz_validate_new_attempt(quiz $quizobj, quiz_access_manager $accessman
     // Check to see if a new preview was requested.
     if ($quizobj->is_preview_user() && $forcenew) {
         // To force the creation of a new preview, we mark the current attempt (if any)
-        // as abandoned. It will then automatically be deleted below.
-        $DB->set_field('quiz_attempts', 'state', quiz_attempt::ABANDONED,
+        // as finished. It will then automatically be deleted below.
+        $DB->set_field('quiz_attempts', 'state', quiz_attempt::FINISHED,
                 array('quiz' => $quizobj->get_quizid(), 'userid' => $USER->id));
     }
 
@@ -2430,29 +2381,22 @@ function quiz_validate_new_attempt(quiz $quizobj, quiz_access_manager $accessman
  *      to force the choice of a particular actual question. Intended for testing purposes only.
  * @param array $forcedvariants slot number => variant. Used for questions with variants,
  *      to force the choice of a particular variant. Intended for testing purposes only.
- * @param int $userid Specific user id to create an attempt for that user, null for current logged in user
  * @return object the new attempt
  * @since  Moodle 3.1
  */
 function quiz_prepare_and_start_new_attempt(quiz $quizobj, $attemptnumber, $lastattempt,
-        $offlineattempt = false, $forcedrandomquestions = [], $forcedvariants = [], $userid = null) {
+        $offlineattempt = false, $forcedrandomquestions = [], $forcedvariants = []) {
     global $DB, $USER;
 
-    if ($userid === null) {
-        $userid = $USER->id;
-        $ispreviewuser = $quizobj->is_preview_user();
-    } else {
-        $ispreviewuser = has_capability('mod/quiz:preview', $quizobj->get_context(), $userid);
-    }
     // Delete any previous preview attempts belonging to this user.
-    quiz_delete_previews($quizobj->get_quiz(), $userid);
+    quiz_delete_previews($quizobj->get_quiz(), $USER->id);
 
     $quba = question_engine::make_questions_usage_by_activity('mod_quiz', $quizobj->get_context());
     $quba->set_preferred_behaviour($quizobj->get_quiz()->preferredbehaviour);
 
     // Create the new attempt and initialize the question sessions
     $timenow = time(); // Update time now, in case the server is running really slowly.
-    $attempt = quiz_create_attempt($quizobj, $attemptnumber, $lastattempt, $timenow, $ispreviewuser, $userid);
+    $attempt = quiz_create_attempt($quizobj, $attemptnumber, $lastattempt, $timenow, $quizobj->is_preview_user());
 
     if (!($quizobj->get_quiz()->attemptonlast && $lastattempt)) {
         $attempt = quiz_start_new_attempt($quizobj, $quba, $attempt, $attemptnumber, $timenow,

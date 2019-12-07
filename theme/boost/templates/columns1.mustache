@@ -39,7 +39,6 @@
 {{> theme_boost/head }}
 
 <body {{{ bodyattributes }}}>
-{{> core/local/toast/wrapper}}
 
 <div id="page-wrapper">
 
@@ -48,7 +47,7 @@
     <div id="page" class="container-fluid">
         <div id="page-content" class="row pb-3">
             <div id="region-main-box" class="col-12">
-                <section id="region-main" aria-label="{{#str}}content{{/str}}">
+                <section id="region-main">
                     {{{ output.course_content_header }}}
                     {{{ output.main_content }}}
                     {{{ output.activity_navigation }}}
@@ -65,8 +64,5 @@
 </body>
 </html>
 {{#js}}
-M.util.js_pending('theme_boost/loader');
-require(['theme_boost/loader'], function() {
-  M.util.js_complete('theme_boost/loader');
-});
+require(['theme_boost/loader']);
 {{/js}}

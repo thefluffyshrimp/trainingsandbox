@@ -1,11 +1,7 @@
 This file describes API changes in /theme/boost
 information provided here is intended especially for theme designers.
 
-=== 3.7 ===
-
-* Templates and renderers moved to core.
-
-* Behat override steps moved to core.
+=== 3.6.2 ===
 
 Form element template
 ---------------------

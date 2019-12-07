@@ -70,12 +70,10 @@ class create_update_form_mapper implements create_update_form_mapper_interface {
             'format' => $data->format
         ];
 
-        // Don't return context or subscription because they're not form values and break validation.
+        // We don't want to return the context because it's not a
+        // form value and breaks the validation.
         if (isset($data->context)) {
             unset($data->context);
-        }
-        if (isset($data->subscription)) {
-            unset($data->subscription);
         }
 
         return $data;

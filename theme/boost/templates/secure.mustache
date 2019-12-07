@@ -37,7 +37,6 @@
 {{> theme_boost/head }}
 
 <body {{{ bodyattributes }}}>
-{{> core/local/toast/wrapper}}
 
 <div id="page-wrapper">
 
@@ -60,7 +59,7 @@
 
         <div id="page-content" class="row">
             <div id="region-main-box" class="col-12">
-                <section id="region-main" {{#hasblocks}}class="has-blocks"{{/hasblocks}} aria-label="{{#str}}content{{/str}}">
+                <section id="region-main" {{#hasblocks}}class="has-blocks"{{/hasblocks}}>
 
                     {{{ output.course_content_header }}}
                     {{{ output.main_content }}}
@@ -68,7 +67,7 @@
 
                 </section>
                 {{#hasblocks}}
-                <section data-region="blocks-column" aria-label="{{#str}}blocks{{/str}}">
+                <section data-region="blocks-column">
                     {{{ sidepreblocks }}}
                 </section>
                 {{/hasblocks}}
@@ -88,8 +87,5 @@
 </body>
 </html>
 {{#js}}
-M.util.js_pending('theme_boost/loader');
-require(['theme_boost/loader'], function() {
-  M.util.js_complete('theme_boost/loader');
-});
+require(['theme_boost/loader']);
 {{/js}}

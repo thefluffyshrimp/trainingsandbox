@@ -95,12 +95,21 @@ class provider implements
             return;
         }
 
-        $params = ['contextid' => $context->id];
+        $params = [
+            'contextid' => $context->id,
+            'contextsystem' => CONTEXT_SYSTEM,
+            'contextcoursecat' => CONTEXT_COURSECAT,
+        ];
 
-        $sql = "SELECT cm.userid
+        $sql = "SELECT cm.userid as userid
                   FROM {cohort_members} cm
-                  JOIN {cohort} c ON cm.cohortid = c.id
-                 WHERE c.contextid = :contextid";
+                  JOIN {cohort} c
+                       ON cm.cohortid = c.id
+                  JOIN {context} ctx
+                       ON c.contextid = ctx.id
+                       AND (ctx.contextlevel = :contextsystem
+                            OR ctx.contextlevel = :contextcoursecat)
+                 WHERE ctx.id = :contextid";
 
         $userlist->add_from_sql('userid', $sql, $params);
     }

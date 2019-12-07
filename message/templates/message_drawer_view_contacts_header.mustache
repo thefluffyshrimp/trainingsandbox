@@ -36,18 +36,16 @@
 }}
 <div class="hidden border-bottom px-2 py-3" aria-hidden="true" data-region="view-contacts">
     <div class="d-flex align-items-center">
-        {{#isdrawer}}
         <div class="align-self-stretch">
-            <a class="h-100 d-flex align-items-center mr-2" href="#" data-route-back role="button">
+            <a class="h-100 d-flex align-items-center mr-2" href="#" data-route-back>
                 {{> core_message/message_drawer_icon_back }}
             </a>
         </div>
-        {{/isdrawer}}
         <div>
             {{#str}} contacts, core_message {{/str}}
         </div>
         <div class="ml-auto">
-            <a href="#" data-route="view-search" role="button" aria-label="{{#str}} search, core_search {{/str}}">
+            <a href="#" data-route="view-search">
                 {{#pix}} a/search, core {{/pix}}
             </a>
         </div>

@@ -28,7 +28,6 @@ define('AJAX_SCRIPT', true);
 define('NO_MOODLE_COOKIES', true); // No need for a session here.
 
 require_once(__DIR__ . '/../config.php');
-require_once($CFG->libdir . '/badgeslib.php');
 
 if (empty($CFG->enablebadges)) {
     print_error('badgesdisabled', 'badges');

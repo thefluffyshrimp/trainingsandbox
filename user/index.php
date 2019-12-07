@@ -210,7 +210,7 @@ $enrolbuttonsout = '';
 foreach ($enrolbuttons as $enrolbutton) {
     $enrolbuttonsout .= $enrolrenderer->render($enrolbutton);
 }
-echo html_writer::div($enrolbuttonsout, 'float-right');
+echo html_writer::div($enrolbuttonsout, 'pull-right');
 
 // Should use this variable so that we don't break stuff every time a variable is added or changed.
 $baseurl = new moodle_url('/user/index.php', array(
@@ -262,7 +262,7 @@ if ($perpage == SHOW_ALL_PAGE_SIZE && $participanttable->totalrows > DEFAULT_PAG
 }
 
 if ($bulkoperations) {
-    echo '<br /><div class="buttons"><div class="form-inline">';
+    echo '<br /><div class="buttons">';
 
     if ($participanttable->get_page_size() < $participanttable->totalrows) {
         $perpageurl = clone($baseurl);
@@ -280,12 +280,19 @@ if ($bulkoperations) {
         $label = get_string('selectalluserswithcount', 'moodle', $participanttable->totalrows);
         echo html_writer::tag('input', "", array('type' => 'button', 'id' => 'checkall', 'class' => 'btn btn-secondary',
                 'value' => $label, 'data-showallink' => $showalllink));
+        // Select all users, mark all users on page as selected.
+        echo html_writer::tag('input', "", array('type' => 'button', 'id' => 'checkallonpage', 'class' => 'btn btn-secondary',
+        'value' => get_string('selectallusersonpage')));
+    } else {
+        echo html_writer::tag('input', "", array('type' => 'button', 'id' => 'checkallonpage', 'class' => 'btn btn-secondary',
+        'value' => get_string('selectall')));
     }
+
+    echo html_writer::tag('input', "", array('type' => 'button', 'id' => 'checknone', 'class' => 'btn btn-secondary',
+        'value' => get_string('deselectall')));
     echo html_writer::end_tag('div');
     $displaylist = array();
-    if (!empty($CFG->messaging)) {
-        $displaylist['#messageselect'] = get_string('messageselectadd');
-    }
+    $displaylist['#messageselect'] = get_string('messageselectadd');
     if (!empty($CFG->enablenotes) && has_capability('moodle/notes:manage', $context) && $context->id != $frontpagectx->id) {
         $displaylist['#addgroupnote'] = get_string('addnewnote', 'notes');
     }
@@ -330,23 +337,15 @@ if ($bulkoperations) {
         }
     }
 
-    $selectactionparams = array(
-        'id' => 'formactionid',
-        'class' => 'ml-2',
-        'data-action' => 'toggle',
-        'data-togglegroup' => 'participants-table',
-        'data-toggle' => 'action',
-        'disabled' => empty($selectall)
-    );
-    echo html_writer::tag('div', html_writer::tag('label', get_string("withselectedusers"),
-        array('for' => 'formactionid', 'class' => 'col-form-label d-inline')) .
-        html_writer::select($displaylist, 'formaction', '', array('' => 'choosedots'), $selectactionparams));
+    echo $OUTPUT->help_icon('withselectedusers');
+    echo html_writer::tag('label', get_string("withselectedusers"), array('for' => 'formactionid'));
+    echo html_writer::select($displaylist, 'formaction', '', array('' => 'choosedots'), array('id' => 'formactionid'));
 
     echo '<input type="hidden" name="id" value="'.$course->id.'" />';
     echo '<noscript style="display:inline">';
     echo '<div><input type="submit" value="'.get_string('ok').'" /></div>';
     echo '</noscript>';
-    echo '</div></div></div>';
+    echo '</div></div>';
     echo '</form>';
 
     $options = new stdClass();
@@ -359,7 +358,7 @@ if ($bulkoperations) {
 echo '</div>';  // Userlist.
 
 $enrolrenderer = $PAGE->get_renderer('core_enrol');
-echo '<div class="float-right">';
+echo '<div class="pull-right">';
 foreach ($enrolbuttons as $enrolbutton) {
     echo $enrolrenderer->render($enrolbutton);
 }
@@ -367,8 +366,9 @@ echo '</div>';
 
 if ($newcourse == 1) {
     $str = get_string('proceedtocourse', 'enrol');
+    // Floated left so it goes under the enrol users button on mobile.
     // The margin is to make it line up with the enrol users button when they are both on the same line.
-    $classes = 'my-1';
+    $classes = 'm-y-1 pull-xs-left';
     $url = course_get_url($course);
     echo $OUTPUT->single_button($url, $str, 'GET', array('class' => $classes));
 }

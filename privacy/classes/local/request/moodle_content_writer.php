@@ -38,11 +38,6 @@ defined('MOODLE_INTERNAL') || die();
  */
 class moodle_content_writer implements content_writer {
     /**
-     * Maximum context name char size.
-     */
-    const MAX_CONTEXT_NAME_LENGTH = 32;
-
-    /**
      * @var string The base path on disk for this instance.
      */
     protected $path = null;
@@ -259,17 +254,15 @@ class moodle_content_writer implements content_writer {
     /**
      * Determine the path for the current context.
      *
-     * @return array The context path.
-     * @throws \coding_exception
+     * @return  array                       The context path.
      */
-    protected function get_context_path() : array {
+    protected function get_context_path() : Array {
         $path = [];
         $contexts = array_reverse($this->context->get_parent_contexts(true));
         foreach ($contexts as $context) {
             $name = $context->get_context_name();
-            $id = ' _.' . $context->id;
-            $path[] = shorten_text(clean_param($name, PARAM_FILE),
-                    self::MAX_CONTEXT_NAME_LENGTH, true, json_decode('"' . '\u2026' . '"')) . $id;
+            $id = '_.' . $context->id;
+            $path[] = shorten_filename(clean_param("{$name} {$id}", PARAM_FILE), MAX_FILENAME_SIZE, true);
         }
 
         return $path;
@@ -623,8 +616,8 @@ class moodle_content_writer implements content_writer {
         $targetpath = ['js', 'general.js'];
         $this->copy_data($jspath, $targetpath);
 
-        $jquery = ['lib', 'jquery', 'jquery-3.4.1.min.js'];
-        $jquerydestination = ['js', 'jquery-3.4.1.min.js'];
+        $jquery = ['lib', 'jquery', 'jquery-3.2.1.min.js'];
+        $jquerydestination = ['js', 'jquery-3.2.1.min.js'];
         $this->copy_data($jquery, $jquerydestination);
 
         $requirecurrentpath = ['lib', 'requirejs', 'require.min.js'];

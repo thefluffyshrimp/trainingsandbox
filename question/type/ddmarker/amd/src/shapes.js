@@ -234,8 +234,6 @@ define(function() {
      * @constructor
      */
     function Circle(label, x, y, radius) {
-        x = x || 15;
-        y = y || 15;
         Shape.call(this, label, x, y);
         this.radius = radius || 15;
     }

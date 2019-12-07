@@ -773,9 +773,7 @@ class moodle_url {
      * @param string $pathname
      * @param string $filename
      * @param bool $forcedownload
-     * @param mixed $includetoken Whether to use a user token when displaying this group image.
-     *                True indicates to generate a token for current user, and integer value indicates to generate a token for the
-     *                user whose id is the value indicated.
+     * @param boolean $includetoken Whether to use a user token when displaying this group image.
      *                If the group picture is included in an e-mail or some other location where the audience is a specific
      *                user who will not be logged in when viewing, then we use a token to authenticate the user.
      * @return moodle_url
@@ -788,8 +786,7 @@ class moodle_url {
 
         if ($includetoken) {
             $urlbase = "$CFG->wwwroot/tokenpluginfile.php";
-            $userid = $includetoken === true ? $USER->id : $includetoken;
-            $token = get_user_key('core_files', $userid);
+            $token = get_user_key('core_files', $USER->id);
             if ($CFG->slasharguments) {
                 $path[] = $token;
             }
@@ -1107,10 +1104,13 @@ function page_get_doc_link_path(moodle_page $page) {
  * @return boolean
  */
 function validate_email($address) {
-    global $CFG;
-    require_once($CFG->libdir.'/phpmailer/moodle_phpmailer.php');
 
-    return moodle_phpmailer::validateAddress($address) && !preg_match('/[<>]/', $address);
+    return (bool)preg_match('#^[-!\#$%&\'*+\\/0-9=?A-Z^_`a-z{|}~]+'.
+                 '(\.[-!\#$%&\'*+\\/0-9=?A-Z^_`a-z{|}~]+)*'.
+                  '@'.
+                  '[-!\#$%&\'*+\\/0-9=?A-Z^_`a-z{|}~]+\.'.
+                  '[-!\#$%&\'*+\\./0-9=?A-Z^_`a-z{|}~]+$#',
+                  $address);
 }
 
 /**
@@ -1856,7 +1856,7 @@ function purify_html($text, $options = array()) {
         }
 
         if ($def = $config->maybeGetRawHTMLDefinition()) {
-            $def->addElement('nolink', 'Inline', 'Flow', array());                      // Skip our filters inside.
+            $def->addElement('nolink', 'Block', 'Flow', array());                       // Skip our filters inside.
             $def->addElement('tex', 'Inline', 'Inline', array());                       // Tex syntax, equivalent to $$xx$$.
             $def->addElement('algebra', 'Inline', 'Inline', array());                   // Algebra syntax, equivalent to @@xx@@.
             $def->addElement('lang', 'Block', 'Flow', array(), array('lang'=>'CDATA')); // Original multilang style - only our hacked lang attribute.
@@ -2281,8 +2281,7 @@ function send_headers($contenttype, $cacheable = true) {
     }
     @header('Accept-Ranges: none');
 
-    // The Moodle app must be allowed to embed content always.
-    if (empty($CFG->allowframembedding) && !core_useragent::is_moodle_app()) {
+    if (empty($CFG->allowframembedding)) {
         @header('X-Frame-Options: sameorigin');
     }
 }
@@ -2494,8 +2493,6 @@ function print_collapsible_region_end($return = false) {
  * @param boolean $return If false print picture, otherwise return the output as string
  * @param boolean $link Enclose image in a link to view specified course?
  * @param boolean $includetoken Whether to use a user token when displaying this group image.
- *                True indicates to generate a token for current user, and integer value indicates to generate a token for the
- *                user whose id is the value indicated.
  *                If the group picture is included in an e-mail or some other location where the audience is a specific
  *                user who will not be logged in when viewing, then we use a token to authenticate the user.
  * @return string|void Depending on the setting of $return
@@ -2550,8 +2547,6 @@ function print_group_picture($group, $courseid, $large = false, $return = false,
  * @param  int $courseid The course ID for the group.
  * @param  bool $large A large or small group picture? Default is small.
  * @param  boolean $includetoken Whether to use a user token when displaying this group image.
- *                 True indicates to generate a token for current user, and integer value indicates to generate a token for the
- *                 user whose id is the value indicated.
  *                 If the group picture is included in an e-mail or some other location where the audience is a specific
  *                 user who will not be logged in when viewing, then we use a token to authenticate the user.
  * @return moodle_url Returns the url for the group picture.
@@ -2978,10 +2973,10 @@ function obfuscate_email($email) {
     $length = strlen($email);
     $obfuscated = '';
     while ($i < $length) {
-        if (rand(0, 2) && $email[$i]!='@') { // MDL-20619 some browsers have problems unobfuscating @.
-            $obfuscated.='%'.dechex(ord($email[$i]));
+        if (rand(0, 2) && $email{$i}!='@') { // MDL-20619 some browsers have problems unobfuscating @.
+            $obfuscated.='%'.dechex(ord($email{$i}));
         } else {
-            $obfuscated.=$email[$i];
+            $obfuscated.=$email{$i};
         }
         $i++;
     }
@@ -3615,9 +3610,7 @@ function print_password_policy() {
     $message = '';
     if (!empty($CFG->passwordpolicy)) {
         $messages = array();
-        if (!empty($CFG->minpasswordlength)) {
-            $messages[] = get_string('informminpasswordlength', 'auth', $CFG->minpasswordlength);
-        }
+        $messages[] = get_string('informminpasswordlength', 'auth', $CFG->minpasswordlength);
         if (!empty($CFG->minpassworddigits)) {
             $messages[] = get_string('informminpassworddigits', 'auth', $CFG->minpassworddigits);
         }
@@ -3631,20 +3624,8 @@ function print_password_policy() {
             $messages[] = get_string('informminpasswordnonalphanum', 'auth', $CFG->minpasswordnonalphanum);
         }
 
-        // Fire any additional password policy functions from plugins.
-        // Callbacks must return an array of message strings.
-        $pluginsfunction = get_plugins_with_function('print_password_policy');
-        foreach ($pluginsfunction as $plugintype => $plugins) {
-            foreach ($plugins as $pluginfunction) {
-                $messages = array_merge($messages, $pluginfunction());
-            }
-        }
-
         $messages = join(', ', $messages); // This is ugly but we do not have anything better yet...
-        // Check if messages is empty before outputting any text.
-        if ($messages != '') {
-            $message = get_string('informpasswordpolicy', 'auth', $messages);
-        }
+        $message = get_string('informpasswordpolicy', 'auth', $messages);
     }
     return $message;
 }

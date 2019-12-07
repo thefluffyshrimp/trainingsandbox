@@ -105,11 +105,20 @@ class provider implements
             return;
         }
 
-        $sql = "SELECT ud.userid
+        $params = [
+            'contextid' => $context->id,
+            'contextuser' => CONTEXT_USER,
+        ];
+
+        $sql = "SELECT ud.userid as userid
                   FROM {message_airnotifier_devices} mad
-                  JOIN {user_devices} ud ON ud.id = mad.userdeviceid
-                 WHERE ud.userid = ?";
-        $params = [$context->instanceid];
+                  JOIN {user_devices} ud
+                       ON ud.id = mad.userdeviceid
+                  JOIN {context} ctx
+                       ON ctx.instanceid = ud.userid
+                       AND ctx.contextlevel = :contextuser
+                 WHERE ctx.id = :contextid";
+
         $userlist->add_from_sql('userid', $sql, $params);
     }
 

@@ -69,10 +69,6 @@ $strnotingroup       = get_string('notingrouplist', 'group');
 $strnogroup          = get_string('nogroup', 'group');
 $strnogrouping       = get_string('nogrouping', 'group');
 
-// This can show all users and all groups in a course.
-// This is lots of data so allow this script more resources.
-raise_memory_limit(MEMORY_EXTRA);
-
 // Get all groupings and sort them by formatted name.
 $groupings = $DB->get_records('groupings', array('courseid'=>$courseid), 'name');
 foreach ($groupings as $gid => $grouping) {
@@ -246,7 +242,7 @@ foreach ($members as $gpgid=>$groupdata) {
             $line[] = $name;
         } else {
             $line[] = html_writer::tag('span', $name, array('class' => 'group_hoverdescription', 'data-groupid' => $gpid));
-            $hoverevents[$gpid] = get_string('descriptiona', null, $jsdescription);
+            $hoverevents[$gpid] = $jsdescription;
         }
         $fullnames = array();
         foreach ($users as $user) {

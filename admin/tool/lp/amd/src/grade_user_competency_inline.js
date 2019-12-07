@@ -95,7 +95,7 @@ define(['jquery',
             self = this;
 
         var promise = ScaleValues.get_values(self._scaleId);
-        promise.then(function(scalevalues) {
+        promise.done(function(scalevalues) {
             options.push({
                 value: '',
                 name: self._chooseStr
@@ -109,13 +109,8 @@ define(['jquery',
                 });
             }
 
-            return options;
-        })
-        .then(function(options) {
-            return new GradeDialogue(options);
-        })
-        .then(function(dialogue) {
-            dialogue.on('rated', function(e, data) {
+            self._dialogue = new GradeDialogue(options);
+            self._dialogue.on('rated', function(e, data) {
                 var args = self._args;
                 args.grade = data.rating;
                 args.note = data.note;
@@ -128,15 +123,7 @@ define(['jquery',
                     fail: notification.exception
                 }]);
             });
-
-            return dialogue;
-        })
-        .then(function(dialogue) {
-            self._dialogue = dialogue;
-
-            return;
-        })
-        .fail(notification.exception);
+        }).fail(notification.exception);
     };
 
     /** @type {Number} The scale id for this competency. */

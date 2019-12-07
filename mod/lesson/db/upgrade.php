@@ -54,6 +54,9 @@ function xmldb_lesson_upgrade($oldversion) {
 
     $dbman = $DB->get_manager();
 
+    // Automatically generated Moodle v3.2.0 release upgrade line.
+    // Put any upgrade step following this.
+
     if ($oldversion < 2016120515) {
         // Define new fields to be added to lesson.
         $table = new xmldb_table('lesson');
@@ -101,13 +104,6 @@ function xmldb_lesson_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2017051501, 'lesson');
     }
 
-    if ($oldversion < 2019062400) {
-        // Delete orphaned group overrides.
-        $DB->delete_records_select('lesson_overrides', 'groupid = 0 AND userid IS NULL');
-
-        upgrade_mod_savepoint(true, 2019062400, 'lesson');
-    }
-
     // Automatically generated Moodle v3.4.0 release upgrade line.
     // Put any upgrade step following this.
 
@@ -115,12 +111,6 @@ function xmldb_lesson_upgrade($oldversion) {
     // Put any upgrade step following this.
 
     // Automatically generated Moodle v3.6.0 release upgrade line.
-    // Put any upgrade step following this.
-
-    // Automatically generated Moodle v3.7.0 release upgrade line.
-    // Put any upgrade step following this.
-
-    // Automatically generated Moodle v3.8.0 release upgrade line.
     // Put any upgrade step following this.
 
     return true;

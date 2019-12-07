@@ -127,13 +127,8 @@ $searches = [];
 $params = [];
 
 $usedefaultfilters = true;
-
-if (!empty($types['site'])) {
+if (!empty($courseid) && $courseid == SITEID && !empty($types['site'])) {
     $searches[] = "(eventtype = 'site')";
-    $usedefaultfilters = false;
-}
-
-if (!empty($types['user'])) {
     $searches[] = "(eventtype = 'user' AND userid = :userid)";
     $params['userid'] = $USER->id;
     $usedefaultfilters = false;
@@ -145,14 +140,9 @@ if (!empty($courseid) && !empty($types['course'])) {
     $usedefaultfilters = false;
 }
 
-if (!empty($types['category'])) {
-    if (!empty($categoryid)) {
-        $searches[] = "(eventtype = 'category' AND categoryid = :categoryid)";
-        $params += ['categoryid' => $categoryid];
-    } else {
-        $searches[] = "(eventtype = 'category')";
-    }
-
+if (!empty($categoryid) && !empty($types['category'])) {
+    $searches[] = "(eventtype = 'category' AND categoryid = :categoryid)";
+    $params += ['categoryid' => $categoryid];
     $usedefaultfilters = false;
 }
 

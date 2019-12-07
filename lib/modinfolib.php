@@ -260,6 +260,7 @@ class course_modinfo {
                 $modnamesused[$mod->modname] = $modnames[$mod->modname];
             }
         }
+        core_collator::asort($modnamesused);
         return $modnamesused;
     }
 

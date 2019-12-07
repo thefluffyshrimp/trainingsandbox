@@ -36,13 +36,11 @@
 }}
 
 <div class="d-flex align-items-center">
-    {{#showrouteback}}
-        <div class="align-self-stretch" >
-            <a class="h-100 mr-2 d-flex align-items-center" href="#" data-route-back role="button">
-                {{> core_message/message_drawer_icon_back }}
-            </a>
-        </div>
-    {{/showrouteback}}
+    <div class="align-self-stretch" >
+        <a class="h-100 mr-2 d-flex align-items-center" href="#" data-route-back>
+            {{> core_message/message_drawer_icon_back }}
+        </a>
+    </div>
     <div class="d-flex text-truncate">
         {{#imageurl}}
             <div class="d-flex align-items-center">
@@ -58,13 +56,8 @@
         <div class="w-100 text-truncate ml-2">
             <div class="d-flex">
                 <strong class="m-0 text-truncate">{{name}}</strong>
-                <span class="{{^isfavourite}}hidden{{/isfavourite}} ml-1 text-primary" data-region="favourite-icon-container"
-                aria-label="{{#str}} favourites, core {{/str}}">
+                <span class="{{^isfavourite}}hidden{{/isfavourite}} ml-1 text-primary" data-region="favourite-icon-container">
                     {{#pix}} i/star-rating, core {{/pix}}
-                </span>
-                <span class="{{^ismuted}}hidden{{/ismuted}} ml-1 text-primary" data-region="muted-icon-container"
-                aria-label="{{#str}} mutedconversation, core_message {{/str}}">
-                    {{#pix}} i/muted, core {{/pix}}
                 </span>
             </div>
             {{#showonlinestatus}}

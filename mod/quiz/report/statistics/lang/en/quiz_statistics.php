@@ -93,7 +93,6 @@ $string['questioninformation'] = 'Question information';
 $string['questionname'] = 'Question name';
 $string['questionnumber'] = 'Q#';
 $string['questionstatistics'] = 'Question statistics';
-$string['quizstatisticscleanuptask'] = 'Clean up old quiz statistics cache records';
 $string['questionstatsfilename'] = 'questionstats';
 $string['questiontype'] = 'Question type';
 $string['quizinformation'] = 'Quiz information';

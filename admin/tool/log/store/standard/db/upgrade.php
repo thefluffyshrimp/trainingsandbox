@@ -27,6 +27,9 @@ defined('MOODLE_INTERNAL') || die();
 function xmldb_logstore_standard_upgrade($oldversion) {
     global $CFG;
 
+    // Automatically generated Moodle v3.2.0 release upgrade line.
+    // Put any upgrade step following this.
+
     // Automatically generated Moodle v3.3.0 release upgrade line.
     // Put any upgrade step following this.
 
@@ -37,19 +40,6 @@ function xmldb_logstore_standard_upgrade($oldversion) {
     // Put any upgrade step following this.
 
     // Automatically generated Moodle v3.6.0 release upgrade line.
-    // Put any upgrade step following this.
-
-    if ($oldversion < 2019032800) {
-        // For existing installations, set the new jsonformat option to off (no behaviour change).
-        // New installations default to on.
-        set_config('jsonformat', 0, 'logstore_standard');
-        upgrade_plugin_savepoint(true, 2019032800, 'logstore', 'standard');
-    }
-
-    // Automatically generated Moodle v3.7.0 release upgrade line.
-    // Put any upgrade step following this.
-
-    // Automatically generated Moodle v3.8.0 release upgrade line.
     // Put any upgrade step following this.
 
     return true;

@@ -42,4 +42,3 @@ $string['cliunknowoption'] = 'خيارات غير معروفة
 $string['cliyesnoprompt'] = 'ادخل (Y) تعني نعم أو (N) تعني لأ';
 $string['environmentrequireinstall'] = 'مطلوب تثبيته/تفيله';
 $string['environmentrequireversion'] = 'مطلوب الأصدار {$a->needed} ، وانت تستخدم الأصدار {$a->current}';
-$string['upgradekeyset'] = 'مفتاح التحديث (اتركها فارغة إن لم ترغب بتحديده)';

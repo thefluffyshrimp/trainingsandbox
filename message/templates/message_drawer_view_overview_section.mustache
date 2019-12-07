@@ -43,9 +43,9 @@
         <button
             class="btn btn-link w-100 text-left p-2 d-flex align-items-center overview-section-toggle {{^expanded}}collapsed{{/expanded}}"
             data-toggle="collapse"
-            data-target="#{{$region}}{{/region}}-target-{{uniqid}}"
+            data-target="#{{$region}}{{/region}}-target"
             aria-expanded="{{#expanded}}true{{/expanded}}{{^expanded}}false{{/expanded}}"
-            aria-controls="{{$region}}{{/region}}-target-{{uniqid}}"
+            aria-controls="{{$region}}{{/region}}-target"
         >
             <span class="collapsed-icon-container">
                 {{#pix}} t/collapsedcaret, core {{/pix}}
@@ -54,16 +54,13 @@
                 {{#pix}} t/expanded, core {{/pix}}
             </span>
             <span class="font-weight-bold">{{$title}}{{/title}}</span>
-            <small class="hidden ml-1" data-region="section-total-count-container"
-            aria-label="{{#str}} totalconversations, core_message, {{count.total}} {{/str}}">
+            <small class="hidden ml-1" data-region="section-total-count-container">
                 (<span data-region="section-total-count">{{count.total}}</span>)
             </small>
             <span class="hidden ml-2" data-region="loading-icon-container">
                 {{> core/loading }}
             </span>
-            <span class="{{^count.unread}}hidden{{/count.unread}} badge badge-pill badge-primary ml-auto bg-primary"
-            data-region="section-unread-count"
-            {{#count.unread}}aria-label="{{#str}} unreadconversations, core_message, {{count.unread}} {{/str}}"{{/count.unread}}>
+            <span class="{{^count.unread}}hidden{{/count.unread}} badge badge-pill badge-primary ml-auto bg-primary" data-region="section-unread-count">
                 {{count.unread}}
             </span>
         </button>
@@ -71,9 +68,9 @@
     {{< core_message/message_drawer_lazy_load_list }}
         {{$rootclasses}}collapse border-bottom {{#expanded}}show{{/expanded}}{{/rootclasses}}
         {{$rootattributes}}
-            id="{{$region}}{{/region}}-target-{{uniqid}}"
+            id="{{$region}}{{/region}}-target"
             aria-labelledby="{{$region}}{{/region}}-toggle"
-            data-parent="#message-drawer-view-overview-container-{{uniqid}}"
+            data-parent="#message-drawer-view-overview-container"
         {{/rootattributes}}
     {{/ core_message/message_drawer_lazy_load_list }}
 </div>

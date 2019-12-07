@@ -560,8 +560,7 @@ class mod_quiz_renderer extends plugin_renderer_base {
      */
     public function redo_question_button($slot, $disabled) {
         $attributes = array('type' => 'submit',  'name' => 'redoslot' . $slot,
-            'value' => get_string('redoquestion', 'quiz'),
-            'class' => 'mod_quiz-redo_question_button btn btn-secondary');
+                'value' => get_string('redoquestion', 'quiz'), 'class' => 'mod_quiz-redo_question_button');
         if ($disabled) {
             $attributes['disabled'] = 'disabled';
         }

@@ -689,7 +689,6 @@ class external extends external_api {
      * @throws restricted_context_exception
      */
     public static function get_users($query) {
-        global $DB;
         $params = external_api::validate_parameters(self::get_users_parameters(), [
             'query' => $query
         ]);
@@ -704,30 +703,15 @@ class external extends external_api {
         // Exclude admins and guest user.
         $excludedusers = array_keys(get_admins()) + [guest_user()->id];
         $sort = 'lastname ASC, firstname ASC';
-        $fields = 'id,' . $allusernames;
-
-        $extrafields = get_extra_user_fields($context);
-        if (!empty($extrafields)) {
-            $fields .= ',' . implode(',', $extrafields);
-        }
-
-        list($sql, $params) = users_search_sql($query, '', false, $extrafields, $excludedusers);
-        $users = $DB->get_records_select('user', $sql, $params, $sort, $fields, 0, 30);
+        $fields = 'id, email, ' . $allusernames;
+        $users = get_users(true, $query, true, $excludedusers, $sort, '', '', 0, 30, $fields);
         $useroptions = [];
         foreach ($users as $user) {
-            $useroption = (object)[
+            $useroptions[$user->id] = (object)[
                 'id' => $user->id,
-                'fullname' => fullname($user)
+                'fullname' => fullname($user),
+                'email' => $user->email
             ];
-            $useroption->extrafields = [];
-            foreach ($extrafields as $extrafield) {
-                // Sanitize the extra fields to prevent potential XSS exploit.
-                $useroption->extrafields[] = (object)[
-                    'name' => $extrafield,
-                    'value' => s($user->$extrafield)
-                ];
-            }
-            $useroptions[$user->id] = $useroption;
         }
 
         return $useroptions;
@@ -745,13 +729,7 @@ class external extends external_api {
             [
                 'id' => new external_value(core_user::get_property_type('id'), 'ID of the user'),
                 'fullname' => new external_value(core_user::get_property_type('firstname'), 'The fullname of the user'),
-                'extrafields' => new external_multiple_structure(
-                    new external_single_structure([
-                            'name' => new external_value(PARAM_TEXT, 'Name of the extrafield.'),
-                            'value' => new external_value(PARAM_TEXT, 'Value of the extrafield.')
-                        ]
-                    ), 'List of extra fields', VALUE_OPTIONAL
-                )
+                'email' => new external_value(core_user::get_property_type('email'), 'The user\'s email address', VALUE_OPTIONAL),
             ]
         ));
     }

@@ -38,7 +38,7 @@ Feature: Test all the basic functionality of this question type
     Then I should see "Select missing words 001"
 
     # Preview it.
-    When I choose "Preview" action for "Select missing words 001" in the question bank
+    When I click on "Preview" "link" in the "Select missing words 001" "table_row"
     And I switch to "questionpreview" window
 
     # Gaps (drop-down menus) do not have labels. ids and names are generated
@@ -136,7 +136,7 @@ Feature: Test all the basic functionality of this question type
     Then I should see "Select missing words 001"
 
     # Edit the copy and verify the form field contents.
-    When I choose "Edit question" action for "Select missing words 001" in the question bank
+    When I click on "Edit" "link" in the "Select missing words 001" "table_row"
     Then the following fields match these values:
       | Question name             | Select missing words 001      |
       | Question text             | The [[1]] [[2]] on the [[3]]. |

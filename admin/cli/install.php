@@ -391,6 +391,7 @@ if ($interactive) {
 $CFG->wwwroot       = $wwwroot;
 $CFG->httpswwwroot  = $CFG->wwwroot;
 
+
 //We need dataroot before lang download
 $CFG->dataroot = $options['dataroot'];
 if ($interactive) {
@@ -513,105 +514,100 @@ if ($interactive) {
 $database = $databases[$CFG->dbtype];
 
 
-// We cannot do any validation until all DB connection data is provided.
-$hintdatabase = '';
-do {
-    echo $hintdatabase;
-
-    // Ask for db host.
-    if ($interactive) {
-        cli_separator();
-        cli_heading(get_string('databasehost', 'install'));
-        if ($options['dbhost'] !== '') {
-            $prompt = get_string('clitypevaluedefault', 'admin', $options['dbhost']);
-        } else {
-            $prompt = get_string('clitypevalue', 'admin');
-        }
-        $CFG->dbhost = cli_input($prompt, $options['dbhost']);
-
+// ask for db host
+if ($interactive) {
+    cli_separator();
+    cli_heading(get_string('databasehost', 'install'));
+    if ($options['dbhost'] !== '') {
+        $prompt = get_string('clitypevaluedefault', 'admin', $options['dbhost']);
     } else {
-        $CFG->dbhost = $options['dbhost'];
+        $prompt = get_string('clitypevalue', 'admin');
     }
+    $CFG->dbhost = cli_input($prompt, $options['dbhost']);
 
-    // Ask for db name.
-    if ($interactive) {
-        cli_separator();
-        cli_heading(get_string('databasename', 'install'));
-        if ($options['dbname'] !== '') {
-            $prompt = get_string('clitypevaluedefault', 'admin', $options['dbname']);
-        } else {
-            $prompt = get_string('clitypevalue', 'admin');
-        }
-        $CFG->dbname = cli_input($prompt, $options['dbname']);
+} else {
+    $CFG->dbhost = $options['dbhost'];
+}
 
+// ask for db name
+if ($interactive) {
+    cli_separator();
+    cli_heading(get_string('databasename', 'install'));
+    if ($options['dbname'] !== '') {
+        $prompt = get_string('clitypevaluedefault', 'admin', $options['dbname']);
     } else {
-        $CFG->dbname = $options['dbname'];
+        $prompt = get_string('clitypevalue', 'admin');
     }
+    $CFG->dbname = cli_input($prompt, $options['dbname']);
 
-    // Ask for db prefix.
-    if ($interactive) {
-        cli_separator();
-        cli_heading(get_string('dbprefix', 'install'));
-        //TODO: solve somehow the prefix trouble for oci.
-        if ($options['prefix'] !== '') {
-            $prompt = get_string('clitypevaluedefault', 'admin', $options['prefix']);
-        } else {
-            $prompt = get_string('clitypevalue', 'admin');
-        }
-        $CFG->prefix = cli_input($prompt, $options['prefix']);
+} else {
+    $CFG->dbname = $options['dbname'];
+}
 
+// ask for db prefix
+if ($interactive) {
+    cli_separator();
+    cli_heading(get_string('dbprefix', 'install'));
+    //TODO: solve somehow the prefix trouble for oci
+    if ($options['prefix'] !== '') {
+        $prompt = get_string('clitypevaluedefault', 'admin', $options['prefix']);
     } else {
-        $CFG->prefix = $options['prefix'];
+        $prompt = get_string('clitypevalue', 'admin');
     }
+    $CFG->prefix = cli_input($prompt, $options['prefix']);
 
-    // Ask for db port.
-    if ($interactive) {
-        cli_separator();
-        cli_heading(get_string('databaseport', 'install'));
-        $prompt = get_string('clitypevaluedefault', 'admin', $options['dbport']);
-        $CFG->dboptions['dbport'] = (int) cli_input($prompt, $options['dbport']);
+} else {
+    $CFG->prefix = $options['prefix'];
+}
 
+// ask for db port
+if ($interactive) {
+    cli_separator();
+    cli_heading(get_string('databaseport', 'install'));
+    $prompt = get_string('clitypevaluedefault', 'admin', $options['dbport']);
+    $CFG->dboptions['dbport'] = (int)cli_input($prompt, $options['dbport']);
+
+} else {
+    $CFG->dboptions['dbport'] = (int)$options['dbport'];
+}
+if ($CFG->dboptions['dbport'] <= 0) {
+    $CFG->dboptions['dbport'] = '';
+}
+
+// ask for db socket
+if ($CFG->ostype === 'WINDOWS') {
+    $CFG->dboptions['dbsocket'] = '';
+
+} else if ($interactive and empty($CFG->dboptions['dbport'])) {
+    cli_separator();
+    cli_heading(get_string('databasesocket', 'install'));
+    $prompt = get_string('clitypevaluedefault', 'admin', $options['dbsocket']);
+    $CFG->dboptions['dbsocket'] = cli_input($prompt, $options['dbsocket']);
+
+} else {
+    $CFG->dboptions['dbsocket'] = $options['dbsocket'];
+}
+
+// ask for db user
+if ($interactive) {
+    cli_separator();
+    cli_heading(get_string('databaseuser', 'install'));
+    if ($options['dbuser'] !== '') {
+        $prompt = get_string('clitypevaluedefault', 'admin', $options['dbuser']);
     } else {
-        $CFG->dboptions['dbport'] = (int) $options['dbport'];
+        $prompt = get_string('clitypevalue', 'admin');
     }
-    if ($CFG->dboptions['dbport'] <= 0) {
-        $CFG->dboptions['dbport'] = '';
-    }
+    $CFG->dbuser = cli_input($prompt, $options['dbuser']);
 
-    // Ask for db socket.
-    if ($CFG->ostype === 'WINDOWS') {
-        $CFG->dboptions['dbsocket'] = '';
+} else {
+    $CFG->dbuser = $options['dbuser'];
+}
 
-    } else if ($interactive and empty($CFG->dboptions['dbport'])) {
-        cli_separator();
-        cli_heading(get_string('databasesocket', 'install'));
-        $prompt = get_string('clitypevaluedefault', 'admin', $options['dbsocket']);
-        $CFG->dboptions['dbsocket'] = cli_input($prompt, $options['dbsocket']);
-
-    } else {
-        $CFG->dboptions['dbsocket'] = $options['dbsocket'];
-    }
-
-    // Ask for db user.
-    if ($interactive) {
-        cli_separator();
-        cli_heading(get_string('databaseuser', 'install'));
-        if ($options['dbuser'] !== '') {
-            $prompt = get_string('clitypevaluedefault', 'admin', $options['dbuser']);
-        } else {
-            $prompt = get_string('clitypevalue', 'admin');
-        }
-        $CFG->dbuser = cli_input($prompt, $options['dbuser']);
-
-    } else {
-        $CFG->dbuser = $options['dbuser'];
-    }
-
-    // Ask for db password.
-    if ($interactive) {
-        cli_separator();
-        cli_heading(get_string('databasepass', 'install'));
-
+// ask for db password
+if ($interactive) {
+    cli_separator();
+    cli_heading(get_string('databasepass', 'install'));
+    do {
         if ($options['dbpass'] !== '') {
             $prompt = get_string('clitypevaluedefault', 'admin', $options['dbpass']);
         } else {
@@ -619,23 +615,19 @@ do {
         }
 
         $CFG->dbpass = cli_input($prompt, $options['dbpass']);
-        if (function_exists('distro_pre_create_db')) { // Hook for distros needing to do something before DB creation.
-            $distro = distro_pre_create_db($database, $CFG->dbhost, $CFG->dbuser, $CFG->dbpass, $CFG->dbname, $CFG->prefix,
-                    array('dbpersist' => 0, 'dbport' => $CFG->dboptions['dbport'], 'dbsocket' => $CFG->dboptions['dbsocket']),
-                    $distro);
+        if (function_exists('distro_pre_create_db')) { // Hook for distros needing to do something before DB creation
+            $distro = distro_pre_create_db($database, $CFG->dbhost, $CFG->dbuser, $CFG->dbpass, $CFG->dbname, $CFG->prefix, array('dbpersist'=>0, 'dbport'=>$CFG->dboptions['dbport'], 'dbsocket'=>$CFG->dboptions['dbsocket']), $distro);
         }
-        $hintdatabase = install_db_validate($database, $CFG->dbhost, $CFG->dbuser, $CFG->dbpass, $CFG->dbname, $CFG->prefix,
-                array('dbpersist' => 0, 'dbport' => $CFG->dboptions['dbport'], 'dbsocket' => $CFG->dboptions['dbsocket']));
+        $hint_database = install_db_validate($database, $CFG->dbhost, $CFG->dbuser, $CFG->dbpass, $CFG->dbname, $CFG->prefix, array('dbpersist'=>0, 'dbport'=>$CFG->dboptions['dbport'], 'dbsocket'=>$CFG->dboptions['dbsocket']));
+    } while ($hint_database !== '');
 
-    } else {
-        $CFG->dbpass = $options['dbpass'];
-        $hintdatabase = install_db_validate($database, $CFG->dbhost, $CFG->dbuser, $CFG->dbpass, $CFG->dbname, $CFG->prefix,
-                array('dbpersist' => 0, 'dbport' => $CFG->dboptions['dbport'], 'dbsocket' => $CFG->dboptions['dbsocket']));
-        if ($hintdatabase !== '') {
-            cli_error(get_string('dbconnectionerror', 'install'));
-        }
+} else {
+    $CFG->dbpass = $options['dbpass'];
+    $hint_database = install_db_validate($database, $CFG->dbhost, $CFG->dbuser, $CFG->dbpass, $CFG->dbname, $CFG->prefix, array('dbpersist'=>0, 'dbport'=>$CFG->dboptions['dbport'], 'dbsocket'=>$CFG->dboptions['dbsocket']));
+    if ($hint_database !== '') {
+        cli_error(get_string('dbconnectionerror', 'install'));
     }
-} while ($hintdatabase !== '');
+}
 
 // ask for fullname
 if ($interactive) {
@@ -718,7 +710,7 @@ if ($interactive) {
     cli_separator();
     cli_heading(get_string('cliadminemail', 'install'));
     $prompt = get_string('clitypevaluedefault', 'admin', $options['adminemail']);
-    $options['adminemail'] = cli_input($prompt, $options['adminemail']);
+    $options['adminemail'] = cli_input($prompt);
 }
 
 // Validate that the address provided was an e-mail address.

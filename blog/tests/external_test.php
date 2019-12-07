@@ -108,9 +108,6 @@ class core_blog_external_testcase extends advanced_testcase {
         $result = core_blog\external::get_entries();
         $result = external_api::clean_returnvalue(core_blog\external::get_entries_returns(), $result);
         $this->assertCount(1, $result['entries']);
-        $this->assertCount(1, $result['entries'][0]['tags']);
-        $this->assertEquals('tag1', $result['entries'][0]['tags'][0]['rawname']);
-
         $this->assertEquals($this->postid, $result['entries'][0]['id']);
     }
 
@@ -144,9 +141,6 @@ class core_blog_external_testcase extends advanced_testcase {
         $result = core_blog\external::get_entries();
         $result = external_api::clean_returnvalue(core_blog\external::get_entries_returns(), $result);
         $this->assertCount(1, $result['entries']);
-        $this->assertCount(1, $result['entries'][0]['tags']);
-        $this->assertEquals('tag1', $result['entries'][0]['tags'][0]['rawname']);
-
         $this->assertEquals($this->postid, $result['entries'][0]['id']);
     }
 
@@ -337,9 +331,6 @@ class core_blog_external_testcase extends advanced_testcase {
         $result = external_api::clean_returnvalue(core_blog\external::get_entries_returns(), $result);
         $this->assertCount(2, $result['entries']);
         $this->assertEquals(2, $result['totalentries']);
-        $this->assertCount(0, $result['entries'][0]['tags']);
-        $this->assertCount(1, $result['entries'][1]['tags']);
-        $this->assertEquals('tag1', $result['entries'][1]['tags'][0]['rawname']);
 
         $result = core_blog\external::get_entries(array(), 0, 1);
         $result = external_api::clean_returnvalue(core_blog\external::get_entries_returns(), $result);
@@ -374,8 +365,6 @@ class core_blog_external_testcase extends advanced_testcase {
         $result = core_blog\external::get_entries(array(array('name' => 'courseid', 'value' => $this->courseid)));
         $result = external_api::clean_returnvalue(core_blog\external::get_entries_returns(), $result);
         $this->assertCount(1, $result['entries']);
-        $this->assertCount(1, $result['entries'][0]['tags']);
-        $this->assertEquals('tag1', $result['entries'][0]['tags'][0]['rawname']);
 
         // There is no entry associated with a wrong course.
         $result = core_blog\external::get_entries(array(array('name' => 'courseid', 'value' => $anothercourse->id)));

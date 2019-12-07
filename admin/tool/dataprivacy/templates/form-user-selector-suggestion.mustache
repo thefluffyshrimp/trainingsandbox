@@ -32,21 +32,10 @@
     Example context (json):
     {
         "fullname": "Admin User",
-        "extrafields": [
-            {
-                "name": "email",
-                "value": "admin@example.com"
-            },
-            {
-                "name": "phone1",
-                "value": "0123456789"
-            }
-        ]
+        "email": "admin@example.com"
     }
 }}
 <span>
     <span>{{fullname}}</span>
-    {{#extrafields}}
-        <span><small>{{{value}}}</small></span>
-    {{/extrafields}}
+    <span><small>{{email}}</small></span>
 </span>

@@ -1,6 +1,6 @@
 <?php
 /*
-@version   v5.20.14  06-Jan-2019
+@version   v5.20.9  21-Dec-2016
 @copyright (c) 2000-2013 John Lim (jlim#natsoft.com). All rights reserved.
 @copyright (c) 2014      Damien Regad, Mark Newnham and the ADOdb community
    Set tabs to 4.
@@ -259,7 +259,8 @@ class ADODB_text extends ADOConnection {
 					$projtypes = array($this->_types[$i]);
 					$projnames = array($n);
 
-					foreach ($where_arr as $a) {
+					reset($where_arr);
+					while (list($k_a,$a) = each($where_arr)) {
 						if ($i == 0 && $this->_skiprow1) {
 							$projarray[] = array($n);
 							continue;

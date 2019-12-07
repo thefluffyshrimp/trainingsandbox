@@ -41,115 +41,6 @@ use Behat\Mink\Exception\ExpectationException as ExpectationException;
 class behat_mod_quiz extends behat_question_base {
 
     /**
-     * Convert page names to URLs for steps like 'When I am on the "[page name]" page'.
-     *
-     * Recognised page names are:
-     * | None so far!      |                                                              |
-     *
-     * @param string $page name of the page, with the component name removed e.g. 'Admin notification'.
-     * @return moodle_url the corresponding URL.
-     * @throws Exception with a meaningful error message if the specified page cannot be found.
-     */
-    protected function resolve_page_url(string $page): moodle_url {
-        switch ($page) {
-            default:
-                throw new Exception('Unrecognised quiz page type "' . $page . '."');
-        }
-    }
-
-    /**
-     * Convert page names to URLs for steps like 'When I am on the "[identifier]" "[page type]" page'.
-     *
-     * Recognised page names are:
-     * | pagetype          | name meaning                                | description                                  |
-     * | View              | Quiz name                                   | The quiz info page (view.php)                |
-     * | Edit              | Quiz name                                   | The edit quiz page (edit.php)                |
-     * | Group overrides   | Quiz name                                   | The manage group overrides page              |
-     * | User overrides    | Quiz name                                   | The manage user overrides page               |
-     * | Grades report     | Quiz name                                   | The overview report for a quiz               |
-     * | Responses report  | Quiz name                                   | The responses report for a quiz              |
-     * | Statistics report | Quiz name                                   | The statistics report for a quiz             |
-     * | Attempt review    | Quiz name > username > [Attempt] attempt no | Review page for a given attempt (review.php) |
-     *
-     * @param string $type identifies which type of page this is, e.g. 'Attempt review'.
-     * @param string $identifier identifies the particular page, e.g. 'Test quiz > student > Attempt 1'.
-     * @return moodle_url the corresponding URL.
-     * @throws Exception with a meaningful error message if the specified page cannot be found.
-     */
-    protected function resolve_page_instance_url(string $type, string $identifier): moodle_url {
-        global $DB;
-
-        switch ($type) {
-            case 'View':
-                return new moodle_url('/mod/quiz/view.php',
-                        ['id' => $this->get_cm_by_quiz_name($identifier)->id]);
-
-            case 'Edit':
-                return new moodle_url('/mod/quiz/edit.php',
-                        ['cmid' => $this->get_cm_by_quiz_name($identifier)->id]);
-
-            case 'Group overrides':
-                return new moodle_url('/mod/quiz/overrides.php',
-                    ['cmid' => $this->get_cm_by_quiz_name($identifier)->id, 'mode' => 'group']);
-
-            case 'User overrides':
-                return new moodle_url('/mod/quiz/overrides.php',
-                    ['cmid' => $this->get_cm_by_quiz_name($identifier)->id, 'mode' => 'user']);
-
-            case 'Grades report':
-                return new moodle_url('/mod/quiz/report.php',
-                    ['id' => $this->get_cm_by_quiz_name($identifier)->id, 'mode' => 'overview']);
-
-            case 'Responses report':
-                return new moodle_url('/mod/quiz/report.php',
-                    ['id' => $this->get_cm_by_quiz_name($identifier)->id, 'mode' => 'responses']);
-
-            case 'Statistics report':
-                return new moodle_url('/mod/quiz/report.php',
-                    ['id' => $this->get_cm_by_quiz_name($identifier)->id, 'mode' => 'statistics']);
-
-            case 'Attempt review':
-                if (substr_count($identifier, ' > ') !== 2) {
-                    throw new coding_exception('For "attempt review", name must be ' .
-                            '"{Quiz name} > {username} > Attempt {attemptnumber}", ' .
-                            'for example "Quiz 1 > student > Attempt 1".');
-                }
-                list($quizname, $username, $attemptno) = explode(' > ', $identifier);
-                $attemptno = (int) trim(str_replace ('Attempt', '', $attemptno));
-                $quiz = $this->get_quiz_by_name($quizname);
-                $user = $DB->get_record('user', ['username' => $username], '*', MUST_EXIST);
-                $attempt = $DB->get_record('quiz_attempts',
-                        ['quiz' => $quiz->id, 'userid' => $user->id, 'attempt' => $attemptno], '*', MUST_EXIST);
-                return new moodle_url('/mod/quiz/review.php', ['attempt' => $attempt->id]);
-
-            default:
-                throw new Exception('Unrecognised quiz page type "' . $type . '."');
-        }
-    }
-
-    /**
-     * Get a quiz by name.
-     *
-     * @param string $name quiz name.
-     * @return stdClass the corresponding DB row.
-     */
-    protected function get_quiz_by_name(string $name): stdClass {
-        global $DB;
-        return $DB->get_record('quiz', array('name' => $name), '*', MUST_EXIST);
-    }
-
-    /**
-     * Get a quiz cmid from the quiz name.
-     *
-     * @param string $name quiz name.
-     * @return stdClass cm from get_coursemodule_from_instance.
-     */
-    protected function get_cm_by_quiz_name(string $name): stdClass {
-        $quiz = $this->get_quiz_by_name($name);
-        return get_coursemodule_from_instance('quiz', $quiz->id, $quiz->course);
-    }
-
-    /**
      * Put the specified questions on the specified pages of a given quiz.
      *
      * The first row should be column names:
@@ -176,7 +67,7 @@ class behat_mod_quiz extends behat_question_base {
     public function quiz_contains_the_following_questions($quizname, TableNode $data) {
         global $DB;
 
-        $quiz = $this->get_quiz_by_name($quizname);
+        $quiz = $DB->get_record('quiz', array('name' => $quizname), '*', MUST_EXIST);
 
         // Deal with backwards-compatibility, optional first row.
         $firstrow = $data->getRow(0);
@@ -363,18 +254,15 @@ class behat_mod_quiz extends behat_question_base {
         $editquiz = $this->escape(get_string('editquiz', 'quiz'));
         $quizadmin = $this->escape(get_string('pluginadministration', 'quiz'));
         $addaquestion = $this->escape(get_string('addaquestion', 'quiz'));
+        $menuxpath = "//div[contains(@class, ' page-add-actions ')][last()]//a[contains(@class, ' textmenu')]";
+        $itemxpath = "//div[contains(@class, ' page-add-actions ')][last()]//a[contains(@class, ' addquestion ')]";
 
         $this->execute('behat_general::click_link', $quizname);
 
-        $this->execute("behat_navigation::i_navigate_to_in_current_page_administration",
-                $quizadmin . ' > ' . $editquiz);
+        $this->execute("behat_navigation::i_navigate_to_in_current_page_administration", $editquiz);
 
-        if ($this->running_javascript()) {
-            $this->execute("behat_action_menu::i_open_the_action_menu_in", array('.slots', "css_element"));
-            $this->execute("behat_action_menu::i_choose_in_the_open_action_menu", array($addaquestion));
-        } else {
-            $this->execute('behat_general::click_link', $addaquestion);
-        }
+        $this->execute("behat_general::i_click_on", array($menuxpath, "xpath_element"));
+        $this->execute("behat_general::i_click_on", array($itemxpath, "xpath_element"));
 
         $this->finish_adding_question($questiontype, $questiondata);
     }
@@ -408,9 +296,9 @@ class behat_mod_quiz extends behat_question_base {
         }
 
         if ($pageorlast == 'last') {
-            $xpath = "//div[@class = 'last-add-menu']//a[contains(@data-toggle, 'dropdown') and contains(., 'Add')]";
+            $xpath = "//div[@class = 'last-add-menu']//a[contains(@class, 'textmenu') and contains(., 'Add')]";
         } else if (preg_match('~Page (\d+)~', $pageorlast, $matches)) {
-            $xpath = "//li[@id = 'page-{$matches[1]}']//a[contains(@data-toggle, 'dropdown') and contains(., 'Add')]";
+            $xpath = "//li[@id = 'page-{$matches[1]}']//a[contains(@class, 'textmenu') and contains(., 'Add')]";
         } else {
             throw new ExpectationException("The I open the add to quiz menu step must specify either 'Page N' or 'last'.");
         }
@@ -669,7 +557,7 @@ class behat_mod_quiz extends behat_question_base {
         // Split in two checkings to give more feedback in case of exception.
         $exception = new ExpectationException('Question "' . $questionnumber . '" is not in section "' .
                 $sectionheading . '" in the quiz navigation.', $this->getSession());
-        $xpath = "//*[@id = 'mod_quiz_navblock']//*[contains(concat(' ', normalize-space(@class), ' '), ' qnbutton ') and " .
+        $xpath = "//div[@id = 'mod_quiz_navblock']//*[contains(concat(' ', normalize-space(@class), ' '), ' qnbutton ') and " .
                 "contains(., {$questionnumberliteral}) and contains(preceding-sibling::h3[1], {$headingliteral})]";
         $this->find('xpath', $xpath);
     }
@@ -740,8 +628,7 @@ class behat_mod_quiz extends behat_question_base {
      *                random questions. If so, this will let you control which actual
      *                question gets picked when this slot is 'randomised' at the
      *                start of the attempt. If you don't specify, then one will be picked
-     *                at random (which might make the response meaningless).
-     *                Give the question name.
+     *                at random (which might make the reponse meaningless).
      * variant        This column is similar, and also options. It is only needed if
      *                the question that ends up in this slot returns something greater
      *                than 1 for $question->get_num_variants(). Like with actualquestion,
@@ -818,7 +705,7 @@ class behat_mod_quiz extends behat_question_base {
      * @param string $username the username of the user that will attempt.
      * @param string $quizname the name of the quiz the user will attempt.
      * @param TableNode $attemptinfo information about the questions to add, as above.
-     * @Given /^user "([^"]*)" has started an attempt at quiz "([^"]*)" randomised as follows:$/
+     * @Given /^user "([^"]*)" has started an attempt at quiz "([^"]*) randomised as follows:"$/
      */
     public function user_has_started_an_attempt_at_quiz_with_details($username, $quizname, TableNode $attemptinfo) {
         global $DB;

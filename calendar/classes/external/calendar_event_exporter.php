@@ -52,6 +52,9 @@ class calendar_event_exporter extends event_exporter_base {
             'type' => PARAM_BOOL,
             'default' => false,
         ];
+        $values['calendareventtype'] = [
+            'type' => PARAM_TEXT,
+        ];
         $values['popupname'] = [
             'type' => PARAM_RAW,
         ];
@@ -168,6 +171,8 @@ class calendar_event_exporter extends event_exporter_base {
             ];
             $values['popupname'] = get_string('eventnameandcourse', 'calendar', $eventnameparams);
         }
+
+        $values['calendareventtype'] = $this->get_calendar_event_type();
 
         if ($event->get_course_module()) {
             $values = array_merge($values, $this->get_module_timestamp_limits($event));

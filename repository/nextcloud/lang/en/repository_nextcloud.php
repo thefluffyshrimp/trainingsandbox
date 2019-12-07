@@ -26,6 +26,7 @@ $string['pluginname'] = 'Nextcloud';
 $string['configplugin'] = 'Nextcloud repository configuration';
 $string['nextcloud'] = 'Nextcloud';
 $string['nextcloud:view'] = 'View Nextcloud';
+$string['configplugin'] = 'Nextcloud configuration';
 $string['pluginname_help'] = 'Nextcloud repository';
 
 // Settings.

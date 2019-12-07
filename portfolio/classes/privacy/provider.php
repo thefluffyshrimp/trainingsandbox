@@ -113,16 +113,27 @@ class provider implements
             return;
         }
 
-        $params = [$context->instanceid];
+        $params = [
+            'contextid' => $context->id,
+            'contextuser' => CONTEXT_USER,
+        ];
 
-        $sql = "SELECT userid
-                  FROM {portfolio_instance_user}
-                 WHERE userid = ?";
+        $sql = "SELECT ctx.instanceid as userid
+                  FROM {portfolio_instance_user} piu
+                  JOIN {context} ctx
+                       ON ctx.instanceid = piu.userid
+                       AND ctx.contextlevel = :contextuser
+                 WHERE ctx.id = :contextid";
+
         $userlist->add_from_sql('userid', $sql, $params);
 
-        $sql = "SELECT userid
-                  FROM {portfolio_log}
-                  WHERE userid = ?";
+        $sql = "SELECT ctx.instanceid as userid
+                  FROM {portfolio_log} pl
+                  JOIN {context} ctx
+                       ON ctx.instanceid = pl.userid
+                       AND ctx.contextlevel = :contextuser
+                  WHERE ctx.id = :contextid";
+
         $userlist->add_from_sql('userid', $sql, $params);
     }
 

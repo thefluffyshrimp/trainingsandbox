@@ -511,10 +511,10 @@ class core_plugin_manager {
 
     /**
      * Returns list of plugins that define their subplugins and the information
-     * about them from the db/subplugins.json file.
+     * about them from the db/subplugins.php file.
      *
      * @return array with keys like 'mod_quiz', and values the data from the
-     *      corresponding db/subplugins.json file.
+     *      corresponding db/subplugins.php file.
      */
     public function get_subplugins() {
 
@@ -1647,17 +1647,16 @@ class core_plugin_manager {
         $plugins = array(
             'qformat' => array('blackboard', 'learnwise'),
             'auth' => array('radius', 'fc', 'nntp', 'pam', 'pop3', 'imap'),
-            'block' => array('course_overview', 'messages', 'community', 'participants'),
+            'block' => array('course_overview', 'messages'),
             'cachestore' => array('memcache'),
             'enrol' => array('authorize'),
             'report' => array('search'),
             'repository' => array('alfresco'),
             'tinymce' => array('dragmath'),
             'tool' => array('bloglevelupgrade', 'qeupgradehelper', 'timezoneimport', 'assignmentupgrade'),
-            'theme' => array('bootstrapbase', 'clean', 'more', 'afterburner', 'anomaly', 'arialist', 'base',
-                'binarius', 'boxxie', 'brick', 'canvas', 'formal_white', 'formfactor', 'fusion', 'leatherbound',
-                'magazine', 'mymobile', 'nimble', 'nonzero', 'overlay', 'serenity', 'sky_high', 'splash',
-                'standard', 'standardold'),
+            'theme' => array('afterburner', 'anomaly', 'arialist', 'base', 'binarius', 'boxxie', 'brick', 'canvas',
+                'formal_white', 'formfactor', 'fusion', 'leatherbound', 'magazine', 'mymobile', 'nimble', 'nonzero',
+                'overlay', 'serenity', 'sky_high', 'splash', 'standard', 'standardold'),
             'webservice' => array('amf'),
         );
 
@@ -1687,7 +1686,7 @@ class core_plugin_manager {
                 'equation', 'fontcolor', 'html', 'image', 'indent', 'italic',
                 'link', 'managefiles', 'media', 'noautolink', 'orderedlist',
                 'recordrtc', 'rtl', 'strike', 'subscript', 'superscript', 'table',
-                'title', 'underline', 'undo', 'unorderedlist', 'h5p', 'emojipicker',
+                'title', 'underline', 'undo', 'unorderedlist'
             ),
 
             'assignment' => array(
@@ -1714,11 +1713,11 @@ class core_plugin_manager {
             'block' => array(
                 'activity_modules', 'activity_results', 'admin_bookmarks', 'badges',
                 'blog_menu', 'blog_recent', 'blog_tags', 'calendar_month',
-                'calendar_upcoming', 'comments',
+                'calendar_upcoming', 'comments', 'community',
                 'completionstatus', 'course_list', 'course_summary',
                 'feedback', 'globalsearch', 'glossary_random', 'html',
                 'login', 'lp', 'mentees', 'mnet_hosts', 'myoverview', 'myprofile',
-                'navigation', 'news_items', 'online_users',
+                'navigation', 'news_items', 'online_users', 'participants',
                 'private_files', 'quiz_results', 'recent_activity', 'recentlyaccesseditems',
                 'recentlyaccessedcourses', 'rss_client', 'search_forums', 'section_links',
                 'selfcompletion', 'settings', 'site_main_menu',
@@ -1741,10 +1740,6 @@ class core_plugin_manager {
                 'gregorian'
             ),
 
-            'customfield' => array(
-                'checkbox', 'date', 'select', 'text', 'textarea'
-            ),
-
             'coursereport' => array(
                 // Deprecated!
             ),
@@ -1755,7 +1750,7 @@ class core_plugin_manager {
             ),
 
             'dataformat' => array(
-                'html', 'csv', 'json', 'excel', 'ods', 'pdf',
+                'html', 'csv', 'json', 'excel', 'ods',
             ),
 
             'datapreset' => array(
@@ -1778,16 +1773,12 @@ class core_plugin_manager {
 
             'filter' => array(
                 'activitynames', 'algebra', 'censor', 'emailprotect',
-                'emoticon', 'displayh5p', 'mathjaxloader', 'mediaplugin', 'multilang', 'tex', 'tidy',
+                'emoticon', 'mathjaxloader', 'mediaplugin', 'multilang', 'tex', 'tidy',
                 'urltolink', 'data', 'glossary'
             ),
 
             'format' => array(
                 'singleactivity', 'social', 'topics', 'weeks'
-            ),
-
-            'forumreport' => array(
-                'summary',
             ),
 
             'gradeexport' => array(
@@ -1814,7 +1805,7 @@ class core_plugin_manager {
             ),
 
             'ltiservice' => array(
-                'gradebookservices', 'memberships', 'profile', 'toolproxy', 'toolsettings', 'basicoutcomes'
+                'gradebookservices', 'memberships', 'profile', 'toolproxy', 'toolsettings'
             ),
 
             'mlbackend' => array(
@@ -1910,7 +1901,7 @@ class core_plugin_manager {
             ),
 
             'theme' => array(
-                'boost', 'classic'
+                'boost', 'bootstrapbase', 'clean', 'more'
             ),
 
             'tool' => array(
@@ -2237,11 +2228,6 @@ class core_plugin_manager {
      * @return bool
      */
     protected function common_uninstall_check(\core\plugininfo\base $pluginfo) {
-        global $CFG;
-        // Check if uninstall is allowed from the GUI.
-        if (!empty($CFG->uninstallclionly) && (!CLI_SCRIPT)) {
-            return false;
-        }
 
         if (!$pluginfo->is_uninstall_allowed()) {
             // The plugin's plugininfo class declares it should not be uninstalled.

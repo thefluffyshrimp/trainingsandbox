@@ -826,16 +826,4 @@
             }
         }
     }
-    @media (min-width: 576px) {
-        .container {
-            overflow-wrap: break-word;
-        }
-    }
-}
-
-#page-admin-tasklogs {
-    .task-class {
-        font-size: $font-size-sm;
-        color: $gray-600;
-    }
 }

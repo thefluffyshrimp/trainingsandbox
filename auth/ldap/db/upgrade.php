@@ -32,6 +32,9 @@ defined('MOODLE_INTERNAL') || die();
 function xmldb_auth_ldap_upgrade($oldversion) {
     global $CFG;
 
+    // Automatically generated Moodle v3.2.0 release upgrade line.
+    // Put any upgrade step following this.
+
     if ($oldversion < 2017020700) {
         // Convert info in config plugins from auth/ldap to auth_ldap.
         upgrade_fix_config_auth_plugin_names('ldap');
@@ -67,12 +70,6 @@ function xmldb_auth_ldap_upgrade($oldversion) {
     // Put any upgrade step following this.
 
     // Automatically generated Moodle v3.6.0 release upgrade line.
-    // Put any upgrade step following this.
-
-    // Automatically generated Moodle v3.7.0 release upgrade line.
-    // Put any upgrade step following this.
-
-    // Automatically generated Moodle v3.8.0 release upgrade line.
     // Put any upgrade step following this.
 
     return true;

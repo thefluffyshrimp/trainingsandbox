@@ -45,17 +45,11 @@ class main implements renderable, templatable {
     public function export_for_template(renderer_base $output) {
         global $USER;
 
-        $nocoursesurl = $output->image_url('courses', 'block_recentlyaccessedcourses')->out(false);
-        $config = get_config('block_recentlyaccessedcourses');
+        $nocoursesurl = $output->image_url('courses', 'block_recentlyaccessedcourses')->out();
 
         return [
             'userid' => $USER->id,
-            'nocoursesimgurl' => $nocoursesurl,
-            'pagingbar' => [
-                'next' => true,
-                'previous' => true
-            ],
-            'displaycategories' => !empty($config->displaycategories)
+            'nocoursesimgurl' => $nocoursesurl
         ];
     }
 }

@@ -161,10 +161,18 @@ class provider implements
             return;
         }
 
-        $sql = "SELECT userid
-                  FROM {mnet_log}
-                 WHERE userid = ?";
-        $params = [$context->instanceid];
+        $params = [
+            'contextuser' => CONTEXT_USER,
+            'contextid' => $context->id
+        ];
+
+        $sql = "SELECT ctx.instanceid as userid
+                  FROM {mnet_log} ml
+                  JOIN {context} ctx
+                       ON ctx.instanceid = ml.userid
+                       AND ctx.contextlevel = :contextuser
+                 WHERE ctx.id = :contextid";
+
         $userlist->add_from_sql('userid', $sql, $params);
     }
 
@@ -265,15 +273,13 @@ class provider implements
             return;
         }
 
-        $userid = $contextlist->get_user()->id;
         foreach ($contextlist->get_contexts() as $context) {
             if ($context->contextlevel != CONTEXT_USER) {
-                continue;
+                return;
             }
-            if ($context->instanceid == $userid) {
-                // Because we only use user contexts the instance ID is the user ID.
-                $DB->delete_records('mnet_log', ['userid' => $context->instanceid]);
-            }
+
+            // Because we only use user contexts the instance ID is the user ID.
+            $DB->delete_records('mnet_log', ['userid' => $context->instanceid]);
         }
     }
 }

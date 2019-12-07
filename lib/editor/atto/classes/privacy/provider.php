@@ -118,30 +118,23 @@ class provider implements
 
         $user = $contextlist->get_user();
 
-        // Firstly export all autosave records from all contexts in the list owned by the given user.
-
-        list($contextsql, $contextparams) = $DB->get_in_or_equal($contextlist->get_contextids(), SQL_PARAMS_NAMED);
-        $contextparams['userid'] = $user->id;
-
         $sql = "SELECT *
                   FROM {editor_atto_autosave}
                  WHERE userid = :userid AND contextid {$contextsql}";
 
+        list($contextsql, $contextparams) = $DB->get_in_or_equal($contextlist->get_contextids(), SQL_PARAMS_NAMED);
+        $contextparams['userid'] = $contextlist->get_user()->id;
         $autosaves = $DB->get_recordset_sql($sql, $contextparams);
         self::export_autosaves($user, $autosaves);
 
-        // Additionally export all eventual records in the given user's context regardless the actual owner.
-        // We still consider them to be the user's personal data even when edited by someone else.
+        $sql = "SELECT *
+                  FROM {editor_atto_autosave}
+                  JOIN {context} c ON c.id = eas.contextid
+                 WHERE c.id {$contextsql} AND contextlevel = :contextuser AND c.instanceid = :userid";
 
         list($contextsql, $contextparams) = $DB->get_in_or_equal($contextlist->get_contextids(), SQL_PARAMS_NAMED);
-        $contextparams['userid'] = $user->id;
+        $contextparams['userid'] = $contextlist->get_user()->id;
         $contextparams['contextuser'] = CONTEXT_USER;
-
-        $sql = "SELECT eas.*
-                  FROM {editor_atto_autosave} eas
-                  JOIN {context} c ON c.id = eas.contextid
-                 WHERE c.id {$contextsql} AND c.contextlevel = :contextuser AND c.instanceid = :userid";
-
         $autosaves = $DB->get_recordset_sql($sql, $contextparams);
         self::export_autosaves($user, $autosaves);
     }

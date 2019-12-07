@@ -95,9 +95,9 @@ if ($badge->status != BADGE_STATUS_INACTIVE) {
             $json['endorsement'] = $endorsementurl->out(false);
         }
 
-        $alignments = $badge->get_alignments();
-        if (!empty($alignments)) {
-            foreach ($alignments as $item) {
+        $competencies = $badge->get_alignment();
+        if (!empty($competencies)) {
+            foreach ($competencies as $item) {
                 $alignment = array('targetName' => $item->targetname, 'targetUrl' => $item->targeturl);
                 if ($item->targetdescription) {
                     $alignment['targetDescription'] = $item->targetdescription;
@@ -108,7 +108,7 @@ if ($badge->status != BADGE_STATUS_INACTIVE) {
                 if ($item->targetcode) {
                     $alignment['targetCode'] = $item->targetcode;
                 }
-                $json['alignments'][] = $alignment;
+                $json['alignment'][] = $alignment;
             }
         }
     } else if ($action == 0) {

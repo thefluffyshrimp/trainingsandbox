@@ -1721,7 +1721,6 @@ END;
         $categoryinfo = new stdClass();
         $categoryinfo->info = 'info1';
         $categoryinfo->infoformat = 'infoformat1';
-        $categoryinfo->idnumber = null;
         $dummyquestion = $testobject->mock_create_dummy_question_representing_category($categoryname, $categoryinfo);
 
         $this->assertEquals('category', $dummyquestion->qtype);

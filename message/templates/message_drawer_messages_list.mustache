@@ -41,20 +41,13 @@
         data-route="view-conversation"
         {{#conversationid}}
             data-route-param-1="{{.}}"
-            {{#frompanel}}
-                data-route-param-2="frompanel"
-            {{/frompanel}}
         {{/conversationid}}
         {{^conversationid}}
             data-route-param-1="false"
             data-route-param-2="create"
             data-route-param-3="{{userid}}"
-            {{#frompanel}}
-                data-route-param-4="frompanel"
-            {{/frompanel}}
         {{/conversationid}}
         data-conversation-id="{{conversationid}}"
-        role="button"
     >
         <img
             class="rounded-circle"
@@ -80,13 +73,13 @@
                     data-region="last-message-date"
                 >
                     {{#lastmessagedate}}
-                        {{#userdate}} {{.}}, {{#str}} strftimedatefullshort, core_langconfig  {{/str}} {{/userdate}}
+                        {{#userdate}} {{.}}, {{#str}} strftimetime24, core_langconfig  {{/str}} {{/userdate}}
                     {{/lastmessagedate}}
                 </div>
             </div>
             <p class="m-0 font-weight-light text-truncate" data-region="last-message">
                 {{#sentfromcurrentuser}}{{#str}} you, core_message {{/str}}{{/sentfromcurrentuser}}
-                <span>{{{lastmessage}}}</span>
+                {{lastmessage}}
             </p>
         </div>
 

@@ -31,7 +31,7 @@ defined('MOODLE_INTERNAL') || die();
  * @copyright  2016 Frédéric Massart
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class core_scss extends \ScssPhp\ScssPhp\Compiler {
+class core_scss extends \Leafo\ScssPhp\Compiler {
 
     /** @var string The path to the SCSS file. */
     protected $scssfile;
@@ -150,14 +150,14 @@ class core_scss extends \ScssPhp\ScssPhp\Compiler {
      * Compile child; returns a value to halt execution
      *
      * @param array $child
-     * @param \ScssPhp\ScssPhp\Formatter\OutputBlock $out
+     * @param \Leafo\ScssPhp\Formatter\OutputBlock $out
      *
      * @return array|null
      */
-    protected function compileChild($child, \ScssPhp\ScssPhp\Formatter\OutputBlock $out) {
+    protected function compileChild($child, \Leafo\ScssPhp\Formatter\OutputBlock $out) {
         switch($child[0]) {
-            case \ScssPhp\ScssPhp\Type::T_SCSSPHP_IMPORT_ONCE:
-            case \ScssPhp\ScssPhp\Type::T_IMPORT:
+            case \Leafo\ScssPhp\Type::T_SCSSPHP_IMPORT_ONCE:
+            case \Leafo\ScssPhp\Type::T_IMPORT:
                 list(, $rawpath) = $child;
                 $rawpath = $this->reduce($rawpath);
                 $path = $this->compileStringContent($rawpath);

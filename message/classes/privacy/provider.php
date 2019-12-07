@@ -73,8 +73,7 @@ class provider implements
                 'fullmessageformat' => 'privacy:metadata:messages:fullmessageformat',
                 'fullmessagehtml' => 'privacy:metadata:messages:fullmessagehtml',
                 'smallmessage' => 'privacy:metadata:messages:smallmessage',
-                'timecreated' => 'privacy:metadata:messages:timecreated',
-                'customdata' => 'privacy:metadata:messages:customdata',
+                'timecreated' => 'privacy:metadata:messages:timecreated'
             ],
             'privacy:metadata:messages'
         );
@@ -98,16 +97,6 @@ class provider implements
                 'timecreated' => 'privacy:metadata:message_conversation_members:timecreated',
             ],
             'privacy:metadata:message_conversation_members'
-        );
-
-        $items->add_database_table(
-            'message_conversation_actions',
-            [
-                'conversationid' => 'privacy:metadata:message_conversation_actions:conversationid',
-                'userid' => 'privacy:metadata:message_conversation_actions:userid',
-                'timecreated' => 'privacy:metadata:message_conversation_actions:timecreated',
-            ],
-            'privacy:metadata:message_conversation_actions'
         );
 
         $items->add_database_table(
@@ -156,7 +145,6 @@ class provider implements
                 'contexturlname' => 'privacy:metadata:notifications:contexturlname',
                 'timeread' => 'privacy:metadata:notifications:timeread',
                 'timecreated' => 'privacy:metadata:notifications:timecreated',
-                'customdata' => 'privacy:metadata:notifications:customdata',
             ],
             'privacy:metadata:notifications'
         );
@@ -217,8 +205,6 @@ class provider implements
         // It is enough to add the user's context as soon as we come to the conclusion that the user has some data.
         // Also, the order of checking is sorted by the probability of occurrence (just by guess).
         // There is no need to check the message_user_actions table, as there needs to be a message in order to be a message action.
-        // There is no need to check the message_conversation_actions table, as there needs to be a conversation in order to
-        // be a conversation action.
         // So, checking messages table would suffice.
 
         $hasdata = false;
@@ -272,8 +258,6 @@ class provider implements
         // It is enough to add the user's context as soon as we come to the conclusion that the user has some data.
         // Also, the order of checking is sorted by the probability of occurrence (just by guess).
         // There is no need to check the message_user_actions table, as there needs to be a message in order to be a message action.
-        // There is no need to check the message_conversation_actions table, as there needs to be a conversation in order to
-        // be a conversation action.
         // So, checking messages table would suffice.
 
         $hasdata = false;
@@ -584,7 +568,6 @@ class provider implements
 
             // Delete members and conversations.
             $DB->delete_records_list('message_conversation_members', 'conversationid', $conversationids);
-            $DB->delete_records_list('message_conversation_actions', 'conversationid', $conversationids);
             $DB->delete_records_list('message_conversations', 'id', $conversationids);
         }
     }
@@ -690,9 +673,6 @@ class provider implements
             // Reuse the $params var because it contains the useridparams and the conversationids.
             $DB->delete_records_select('message_conversation_members', $sql, $params);
 
-            // Delete any conversation actions.
-            $DB->delete_records_select('message_conversation_actions', $sql, $params);
-
             // Delete the favourite conversations.
             $userlist = new \core_privacy\local\request\approved_userlist($context, 'core_message', $userids);
             \core_favourites\privacy\provider::delete_favourites_for_userlist(
@@ -782,9 +762,6 @@ class provider implements
             $sql = "conversationid $conversationidsql AND userid = :userid";
             // Reuse the $params var because it contains the userid and the conversationids.
             $DB->delete_records_select('message_conversation_members', $sql, $params);
-
-            // Delete any conversation actions.
-            $DB->delete_records_select('message_conversation_actions', $sql, $params);
 
             // Delete the favourite conversations.
             if (empty($contextids) && empty($component) && empty($itemtype) && empty($itemid)) {
@@ -932,8 +909,7 @@ class provider implements
                 'issender' => transform::yesno($issender),
                 'message' => message_format_message_text($message),
                 'timecreated' => transform::datetime($message->timecreated),
-                'timeread' => $timeread,
-                'customdata' => $message->customdata,
+                'timeread' => $timeread
             ];
             if ($conversation->type == \core_message\api::MESSAGE_CONVERSATION_TYPE_GROUP && !$issender) {
                 // Only export sender for group conversations when is not the current user.
@@ -952,19 +928,14 @@ class provider implements
             // Get subcontext.
             if (empty($conversation->contextid)) {
                 // Conversations without context are stored in 'Messages | <Other user id>'.
-                if ($conversation->type == \core_message\api::MESSAGE_CONVERSATION_TYPE_SELF) {
-                    // This is a self-conversation. The other user is the same userid.
-                    $otherusertext = $userid;
+                $members = $DB->get_records('message_conversation_members', ['conversationid' => $conversation->id]);
+                $members = array_filter($members, function ($member) use ($userid) {
+                    return $member->userid != $userid;
+                });
+                if ($otheruser = reset($members)) {
+                    $otherusertext = $otheruser->userid;
                 } else {
-                    $members = $DB->get_records('message_conversation_members', ['conversationid' => $conversation->id]);
-                    $members = array_filter($members, function ($member) use ($userid) {
-                        return $member->userid != $userid;
-                    });
-                    if ($otheruser = reset($members)) {
-                        $otherusertext = $otheruser->userid;
-                    } else {
-                        $otherusertext = get_string('unknownuser', 'core_message') . '_' . $conversation->id;
-                    }
+                    $otherusertext = get_string('unknownuser', 'core_message') . '_' . $conversation->id;
                 }
 
                 $subcontext = array_merge(
@@ -1003,20 +974,6 @@ class provider implements
                 // If the conversation has been favorited by the user, include it in the export.
                 writer::with_context($context)->export_related_data($subcontext, 'starred', (object) $conversationfavourite);
             }
-
-            // Check if the conversation was muted.
-            $params = [
-                'userid' => $userid,
-                'conversationid' => $conversation->id,
-                'action' => \core_message\api::CONVERSATION_ACTION_MUTED
-            ];
-            if ($mca = $DB->get_record('message_conversation_actions', $params)) {
-                $mcatostore = [
-                    'muted' => transform::yesno(true),
-                    'timecreated' => transform::datetime($mca->timecreated),
-                ];
-                writer::with_context($context)->export_related_data($subcontext, 'muted', (object) $mcatostore);
-            }
         }
     }
 
@@ -1045,8 +1002,7 @@ class provider implements
                 'contexturl' => $notification->contexturl,
                 'contexturlname' => $notification->contexturlname,
                 'timeread' => $timeread,
-                'timecreated' => transform::datetime($notification->timecreated),
-                'customdata' => $notification->customdata,
+                'timecreated' => transform::datetime($notification->timecreated)
             ];
 
             $notificationdata[] = $data;

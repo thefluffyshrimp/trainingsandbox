@@ -65,8 +65,7 @@ class pgsql_native_recordset_testcase extends basic_testcase {
         // To make testing easier, create a database with the same dboptions as the real one,
         // but a low number for the cursor size.
         $this->specialdb = \moodle_database::get_driver_instance('pgsql', 'native', true);
-        $dboptions = $CFG->dboptions;
-        $dboptions['fetchbuffersize'] = $fetchbuffersize;
+        $dboptions = ['fetchbuffersize' => $fetchbuffersize];
         $this->specialdb->connect($CFG->dbhost, $CFG->dbuser, $CFG->dbpass, $CFG->dbname,
                 $DB->get_prefix(), $dboptions);
 

@@ -55,15 +55,10 @@ class backup_controller extends base_controller {
 
     protected $status; // Current status of the controller (created, planned, configured...)
 
-    /** @var backup_plan */
     protected $plan;   // Backup execution plan
     protected $includefiles; // Whether this backup includes files or not.
 
-    /**
-     * Immediate/delayed execution type.
-     * @var integer
-     */
-    protected $execution;
+    protected $execution;     // inmediate/delayed
     protected $executiontime; // epoch time when we want the backup to be executed (requires cron to run)
 
     protected $destination; // Destination chain object (fs_moodle, fs_os, db, email...)
@@ -90,16 +85,10 @@ class backup_controller extends base_controller {
         $this->userid = $userid;
 
         // Apply some defaults
+        $this->execution = backup::EXECUTION_INMEDIATE;
         $this->operation = backup::OPERATION_BACKUP;
         $this->executiontime = 0;
         $this->checksum = '';
-
-        // Set execution based on backup mode.
-        if ($mode == backup::MODE_ASYNC) {
-            $this->execution = backup::EXECUTION_DELAYED;
-        } else {
-            $this->execution = backup::EXECUTION_INMEDIATE;
-        }
 
         // Apply current backup version and release if necessary
         backup_controller_dbops::apply_version_and_release();
@@ -123,7 +112,7 @@ class backup_controller extends base_controller {
         // display progress must set it.
         $this->progress = new \core\progress\none();
 
-        // Instantiate the output_controller singleton and active it if interactive and immediate.
+        // Instantiate the output_controller singleton and active it if interactive and inmediate
         $oc = output_controller::get_instance();
         if ($this->interactive == backup::INTERACTIVE_YES && $this->execution == backup::EXECUTION_INMEDIATE) {
             $oc->set_active(true);
@@ -193,8 +182,7 @@ class backup_controller extends base_controller {
         // TODO: Check it's a correct status.
         $this->status = $status;
         // Ensure that, once set to backup::STATUS_AWAITING, controller is stored in DB.
-        // Also save if executing so we can better track progress.
-        if ($status == backup::STATUS_AWAITING || $status == backup::STATUS_EXECUTING) {
+        if ($status == backup::STATUS_AWAITING) {
             $this->save_controller();
             $tbc = self::load_controller($this->backupid);
             $this->logger = $tbc->logger; // wakeup loggers
@@ -204,18 +192,14 @@ class backup_controller extends base_controller {
             // If the operation has ended without error (backup::STATUS_FINISHED_OK)
             // proceed by cleaning the object from database. MDL-29262.
             $this->save_controller(false, true);
-        } else if ($status == backup::STATUS_FINISHED_ERR) {
-            // If the operation has ended with an error save the controller
-            // preserving the object in the database. We may want it for debugging.
-            $this->save_controller();
         }
     }
 
     public function set_execution($execution, $executiontime = 0) {
         $this->log('setting controller execution', backup::LOG_DEBUG);
-        // TODO: Check valid execution mode.
-        // TODO: Check time in future.
-        // TODO: Check time = 0 if immediate.
+        // TODO: Check valid execution mode
+        // TODO: Check time in future
+        // TODO: Check time = 0 if inmediate
         $this->execution = $execution;
         $this->executiontime = $executiontime;
 
@@ -270,37 +254,6 @@ class backup_controller extends base_controller {
      */
     public function get_include_files() {
         return $this->includefiles;
-    }
-
-    /**
-     * Returns the default value for $this->includefiles before we consider any settings.
-     *
-     * @return bool
-     * @throws dml_exception
-     */
-    protected function get_include_files_default() : bool {
-        // We normally include files.
-        $includefiles = true;
-
-        // In an import, we don't need to include files.
-        if ($this->get_mode() === backup::MODE_IMPORT) {
-            $includefiles = false;
-        }
-
-        // When a backup is intended for the same site, we don't need to include the files.
-        // Note, this setting is only used for duplication of an entire course.
-        if ($this->get_mode() === backup::MODE_SAMESITE) {
-            $includefiles = false;
-        }
-
-        // If backup is automated and we have set auto backup config to exclude
-        // files then set them to be excluded here.
-        $backupautofiles = (bool) get_config('backup', 'backup_auto_files');
-        if ($this->get_mode() === backup::MODE_AUTOMATED && !$backupautofiles) {
-            $includefiles = false;
-        }
-
-        return $includefiles;
     }
 
     public function get_operation() {
@@ -358,17 +311,11 @@ class backup_controller extends base_controller {
         // Basic/initial prevention against time/memory limits
         core_php_time_limit::raise(1 * 60 * 60); // 1 hour for 1 course initially granted
         raise_memory_limit(MEMORY_EXTRA);
-
-        // If the controller has decided that we can include files, then check the setting, otherwise do not include files.
-        if ($this->get_include_files()) {
-            $this->set_include_files((bool) $this->get_plan()->get_setting('files')->get_value());
-        }
-
-        // If this is not a course backup, or single activity backup (e.g. duplicate) inform the plan we are not
+        // If this is not a course backup, inform the plan we are not
         // including all the activities for sure. This will affect any
         // task/step executed conditionally to stop including information
         // for section and activity backup. MDL-28180.
-        if ($this->get_type() !== backup::TYPE_1COURSE && $this->get_type() !== backup::TYPE_1ACTIVITY) {
+        if ($this->get_type() !== backup::TYPE_1COURSE) {
             $this->log('notifying plan about excluded activities by type', backup::LOG_DEBUG);
             $this->plan->set_excluding_activities();
         }
@@ -386,8 +333,8 @@ class backup_controller extends base_controller {
      * @param bool $cleanobj to decide if the object itself must be cleaned (true) or no (false)
      */
     public function save_controller($includeobj = true, $cleanobj = false) {
-        // Going to save controller to persistent storage, calculate checksum for later checks and save it.
-        // TODO: flag the controller as NA. Any operation on it should be forbidden until loaded back.
+        // Going to save controller to persistent storage, calculate checksum for later checks and save it
+        // TODO: flag the controller as NA. Any operation on it should be forbidden util loaded back
         $this->log('saving controller to db', backup::LOG_DEBUG);
         if ($includeobj ) {  // Only calculate checksum if we are going to include the object.
             $this->checksum = $this->calculate_checksum();
@@ -424,18 +371,33 @@ class backup_controller extends base_controller {
         $this->log('applying plan defaults', backup::LOG_DEBUG);
         backup_controller_dbops::apply_config_defaults($this);
         $this->set_status(backup::STATUS_CONFIGURED);
-        $this->set_include_files($this->get_include_files_default());
+        $this->set_include_files();
     }
 
     /**
      * Set the initial value for the include_files setting.
      *
-     * @param bool $includefiles
      * @see backup_controller::get_include_files for further information on the purpose of this setting.
+     * @return int Indicates whether files should be included in backups.
      */
-    protected function set_include_files(bool $includefiles) {
-        $this->log("setting file inclusion to {$this->includefiles}", backup::LOG_DEBUG);
+    protected function set_include_files() {
+        // We normally include files.
+        $includefiles = true;
+
+        // In an import, we don't need to include files.
+        if ($this->get_mode() === backup::MODE_IMPORT) {
+            $includefiles = false;
+        }
+
+        // When a backup is intended for the same site, we don't need to include the files.
+        // Note, this setting is only used for duplication of an entire course.
+        if ($this->get_mode() === backup::MODE_SAMESITE) {
+            $includefiles = false;
+        }
+
         $this->includefiles = (int) $includefiles;
+        $this->log("setting file inclusion to {$this->includefiles}", backup::LOG_DEBUG);
+        return $this->includefiles;
     }
 }
 

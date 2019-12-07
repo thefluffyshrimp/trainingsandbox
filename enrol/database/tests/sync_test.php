@@ -98,13 +98,6 @@ class enrol_database_testcase extends advanced_testcase {
             case 'mssql':
                 set_config('dbtype', 'mssqlnative', 'enrol_database');
                 set_config('dbsybasequoting', '1', 'enrol_database');
-
-                // The native sqlsrv driver uses a comma as separator between host and port.
-                $dbhost = $CFG->dbhost;
-                if (!empty($dboptions['dbport'])) {
-                    $dbhost .= ',' . $dboptions['dbport'];
-                }
-                set_config('dbhost', $dbhost, 'enrol_database');
                 break;
 
             default:

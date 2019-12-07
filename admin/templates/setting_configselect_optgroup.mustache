@@ -51,11 +51,8 @@
         ]
     }
 }}
-{{!
-    Setting configselect with optgroup support.
-}}
 <div class="form-select defaultsnext">
-    <select id="{{id}}" name="{{name}}" class="custom-select">
+    <select id="{{id}}" name="{{name}}">
         {{#options}}
             <option value="{{value}}" {{#selected}}selected{{/selected}}>{{name}}</option>
         {{/options}}
@@ -68,5 +65,4 @@
         {{/optgroups}}
     </select>
 </div>
-
 

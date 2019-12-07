@@ -119,7 +119,6 @@ class api {
      * @param int|null $aftereventid Only return events after this one
      * @param int $limitnum Limit results to this amount (between 1 and 50)
      * @param bool $lmittononsuspendedevents Limit course events to courses the user is active in (not suspended).
-     * @param \stdClass|null $user The user id or false for $USER
      * @return array A list of action_event_interface objects
      * @throws \moodle_exception
      */
@@ -128,14 +127,9 @@ class api {
         $timesortto = null,
         $aftereventid = null,
         $limitnum = 20,
-        $limittononsuspendedevents = false,
-        ?\stdClass $user = null
+        $limittononsuspendedevents = false
     ) {
         global $USER;
-
-        if (!$user) {
-            $user = $USER;
-        }
 
         if (is_null($timesortfrom) && is_null($timesortto)) {
             throw new \moodle_exception("Must provide a timesort to and/or from value");
@@ -145,7 +139,6 @@ class api {
             throw new \moodle_exception("Limit must be between 1 and 50 (inclusive)");
         }
 
-        \core_calendar\local\event\container::set_requesting_user($user->id);
         $vault = \core_calendar\local\event\container::get_event_vault();
 
         $afterevent = null;
@@ -153,7 +146,7 @@ class api {
             $afterevent = $event;
         }
 
-        return $vault->get_action_events_by_timesort($user, $timesortfrom, $timesortto, $afterevent, $limitnum,
+        return $vault->get_action_events_by_timesort($USER, $timesortfrom, $timesortto, $afterevent, $limitnum,
                 $limittononsuspendedevents);
     }
 

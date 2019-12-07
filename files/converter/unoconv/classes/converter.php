@@ -194,9 +194,7 @@ class converter implements \core_files\converter_interface {
 
         $conversions = conversion::get_conversions_for_file($testdocx, $format);
         foreach ($conversions as $conversion) {
-            if ($conversion->get('id')) {
-                $conversion->delete();
-            }
+            $conversion->delete();
         }
 
         $conversion = new conversion(0, (object) [

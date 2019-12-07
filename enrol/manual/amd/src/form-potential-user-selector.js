@@ -25,6 +25,9 @@
 
 define(['jquery', 'core/ajax', 'core/templates', 'core/str'], function($, Ajax, Templates, Str) {
 
+    /** @var {Number} Maximum number of users to show. */
+    var MAXUSERS = 100;
+
     return /** @alias module:enrol_manual/form-potential-user-selector */ {
 
         processResults: function(selector, results) {
@@ -46,17 +49,12 @@ define(['jquery', 'core/ajax', 'core/templates', 'core/str'], function($, Ajax, 
         transport: function(selector, query, success, failure) {
             var promise;
             var courseid = $(selector).attr('courseid');
-            var userfields = $(selector).attr('userfields').split(',');
             if (typeof courseid === "undefined") {
                 courseid = '1';
             }
             var enrolid = $(selector).attr('enrolid');
             if (typeof enrolid === "undefined") {
                 enrolid = '';
-            }
-            var perpage = $(selector).attr('perpage');
-            if (typeof perpage === "undefined") {
-                perpage = 100;
             }
 
             promise = Ajax.call([{
@@ -67,7 +65,7 @@ define(['jquery', 'core/ajax', 'core/templates', 'core/str'], function($, Ajax, 
                     search: query,
                     searchanywhere: true,
                     page: 0,
-                    perpage: perpage + 1
+                    perpage: MAXUSERS + 1
                 }
             }]);
 
@@ -75,12 +73,12 @@ define(['jquery', 'core/ajax', 'core/templates', 'core/str'], function($, Ajax, 
                 var promises = [],
                     i = 0;
 
-                if (results.length <= perpage) {
+                if (results.length <= MAXUSERS) {
                     // Render the label.
                     $.each(results, function(index, user) {
                         var ctx = user,
                             identity = [];
-                        $.each(userfields, function(i, k) {
+                        $.each(['idnumber', 'email', 'phone1', 'phone2', 'department', 'institution'], function(i, k) {
                             if (typeof user[k] !== 'undefined' && user[k] !== '') {
                                 ctx.hasidentity = true;
                                 identity.push(user[k]);
@@ -102,7 +100,7 @@ define(['jquery', 'core/ajax', 'core/templates', 'core/str'], function($, Ajax, 
                     });
 
                 } else {
-                    return Str.get_string('toomanyuserstoshow', 'core', '>' + perpage).then(function(toomanyuserstoshow) {
+                    return Str.get_string('toomanyuserstoshow', 'core', '>' + MAXUSERS).then(function(toomanyuserstoshow) {
                         success(toomanyuserstoshow);
                         return;
                     });

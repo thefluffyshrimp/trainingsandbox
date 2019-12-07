@@ -8,7 +8,6 @@
     <info format="plain_text">
       <text>This is Iota category for test</text>
     </info>
-    <idnumber></idnumber>
   </question>
 
 <!-- question: 96  -->
@@ -48,7 +47,6 @@
     <info format="markdown">
       <text>This is Kappa category for test</text>
     </info>
-    <idnumber></idnumber>
   </question>
 
 <!-- question: 106  -->
@@ -116,7 +114,6 @@
     <info format="moodle_auto_format">
       <text>This is Lambda category for test</text>
     </info>
-    <idnumber></idnumber>
   </question>
 
 <!-- question: 98  -->
@@ -156,7 +153,6 @@
     <info format="moodle_auto_format">
       <text>This is Mu category for test</text>
     </info>
-    <idnumber></idnumber>
   </question>
 
 <!-- question: 99  -->

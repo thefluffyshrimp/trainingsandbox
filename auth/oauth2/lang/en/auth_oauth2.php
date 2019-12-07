@@ -40,10 +40,7 @@ then cut and paste the address into the address
 line at the top of your web browser window.
 
 If you need help, please contact the site administrator,
-{$a->admin}
-
-If you did not do this, someone else could be trying to compromise your account.
-Please contact the site administrator immediately.';
+{$a->admin}';
 $string['confirmaccountemailsubject'] = '{$a}: account confirmation';
 $string['confirmationinvalid'] = 'The confirmation link is either invalid, or has expired. Please start the login process again to generate a new confirmation email.';
 $string['confirmationpending'] = 'This account is pending email confirmation.';
@@ -63,10 +60,7 @@ then cut and paste the address into the address
 line at the top of your web browser window.
 
 If you need help, please contact the site administrator,
-{$a->admin}
-
-If you did not do this, someone else could be trying to compromise your account.
-Please contact the site administrator immediately.';
+{$a->admin}';
 $string['confirmlinkedloginemailsubject'] = '{$a}: linked login confirmation';
 $string['createaccountswarning'] = 'This authentication plugin allows users to create accounts on your site. You may want to enable the setting "authpreventaccountcreation" if you use this plugin.';
 $string['createnewlinkedlogin'] = 'Link a new account ({$a})';
@@ -76,15 +70,6 @@ $string['emailconfirmlinksent'] = '<p>An existing account was found with this em
    <p>An email should have been sent to your address at <b>{$a}</b>.</p>
    <p>It contains easy instructions to link your accounts.</p>
    <p>If you have any difficulty, contact the site administrator.</p>';
-$string['emailpasswordchangeinfo'] = 'Hi {$a->firstname},
-
-Someone (probably you) has requested a new password for your account on \'{$a->sitename}\'.
-
-However your password cannot be reset because you are using your account on another site to log in.
-
-Please log in as before, using the link on the login page.
-{$a->admin}';
-$string['emailpasswordchangeinfosubject'] = '{$a}: Change password information';
 $string['info'] = 'External account';
 $string['issuer'] = 'OAuth 2 Service';
 $string['issuernologin'] = 'This issuer can not be used to login';

@@ -74,12 +74,6 @@ abstract class backup implements checksumable {
     const MODE_AUTOMATED = 50;
     const MODE_CONVERTED = 60;
 
-    /**
-     * This mode is for asynchronous backups.
-     * These backups will run via adhoc scheduled tasks.
-     */
-    const MODE_ASYNC = 70;
-
     // Target (new/existing/current/adding/deleting)
     const TARGET_CURRENT_DELETING = 0;
     const TARGET_CURRENT_ADDING   = 1;
@@ -142,11 +136,11 @@ abstract class backup implements checksumable {
      * point is backup when some behavior/approach channged, in order to allow
      * conditional coding based on it.
      */
-    const VERSION = 2019111800;
+    const VERSION = 2018120300;
     /**
      * Usually same than major release zero version, mainly for informative/historic purposes.
      */
-    const RELEASE = '3.8';
+    const RELEASE = '3.6';
 
     /**
      * Cipher to be used in backup and restore operations.

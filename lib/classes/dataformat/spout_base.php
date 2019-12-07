@@ -51,16 +51,12 @@ abstract class spout_base extends \core\dataformat\base {
      * Output file headers to initialise the download of the file.
      */
     public function send_http_headers() {
-        $this->writer = \Box\Spout\Writer\Common\Creator\WriterEntityFactory::createWriter($this->spouttype);
+        $this->writer = \Box\Spout\Writer\WriterFactory::create($this->spouttype);
         if (method_exists($this->writer, 'setTempFolder')) {
             $this->writer->setTempFolder(make_request_directory());
         }
         $filename = $this->filename . $this->get_extension();
-        if (PHPUNIT_TEST) {
-            $this->writer->openToFile('php://output');
-        } else {
-            $this->writer->openToBrowser($filename);
-        }
+        $this->writer->openToBrowser($filename);
 
         // By default one sheet is always created, but we want to rename it when we call start_sheet().
         $this->renamecurrentsheet = true;
@@ -83,7 +79,7 @@ abstract class spout_base extends \core\dataformat\base {
      * @param array $columns
      */
     public function start_sheet($columns) {
-        if ($this->sheettitle && $this->writer instanceof \Box\Spout\Writer\WriterMultiSheetsAbstract) {
+        if ($this->sheettitle && $this->writer instanceof \Box\Spout\Writer\AbstractMultiSheetsWriter) {
             if ($this->renamecurrentsheet) {
                 $sheet = $this->writer->getCurrentSheet();
                 $this->renamecurrentsheet = false;
@@ -92,8 +88,7 @@ abstract class spout_base extends \core\dataformat\base {
             }
             $sheet->setName($this->sheettitle);
         }
-        $row = \Box\Spout\Writer\Common\Creator\WriterEntityFactory::createRowFromArray((array)$columns);
-        $this->writer->addRow($row);
+        $this->writer->addRow(array_values((array)$columns));
     }
 
     /**
@@ -103,8 +98,7 @@ abstract class spout_base extends \core\dataformat\base {
      * @param int $rownum
      */
     public function write_record($record, $rownum) {
-        $row = \Box\Spout\Writer\Common\Creator\WriterEntityFactory::createRowFromArray((array)$record);
-        $this->writer->addRow($row);
+        $this->writer->addRow(array_values((array)$record));
     }
 
     /**

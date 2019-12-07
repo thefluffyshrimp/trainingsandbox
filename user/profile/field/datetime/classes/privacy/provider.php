@@ -96,17 +96,21 @@ class provider implements
             return;
         }
 
-        $sql = "SELECT uda.userid
+        $params = [
+            'contextuser' => CONTEXT_USER,
+            'contextid' => $context->id,
+            'datatype' => 'datetime'
+        ];
+
+        $sql = "SELECT ctx.instanceid as userid
                   FROM {user_info_data} uda
                   JOIN {user_info_field} uif
                        ON uda.fieldid = uif.id
-                 WHERE uda.userid = :userid
+                  JOIN {context} ctx
+                       ON ctx.instanceid = uda.userid
+                       AND ctx.contextlevel = :contextuser
+                 WHERE ctx.id = :contextid
                        AND uif.datatype = :datatype";
-
-        $params = [
-            'userid' => $context->instanceid,
-            'datatype' => 'datetime'
-        ];
 
         $userlist->add_from_sql('userid', $sql, $params);
     }

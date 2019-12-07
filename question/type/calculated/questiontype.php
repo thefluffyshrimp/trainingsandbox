@@ -730,12 +730,14 @@ class qtype_calculated extends question_type {
     public function custom_generator_tools_part($mform, $idx, $j) {
 
         $minmaxgrp = array();
-        $minmaxgrp[] = $mform->createElement('float', "calcmin[{$idx}]",
+        $minmaxgrp[] = $mform->createElement('text', "calcmin[{$idx}]",
                 get_string('calcmin', 'qtype_calculated'));
-        $minmaxgrp[] = $mform->createElement('float', "calcmax[{$idx}]",
+        $minmaxgrp[] = $mform->createElement('text', "calcmax[{$idx}]",
                 get_string('calcmax', 'qtype_calculated'));
         $mform->addGroup($minmaxgrp, 'minmaxgrp',
                 get_string('minmax', 'qtype_calculated'), ' - ', false);
+        $mform->setType("calcmin[{$idx}]", PARAM_FLOAT);
+        $mform->setType("calcmax[{$idx}]", PARAM_FLOAT);
 
         $precisionoptions = range(0, 10);
         $mform->addElement('select', "calclength[{$idx}]",
@@ -752,6 +754,7 @@ class qtype_calculated extends question_type {
         foreach ($datasetdefs as $datasetdef) {
             if (preg_match('~^(uniform|loguniform):([^:]*):([^:]*):([0-9]*)$~',
                     $datasetdef->options, $regs)) {
+                $defid = "{$datasetdef->type}-{$datasetdef->category}-{$datasetdef->name}";
                 $formdata["calcdistribution[{$idx}]"] = $regs[1];
                 $formdata["calcmin[{$idx}]"] = $regs[2];
                 $formdata["calcmax[{$idx}]"] = $regs[3];

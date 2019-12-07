@@ -5,6 +5,7 @@
     require_once('../config.php');
     require_once('lib.php');
     require_once($CFG->libdir.'/completionlib.php');
+    require_once($CFG->libdir . "/badgeslib.php");
 
     $id          = optional_param('id', 0, PARAM_INT);
     $name        = optional_param('name', '', PARAM_TEXT);
@@ -56,6 +57,20 @@
     }
 
     require_login($course);
+
+
+    //for update role
+   $badges = badges_get_user_badges($USER->id, $COURSE->id, 0, 0);
+   //print_r($badges);
+   if($badges){
+    $context = context_course::instance($COURSE->id);
+    $contextid=$context->id;
+    //echo "<pre>";
+    //print_r($context);
+    /*$sql='UPDATE mdl_role_assignments set roleid=5 WHERE contextid ="'.$contextid.'" AND userid='.$USER->id.'';*/
+    //$DB->execute('UPDATE {role_assignments} set roleid=3 WHERE contextid ="'.$contextid.'" AND userid='.$USER->id.'');
+
+   }
 
     // Switchrole - sanity check in cost-order...
     $reset_user_allowed_editing = false;
@@ -242,16 +257,6 @@
 
     $PAGE->set_heading($course->fullname);
     echo $OUTPUT->header();
-
-    if ($USER->editing == 1 && !empty($CFG->enableasyncbackup)) {
-
-        // MDL-65321 The backup libraries are quite heavy, only require the bare minimum.
-        require_once($CFG->dirroot . '/backup/util/helper/async_helper.class.php');
-
-        if (async_helper::is_async_pending($id, 'course', 'backup')) {
-            echo $OUTPUT->notification(get_string('pendingasyncedit', 'backup'), 'warning');
-        }
-    }
 
     if ($completion->is_enabled()) {
         // This value tracks whether there has been a dynamic change to the page.
