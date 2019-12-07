@@ -370,7 +370,7 @@ function theme_moove_rebuildcoursesections(\flat_navigation $flatnav) {
                 //'type' => $item->type,
                 'key' => 'badges',
                 'parent' => $createbadges,
-                'action' => $CGF->wwwroot.'/badges/view.php?type='.$categoryid .'&id='.$COURSE->id.''
+                'action' => $CGF->wwwroot.'/badges/view.php?type=2&id='.$COURSE->id.''
             ]));
 
         
