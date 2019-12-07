@@ -29,17 +29,15 @@ Feature: Adding questions to a quiz from the question bank
     Given I log in as "teacher1"
     And I am on "Course 1" course homepage
     When I navigate to "Question bank > Questions" in current page administration
-    And I click on "Edit" "link" in the "question 01 name" "table_row"
+    And I choose "Edit question" action for "question 01 name" in the question bank
     And I set the following fields to these values:
       | Tags | foo |
     And I press "id_submitbutton"
-    And I click on "Edit" "link" in the "question 02 name" "table_row"
+    And I choose "Edit question" action for "question 02 name" in the question bank
     And I set the following fields to these values:
       | Tags | bar |
     And I press "id_submitbutton"
-    And I am on "Course 1" course homepage
-    And I follow "Quiz 1"
-    And I navigate to "Edit quiz" in current page administration
+    And I am on the "Quiz 1" "mod_quiz > Edit" page
     And I open the "last" add to quiz menu
     And I follow "from question bank"
     And I set the field "Filter by tags..." to "foo"
@@ -71,12 +69,31 @@ Feature: Adding questions to a quiz from the question bank
       | Test questions   | essay     | question 21 name | teacher1 | Question 21 text |
       | Test questions   | essay     | question 22 name | teacher1 | Question 22 text |
     And I log in as "teacher1"
-    And I am on "Course 1" course homepage
-    And I follow "Quiz 1"
-    And I navigate to "Edit quiz" in current page administration
+    And I am on the "Quiz 1" "mod_quiz > Edit" page
     And I open the "last" add to quiz menu
     And I follow "from question bank"
     And I click on "2" "link" in the ".pagination" "css_element"
     Then I should see "question 21 name" in the "categoryquestions" "table"
     And I should see "question 22 name" in the "categoryquestions" "table"
     And I should not see "question 01 name" in the "categoryquestions" "table"
+
+  Scenario: Questions are added in the right place with multiple sections
+    Given the following "questions" exist:
+      | questioncategory | qtype | name             | questiontext     |
+      | Test questions   | essay | question 03 name | question 03 text |
+    And quiz "Quiz 1" contains the following questions:
+      | question         | page |
+      | question 01 name | 1    |
+      | question 02 name | 2    |
+    And quiz "Quiz 1" contains the following sections:
+      | heading   | firstslot | shuffle |
+      | Section 1 | 1         | 0       |
+      | Section 2 | 2         | 0       |
+    And I log in as "teacher1"
+    And I am on the "Quiz 1" "mod_quiz > Edit" page
+    When I open the "Page 1" add to quiz menu
+    And I follow "from question bank"
+    And I set the field with xpath "//tr[contains(normalize-space(.), 'question 03 name')]//input[@type='checkbox']" to "1"
+    And I click on "Add selected questions to the quiz" "button"
+    Then I should see "question 03 name" on quiz page "1"
+    And I should see "question 01 name" before "question 03 name" on the edit quiz page

@@ -195,15 +195,79 @@ function xmldb_tool_ally_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2018080200, 'tool', 'ally');
     }
 
-    if ($oldversion < 2018080810) {
-        $courses = $DB->get_recordset('course', null, 'id', 'id');
-        foreach ($courses as $course) {
-            \tool_ally\local_file::queue_deleted_section_files($course->id);
+    if ($oldversion < 2018080814) {
+
+        // Define table tool_ally_log to be created.
+        $table = new xmldb_table('tool_ally_log');
+
+        // Adding fields to table tool_ally_log.
+        $table->add_field('id',          XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('time',        XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('level',       XMLDB_TYPE_CHAR, '12', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('code',        XMLDB_TYPE_CHAR, '255', null, null, null, null);
+        $table->add_field('message',     XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('explanation', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('data',        XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('exception',   XMLDB_TYPE_TEXT, null, null, null, null, null);
+
+        // Adding keys to table tool_ally_log.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, array('id'));
+
+        // Adding indexes to table tool_ally_log.
+        $table->add_index('level', XMLDB_INDEX_NOTUNIQUE, array('level'));
+        $table->add_index('code', XMLDB_INDEX_NOTUNIQUE, array('code'));
+
+        // Conditionally launch create table for tool_ally_log.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
         }
-        $courses->close();
 
         // Ally savepoint reached.
-        upgrade_plugin_savepoint(true, 2018080810, 'tool', 'ally');
+        upgrade_plugin_savepoint(true, 2018080814, 'tool', 'ally');
+    }
+
+    if ($oldversion < 2018080815) {
+
+        // Define table tool_ally_course_event to be created.
+        $table = new xmldb_table('tool_ally_course_event');
+
+        // Adding fields to table tool_ally_course_event.
+        $table->add_field('id',        XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('name',      XMLDB_TYPE_CHAR, '15', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('time',      XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('courseid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+
+        // Adding keys to table tool_ally_course_event.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, array('id'));
+
+        // Conditionally launch create table for tool_ally_course_event.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Ally savepoint reached.
+        upgrade_plugin_savepoint(true, 2018080815, 'tool', 'ally');
+    }
+
+    if ($oldversion < 2019061200) {
+
+        $user = $DB->get_record('user', ['username' => 'ally_webuser']);
+        // If the user exists we will update its capabilites.
+        if ($user) {
+
+            $contextid = \context_system::instance()->id;
+            // The two new capabilites.
+            $caps = [
+                "moodle/category:viewhiddencategories",
+                "tool/ally:viewlogs"
+            ];
+            // We assign those new capabilities.
+            foreach ($caps as $cap) {
+                assign_capability($cap, CAP_ALLOW, $user->id, $contextid);
+            }
+        }
+        // Ally savepoint reached.
+        upgrade_plugin_savepoint(true, 2019061200, 'tool', 'ally');
     }
 
     return true;

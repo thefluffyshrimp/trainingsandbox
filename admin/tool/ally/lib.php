@@ -27,7 +27,9 @@ use tool_ally\file_processor,
     tool_ally\local_file,
     tool_ally\cache,
     tool_ally\local_content,
-    tool_ally\componentsupport\interfaces\content_sub_tables;
+    tool_ally\componentsupport\interfaces\content_sub_tables,
+    tool_ally\local,
+    tool_ally\logging\logger;
 
 /**
  * Callback for after file deleted.
@@ -84,10 +86,50 @@ function tool_ally_pre_course_module_delete(stdClass $cm) {
         $component->queue_delete_sub_tables($cm);
     } catch (\moodle_exception $mex) {
         // Probably caught when disabled or erratic modules are in tests.
-        if (!\tool_ally\local::duringtesting()) {
+        if (!local::duringtesting()) {
             // Something is wrong with this module.
-            mtrace($mex->getMessage());
-            throw $mex;
+            $msg = 'logger:cmiderraticpremoddelete';
+            $context['_explanation'] = $msg.'_exp';
+            $context['_exception'] = $mex;
+            logger::get()->error($msg, $context);
         }
     }
+}
+
+/**
+ * Serves 3rd party js files.
+ * (c) Guy Thomas 2018
+ *
+ * @param stdClass $course
+ * @param stdClass $cm
+ * @param context $context
+ * @param string $filearea
+ * @param array $args
+ * @param bool $forcedownload
+ * @param array $options
+ * @return bool
+ */
+function tool_ally_pluginfile($course, $cm, $context, $filearea, $args, $forcedownload, array $options = array()) {
+    $pluginpath = __DIR__.'/';
+
+    if ($filearea === 'vendorjs') {
+        // Typically CDN fall backs would go in vendorjs.
+        $path = $pluginpath.'vendorjs/'.implode('/', $args);
+        send_file($path, basename($path));
+        return true;
+    } else if ($filearea === 'vue') {
+        // Vue components.
+        $jsfile = array_pop ($args);
+        $compdir = basename($jsfile, '.js');
+        $umdfile = $compdir.'.umd.js';
+        $args[] = $compdir;
+        $args[] = 'dist';
+        $args[] = $umdfile;
+        $path = $pluginpath.'vue/'.implode('/', $args);
+        send_file($path, basename($path));
+        return true;
+    } else {
+        die('unsupported file area');
+    }
+    die;
 }

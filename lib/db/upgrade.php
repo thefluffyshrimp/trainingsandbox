@@ -2475,16 +2475,18 @@ function xmldb_main_upgrade($oldversion) {
 
     if ($oldversion < 2018092800.02) {
         // Delete any contacts that are not mutual (meaning they both haven't added each other).
-        $sql = "SELECT c1.id
-                  FROM {message_contacts} c1
-             LEFT JOIN {message_contacts} c2
-                    ON c1.userid = c2.contactid
-                   AND c1.contactid = c2.userid
-                 WHERE c2.id IS NULL";
-        if ($contacts = $DB->get_records_sql($sql)) {
-            list($insql, $inparams) = $DB->get_in_or_equal(array_keys($contacts));
-            $DB->delete_records_select('message_contacts', "id $insql", $inparams);
-        }
+        do {
+            $sql = "SELECT c1.id
+                      FROM {message_contacts} c1
+                 LEFT JOIN {message_contacts} c2
+                        ON c1.userid = c2.contactid
+                       AND c1.contactid = c2.userid
+                     WHERE c2.id IS NULL";
+            if ($contacts = $DB->get_records_sql($sql, null, 0, 1000)) {
+                list($insql, $inparams) = $DB->get_in_or_equal(array_keys($contacts));
+                $DB->delete_records_select('message_contacts', "id $insql", $inparams);
+            }
+        } while ($contacts);
 
         upgrade_main_savepoint(true, 2018092800.02);
     }
@@ -2887,6 +2889,242 @@ function xmldb_main_upgrade($oldversion) {
     if ($oldversion < 2018120301.02) {
         upgrade_delete_orphaned_file_records();
         upgrade_main_savepoint(true, 2018120301.02);
+    }
+
+    if ($oldversion <  2018120302.02) {
+
+        // Delete all files that have been used in sections, which are already deleted.
+        $sql = "SELECT DISTINCT f.itemid as sectionid, f.contextid
+                  FROM {files} f
+             LEFT JOIN {course_sections} s ON f.itemid = s.id
+                 WHERE f.component = :component AND f.filearea = :filearea AND s.id IS NULL ";
+
+        $params = [
+            'component' => 'course',
+            'filearea' => 'section'
+        ];
+
+        $stalefiles = $DB->get_recordset_sql($sql, $params);
+
+        $fs = get_file_storage();
+        foreach ($stalefiles as $stalefile) {
+            $fs->delete_area_files($stalefile->contextid, 'course', 'section', $stalefile->sectionid);
+        }
+        $stalefiles->close();
+
+        upgrade_main_savepoint(true,  2018120302.02);
+    }
+
+    if ($oldversion < 2018120302.03) {
+        // Add index 'useridfrom' to the table 'notifications'.
+        $table = new xmldb_table('notifications');
+        $index = new xmldb_index('useridfrom', XMLDB_INDEX_NOTUNIQUE, ['useridfrom']);
+
+        if (!$dbman->index_exists($table, $index)) {
+            $dbman->add_index($table, $index);
+        }
+
+        upgrade_main_savepoint(true, 2018120302.03);
+    }
+
+    if ($oldversion < 2018120302.04) {
+        // Remove duplicate entries from group memberships.
+        // Find records with multiple userid/groupid combinations and find the highest ID.
+        // Later we will remove all those entries.
+        $sql = "
+            SELECT MIN(id) as minid, userid, groupid
+            FROM {groups_members}
+            GROUP BY userid, groupid
+            HAVING COUNT(id) > 1";
+        if ($duplicatedrows = $DB->get_recordset_sql($sql)) {
+            foreach ($duplicatedrows as $row) {
+                $DB->delete_records_select('groups_members',
+                    'userid = :userid AND groupid = :groupid AND id <> :minid', (array)$row);
+            }
+        }
+        $duplicatedrows->close();
+
+        // Define key useridgroupid (unique) to be added to group_members.
+        $table = new xmldb_table('groups_members');
+        $key = new xmldb_key('useridgroupid', XMLDB_KEY_UNIQUE, array('userid', 'groupid'));
+        // Launch add key useridgroupid.
+        $dbman->add_key($table, $key);
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2018120302.04);
+    }
+
+    if ($oldversion < 2018120303.01) {
+        // Remove any conversations and their members associated with non-existent groups.
+        $sql = "SELECT mc.id
+                  FROM {message_conversations} mc
+             LEFT JOIN {groups} g
+                    ON mc.itemid = g.id
+                 WHERE mc.component = :component
+                   AND mc.itemtype = :itemtype
+                   AND g.id is NULL";
+        $conversations = $DB->get_records_sql($sql, ['component' => 'core_group', 'itemtype' => 'groups']);
+
+        if ($conversations) {
+            $conversationids = array_keys($conversations);
+
+            $DB->delete_records_list('message_conversations', 'id', $conversationids);
+            $DB->delete_records_list('message_conversation_members', 'conversationid', $conversationids);
+
+            // Now, go through each conversation and delete any messages and related message actions.
+            foreach ($conversationids as $conversationid) {
+                if ($messages = $DB->get_records('messages', ['conversationid' => $conversationid])) {
+                    $messageids = array_keys($messages);
+
+                    // Delete the actions.
+                    list($insql, $inparams) = $DB->get_in_or_equal($messageids);
+                    $DB->delete_records_select('message_user_actions', "messageid $insql", $inparams);
+
+                    // Delete the messages.
+                    $DB->delete_records('messages', ['conversationid' => $conversationid]);
+                }
+            }
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2018120303.01);
+    }
+
+    if ($oldversion < 2018120303.02) {
+
+        // Add missing indicators to course_dropout.
+        $params = [
+            'target' => '\core\analytics\target\course_dropout',
+            'trained' => 0,
+            'enabled' => 0,
+        ];
+        $models = $DB->get_records('analytics_models', $params);
+        foreach ($models as $model) {
+            $indicators = json_decode($model->indicators);
+
+            $potentiallymissingindicators = [
+                '\core_course\analytics\indicator\completion_enabled',
+                '\core_course\analytics\indicator\potential_cognitive_depth',
+                '\core_course\analytics\indicator\potential_social_breadth',
+                '\core\analytics\indicator\any_access_after_end',
+                '\core\analytics\indicator\any_access_before_start',
+                '\core\analytics\indicator\any_write_action_in_course',
+                '\core\analytics\indicator\read_actions'
+            ];
+
+            $missing = false;
+            foreach ($potentiallymissingindicators as $potentiallymissingindicator) {
+                if (!in_array($potentiallymissingindicator, $indicators)) {
+                    // Add the missing indicator to sites upgraded before 2017072000.02.
+                    $indicators[] = $potentiallymissingindicator;
+                    $missing = true;
+                }
+            }
+
+            if ($missing) {
+                $model->indicators = json_encode($indicators);
+                $model->version = time();
+                $model->timemodified = time();
+                $DB->update_record('analytics_models', $model);
+            }
+        }
+
+        // Add missing indicators to no_teaching.
+        $params = [
+            'target' => '\core\analytics\target\no_teaching',
+        ];
+        $models = $DB->get_records('analytics_models', $params);
+        foreach ($models as $model) {
+            $indicators = json_decode($model->indicators);
+            if (!in_array('\core_course\analytics\indicator\no_student', $indicators)) {
+                // Add the missing indicator to sites upgraded before 2017072000.02.
+
+                $indicators[] = '\core_course\analytics\indicator\no_student';
+
+                $model->indicators = json_encode($indicators);
+                $model->version = time();
+                $model->timemodified = time();
+                $DB->update_record('analytics_models', $model);
+            }
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2018120303.02);
+    }
+
+    if ($oldversion < 2018120303.05) {
+        // The no_teaching model might have been marked as not-trained by mistake (static models are always trained).
+        $DB->set_field('analytics_models', 'trained', 1, ['target' => '\core\analytics\target\no_teaching']);
+        upgrade_main_savepoint(true, 2018120303.05);
+    }
+
+    if ($oldversion < 2018120303.16) {
+        // Delete all stale favourite records which were left behind when a course was deleted.
+        $params = ['component' => 'core_message', 'itemtype' => 'message_conversations'];
+        $sql = "SELECT fav.id as id
+                  FROM {favourite} fav
+             LEFT JOIN {context} ctx ON (ctx.id = fav.contextid)
+                 WHERE fav.component = :component
+                       AND fav.itemtype = :itemtype
+                       AND ctx.id IS NULL";
+
+        if ($records = $DB->get_fieldset_sql($sql, $params)) {
+            // Just for safety, delete by chunks.
+            $chunks = array_chunk($records, 1000);
+            foreach ($chunks as $chunk) {
+                list($insql, $inparams) = $DB->get_in_or_equal($chunk);
+                $DB->delete_records_select('favourite', "id $insql", $inparams);
+            }
+        }
+
+        upgrade_main_savepoint(true, 2018120303.16);
+    }
+
+    if ($oldversion < 2018120305.04) {
+        // Update the empty tag instructions to null.
+        $instructions = get_config('core', 'auth_instructions');
+
+        if (trim(html_to_text($instructions)) === '') {
+            set_config('auth_instructions', '');
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2018120305.04);
+    }
+
+    if ($oldversion < 2018120305.13) {
+        // Delete "orphaned" subscriptions.
+        $sql = "SELECT DISTINCT es.userid
+                  FROM {event_subscriptions} es
+             LEFT JOIN {user} u ON u.id = es.userid
+                 WHERE u.deleted = 1 OR u.id IS NULL";
+        $deletedusers = $DB->get_field_sql($sql);
+        if ($deletedusers) {
+            list($sql, $params) = $DB->get_in_or_equal($deletedusers);
+
+            // Delete orphaned subscriptions.
+            $DB->execute("DELETE FROM {event_subscriptions} WHERE userid " . $sql, $params);
+        }
+
+        upgrade_main_savepoint(true, 2018120305.13);
+    }
+
+    if ($oldversion < 2018120306.06) {
+        // Rename the official moodle sites directory the site is registered with.
+        $DB->execute("UPDATE {registration_hubs}
+                         SET hubname = ?, huburl = ?
+                       WHERE huburl = ?", ['moodle', 'https://stats.moodle.org', 'https://moodle.net']);
+
+        // Convert the hub site specific settings to the new naming format without the hub URL in the name.
+        $hubconfig = get_config('hub');
+
+        if (!empty($hubconfig)) {
+            foreach (upgrade_convert_hub_config_site_param_names($hubconfig, 'https://moodle.net') as $name => $value) {
+                set_config($name, $value, 'hub');
+            }
+        }
+
+        upgrade_main_savepoint(true, 2018120306.06);
     }
 
     return true;

@@ -215,11 +215,17 @@ function book_grades($bookid) {
 }
 
 /**
- * @deprecated since Moodle 3.8
+ * This function returns if a scale is being used by one book
+ * it it has support for grading and scales. Commented code should be
+ * modified if necessary. See book, glossary or journal modules
+ * as reference.
+ *
+ * @param int $bookid
+ * @param int $scaleid
+ * @return boolean True if the scale is used by any journal
  */
-function book_scale_used() {
-    throw new coding_exception('book_scale_used() can not be used anymore. Plugins can implement ' .
-        '<modname>_scale_used_anywhere, all implementations of <modname>_scale_used are now ignored');
+function book_scale_used($bookid, $scaleid) {
+    return false;
 }
 
 /**
@@ -564,7 +570,7 @@ function book_export_contents($cm, $baseurl) {
     $currentchapter = 0;
 
     foreach ($chapters as $chapter) {
-        if ($chapter->hidden && !has_capability('mod/book:viewhiddenchapters', $context)) {
+        if ($chapter->hidden) {
             continue;
         }
 
@@ -573,7 +579,6 @@ function book_export_contents($cm, $baseurl) {
             "title"     => format_string($chapter->title, true, array('context' => $context)),
             "href"      => $chapter->id . "/index.html",
             "level"     => 0,
-            "hidden"    => $chapter->hidden,
             "subitems"  => array()
         );
 
@@ -606,7 +611,6 @@ function book_export_contents($cm, $baseurl) {
         $chapterindexfile['userid']       = null;
         $chapterindexfile['author']       = null;
         $chapterindexfile['license']      = null;
-        $chapterindexfile['tags']         = \core_tag\external\util::get_item_tags('mod_book', 'book_chapters', $chapter->id);
         $contents[] = $chapterindexfile;
 
         // Chapter files (images usually).

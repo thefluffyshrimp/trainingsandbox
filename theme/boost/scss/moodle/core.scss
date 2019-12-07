@@ -296,7 +296,9 @@ form.popupform div {
 }
 
 // Minimum height required for a menu in a table inside a scrollable div.
+// Position required for table sizing inside a flex container.
 .no-overflow > .generaltable {
+    position: relative;
     margin-bottom: 0;
     min-height: 10em;
 }
@@ -2056,6 +2058,9 @@ $footer-link-color: $bg-inverse-link-color !default;
     width: 100%;
     color: $body-color;
 }
+.dropdown-item:active a {
+    color: $dropdown-link-active-color;
+}
 
 .competency-tree {
     ul {
@@ -2252,4 +2257,8 @@ $switch-transition: .2s all !default;
 
 .position-right {
     right: 0 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+.z-index-1 {
+    z-index: 1 !important; /* stylelint-disable-line declaration-no-important */
 }

@@ -27,6 +27,7 @@ defined('MOODLE_INTERNAL') || die();
 $string['pluginname'] = 'Accessibility report';
 $string['adminreport'] = 'Accessibility';
 $string['allylti:viewadminreport'] = 'View the Accessibility report';
+$string['coursereport'] = 'Accessibility report';
 $string['notconfigured'] = 'The Accessibility report is not configured';
 $string['notenabled'] = 'The Accessibility report is not enabled';
 $string['privacy:metadata:lti:coursefullname'] = 'The full name of the course the user is accessing Ally from.';
@@ -38,3 +39,4 @@ $string['privacy:metadata:lti:roles']   = 'The roles in the course for the user 
 $string['privacy:metadata:lti:userid'] = 'The ID of the user accessing Ally.';
 $string['privacy:metadata:lti:useridnumber'] = 'The ID number of the user accessing Ally.';
 $string['reportnewwindow'] = 'Accessibility report launched in a new window';
+$string['allylti:viewcoursereport'] = 'view course report';

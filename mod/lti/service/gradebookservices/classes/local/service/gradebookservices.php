@@ -43,19 +43,8 @@ defined('MOODLE_INTERNAL') || die();
  */
 class gradebookservices extends service_base {
 
-    /** Read-only access to Gradebook services */
-    const GRADEBOOKSERVICES_READ = 1;
-    /** Full access to Gradebook services */
-    const GRADEBOOKSERVICES_FULL = 2;
-    /** Scope for full access to Lineitem service */
-    const SCOPE_GRADEBOOKSERVICES_LINEITEM = 'https://purl.imsglobal.org/spec/lti-ags/scope/lineitem';
-    /** Scope for full access to Lineitem service */
-    const SCOPE_GRADEBOOKSERVICES_LINEITEM_READ = 'https://purl.imsglobal.org/spec/lti-ags/scope/lineitem.readonly';
-    /** Scope for access to Result service */
-    const SCOPE_GRADEBOOKSERVICES_RESULT_READ = 'https://purl.imsglobal.org/spec/lti-ags/scope/result.readonly';
-    /** Scope for access to Score service */
-    const SCOPE_GRADEBOOKSERVICES_SCORE = 'https://purl.imsglobal.org/spec/lti-ags/scope/score';
-
+    /** Internal service name */
+    const SERVICE_NAME = 'ltiservice_gradebookservices';
 
     /**
      * Class constructor.
@@ -64,7 +53,7 @@ class gradebookservices extends service_base {
 
         parent::__construct();
         $this->id = 'gradebookservices';
-        $this->name = get_string($this->get_component_id(), $this->get_component_id());
+        $this->name = $this->get_string('servicename');
 
     }
 
@@ -89,30 +78,6 @@ class gradebookservices extends service_base {
     }
 
     /**
-     * Get the scope(s) permitted for this service.
-     *
-     * @return array
-     */
-    public function get_permitted_scopes() {
-
-        $scopes = array();
-        $ok = !empty($this->get_type());
-        if ($ok && isset($this->get_typeconfig()['ltiservice_gradesynchronization'])) {
-            if (!empty($setting = $this->get_typeconfig()['ltiservice_gradesynchronization'])) {
-                $scopes[] = self::SCOPE_GRADEBOOKSERVICES_LINEITEM_READ;
-                $scopes[] = self::SCOPE_GRADEBOOKSERVICES_RESULT_READ;
-                $scopes[] = self::SCOPE_GRADEBOOKSERVICES_SCORE;
-                if ($setting == self::GRADEBOOKSERVICES_FULL) {
-                    $scopes[] = self::SCOPE_GRADEBOOKSERVICES_LINEITEM;
-                }
-            }
-        }
-
-        return $scopes;
-
-    }
-
-    /**
      * Adds form elements for gradebook sync add/edit page.
      *
      * @param \MoodleQuickForm $mform Moodle quickform object definition
@@ -122,15 +87,35 @@ class gradebookservices extends service_base {
         $selectelementname = 'ltiservice_gradesynchronization';
         $identifier = 'grade_synchronization';
         $options = [
-            get_string('nevergs', $this->get_component_id()),
-            get_string('partialgs', $this->get_component_id()),
-            get_string('alwaysgs', $this->get_component_id())
+            $this->get_string('nevergs'),
+            $this->get_string('partialgs'),
+            $this->get_string('alwaysgs')
         ];
 
-        $mform->addElement('select', $selectelementname, get_string($identifier, $this->get_component_id()), $options);
+        $mform->addElement('select', $selectelementname, $this->get_string($identifier), $options);
         $mform->setType($selectelementname, 'int');
         $mform->setDefault($selectelementname, 0);
-        $mform->addHelpButton($selectelementname, $identifier, $this->get_component_id());
+        $mform->addHelpButton($selectelementname, $identifier, self::SERVICE_NAME);
+    }
+
+    /**
+     * Retrieves string from lang file
+     *
+     * @param string $identifier
+     * @return string
+     */
+    private function get_string($identifier) {
+        return get_string($identifier, self::SERVICE_NAME);
+    }
+
+    /**
+     * Return an array with the names of the parameters that the service will be saving in the configuration
+     *
+     * @return array with the names of the parameters that the service will be saving in the configuration
+     *
+     */
+    public function get_configuration_parameter_names() {
+        return array('ltiservice_gradesynchronization');
     }
 
     /**
@@ -149,15 +134,15 @@ class gradebookservices extends service_base {
      */
     public function get_launch_parameters($messagetype, $courseid, $user, $typeid, $modlti = null) {
         global $DB;
+
         $launchparameters = array();
-        $this->set_type(lti_get_type($typeid));
-        $this->set_typeconfig(lti_get_type_config($typeid));
+        $tool = lti_get_type_type_config($typeid);
         // Only inject parameters if the service is enabled for this tool.
-        if (isset($this->get_typeconfig()['ltiservice_gradesynchronization'])) {
-            if ($this->get_typeconfig()['ltiservice_gradesynchronization'] == self::GRADEBOOKSERVICES_READ ||
-                $this->get_typeconfig()['ltiservice_gradesynchronization'] == self::GRADEBOOKSERVICES_FULL) {
+        if (isset($tool->ltiservice_gradesynchronization)) {
+            if ($tool->ltiservice_gradesynchronization == '1' || $tool->ltiservice_gradesynchronization == '2') {
                 // Check for used in context is only needed because there is no explicit site tool - course relation.
                 if ($this->is_allowed_in_context($typeid, $courseid)) {
+                    $endpoint = $this->get_service_path() . "/{$courseid}/lineitems";
                     if (is_null($modlti)) {
                         $id = null;
                     } else {
@@ -179,10 +164,9 @@ class gradebookservices extends service_base {
                             $id = null;
                         }
                     }
-                    $launchparameters['gradebookservices_scope'] = implode(',', $this->get_permitted_scopes());
-                    $launchparameters['lineitems_url'] = '$LineItems.url';
+                    $launchparameters['custom_lineitems_url'] = $endpoint . "?type_id={$typeid}";
                     if (!is_null($id)) {
-                        $launchparameters['lineitem_url'] = '$LineItem.url';
+                        $launchparameters['custom_lineitem_url'] = $endpoint . "/{$id}/lineitem?type_id={$typeid}";
                     }
                 }
             }
@@ -332,26 +316,10 @@ class gradebookservices extends service_base {
      * @param int $userid User ID
      *
      * @throws \Exception
-     * @deprecated since Moodle 3.7 MDL-62599 - please do not use this function any more.
-     * @see gradebookservices::save_grade_item($gradeitem, $score, $userid)
      */
     public static function save_score($gradeitem, $score, $userid) {
-        $service = new gradebookservices();
-        $service->save_grade_item($gradeitem, $score, $userid);
-    }
-
-    /**
-     * Set a grade item.
-     *
-     * @param object $gradeitem Grade Item record
-     * @param object $score Result object
-     * @param int $userid User ID
-     *
-     * @throws \Exception
-     */
-    public function save_grade_item($gradeitem, $score, $userid) {
         global $DB, $CFG;
-        $source = 'mod' . $this->get_component_id();
+        $source = 'mod' . self::SERVICE_NAME;
         if ($DB->get_record('user', array('id' => $userid)) === false) {
             throw new \Exception(null, 400);
         }
@@ -438,13 +406,11 @@ class gradebookservices extends service_base {
         if ($gbs) {
             $lineitem->tag = (!empty($gbs->tag)) ? $gbs->tag : '';
             if (isset($gbs->ltilinkid)) {
-                $lineitem->resourceLinkId = strval($gbs->ltilinkid);
                 $lineitem->ltiLinkId = strval($gbs->ltilinkid);
             }
         } else {
             $lineitem->tag = '';
             if (isset($item->iteminstance)) {
-                $lineitem->resourceLinkId = strval($item->iteminstance);
                 $lineitem->ltiLinkId = strval($item->iteminstance);
             }
         }

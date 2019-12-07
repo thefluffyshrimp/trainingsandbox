@@ -48,17 +48,23 @@ form {
     display: none;
 }
 
+// MDL-63512 Override to handle issues in clean where the video styling is off.
 .mform .fitem .fitemtitle {
-    div {
+    & > div:not(.mediaplugin) div {
         display: inline;
     }
 
-    // MDL-63512 Override to handle issues in clean where the video styling is off.
-    .mediaplugin,
-    .mediaplugin div {
-        display: block;
+    // MDL-64450 Override for videos so they don't appear off the screen.
+    .mediaplugin > div {
+        margin: 0;
     }
 }
+
+// Reduce the mediaplugin width when using inside forms.
+.que.match .mediaplugin {
+    width: 50vw;
+}
+
 #adminsettings .error,
 .loginpanel .error,
 .mform .error {
@@ -493,8 +499,11 @@ select.form-autocomplete-original-select {
     margin: 0.2em;
     min-height: @baseLineHeight + @baseFontSize / 2;
 }
-.form-autocomplete-multiple [role=listitem] {
+.form-autocomplete-selection [role=listitem] {
     cursor: pointer;
+    white-space: inherit;
+    word-break: break-word;
+    line-height: 1.4;
 }
 
 .form-autocomplete-suggestions {
@@ -528,9 +537,8 @@ select.form-autocomplete-original-select {
 
 .form-autocomplete-downarrow {
     color: @textColor;
-    position: relative;
-    top: -0.3em;
-    left: -1.5em;
+    top: 0.2rem;
+    right: 0.5rem;
     cursor: pointer;
 }
 

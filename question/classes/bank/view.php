@@ -462,7 +462,7 @@ class view {
      */
     public function display($tabname, $page, $perpage, $cat,
             $recurse, $showhidden, $showquestiontext, $tagids = []) {
-        global $PAGE;
+        global $PAGE, $CFG;
 
         if ($this->process_actions_needing_ui()) {
             return;
@@ -473,7 +473,14 @@ class view {
         $thiscontext = $this->get_most_specific_context();
         // Category selection form.
         $this->display_question_bank_header();
-        array_unshift($this->searchconditions, new \core_question\bank\search\tag_condition([$catcontext, $thiscontext], $tagids));
+
+        // Display tag filter if usetags setting is enabled.
+        if ($CFG->usetags) {
+            array_unshift($this->searchconditions,
+                    new \core_question\bank\search\tag_condition([$catcontext, $thiscontext], $tagids));
+            $PAGE->requires->js_call_amd('core_question/edit_tags', 'init', ['#questionscontainer']);
+        }
+
         array_unshift($this->searchconditions, new \core_question\bank\search\hidden_condition(!$showhidden));
         array_unshift($this->searchconditions, new \core_question\bank\search\category_condition(
                 $cat, $recurse, $editcontexts, $this->baseurl, $this->course));
@@ -485,7 +492,6 @@ class view {
                 null, $page, $perpage, $showhidden, $showquestiontext,
                 $this->contexts->having_cap('moodle/question:add'));
 
-        $PAGE->requires->js_call_amd('core_question/edit_tags', 'init', ['#questionscontainer']);
     }
 
     protected function print_choose_category_message($categoryandcontext) {
@@ -647,7 +653,7 @@ class view {
         echo \html_writer::empty_tag('input', array('type' => 'hidden', 'name' => 'qbshowtext',
                                                'value' => 0, 'id' => 'qbshowtext_off'));
         echo \html_writer::checkbox('qbshowtext', '1', $showquestiontext, get_string('showquestiontext', 'question'),
-                                       array('id' => 'qbshowtext_on', 'class' => 'searchoptions'));
+                                       array('id' => 'qbshowtext_on', 'class' => 'searchoptions mr-1'));
         echo "</div>\n";
     }
 

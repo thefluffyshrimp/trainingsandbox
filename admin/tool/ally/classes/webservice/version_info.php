@@ -24,9 +24,6 @@
 
 namespace tool_ally\webservice;
 
-use tool_ally\file_url_resolver;
-use tool_ally\local;
-use tool_ally\local_file;
 use tool_ally\version_information;
 
 defined('MOODLE_INTERNAL') || die();
@@ -40,7 +37,7 @@ require_once(__DIR__.'/../../../../../lib/externallib.php');
  * @copyright Copyright (c) 2017 Blackboard Inc. (http://www.blackboard.com)
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class version_info extends \external_api {
+class version_info extends loggable_external_api {
     /**
      * @return \external_function_parameters
      */
@@ -77,6 +74,13 @@ class version_info extends \external_api {
                 'version'    => new \external_value(PARAM_FLOAT, 'Moodle version'),
                 'release'    => new \external_value(PARAM_TEXT,  'Moodle release'),
                 'branch'     => new \external_value(PARAM_FLOAT, 'Moodle branch')
+            ]),
+            'system' => new \external_single_structure([
+                'os' => new \external_value(PARAM_TEXT,  'Server operating system info'),
+                'phposbuild' => new \external_value(PARAM_TEXT,  'PHP operating system build info'),
+                'phpversion' => new \external_value(PARAM_TEXT, 'PHP version'),
+                'dbtype' => new \external_value(PARAM_TEXT, 'Databse type'),
+                'dbversion' => new \external_value(PARAM_TEXT, 'Databse version')
             ])
         ]);
     }
@@ -84,7 +88,7 @@ class version_info extends \external_api {
     /**
      * @return array
      */
-    public static function service() {
+    public static function execute_service() {
 
         $versioninfo = new version_information();
 
@@ -92,7 +96,8 @@ class version_info extends \external_api {
             'tool_ally'       => $versioninfo->toolally,
             'filter_ally'     => $versioninfo->filterally,
             'report_allylti'  => $versioninfo->reportally,
-            'moodle'          => $versioninfo->core
+            'moodle'          => $versioninfo->core,
+            'system'          => $versioninfo->system
         ];
     }
 }

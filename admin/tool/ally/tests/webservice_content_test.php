@@ -37,6 +37,35 @@ require_once(__DIR__.'/abstract_testcase.php');
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class tool_ally_webservice_content_testcase extends tool_ally_abstract_testcase {
+
+    public function test_invalid_component() {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $this->expectExceptionMessage('Invalid component identifier');
+        content::service(1, 'aninvalidcomponent', 'anytable', 'anyfield');
+    }
+    public function test_invalid_table() {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $course = $this->getDataGenerator()->create_course();
+        $this->expectExceptionMessage('Invalid component identifier');
+        content::service($course->id, 'course', 'invalidtable', 'summary');
+    }
+    public function test_invalid_field() {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $course = $this->getDataGenerator()->create_course();
+        $this->expectExceptionMessage('Invalid component identifier');
+        content::service($course->id, 'course', 'course', 'invalidfield');
+    }
+    public function test_invalid_id() {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $invalidid = 999999;
+        $this->expectExceptionMessage('Content not found');
+        content::service($invalidid, 'course', 'course', 'summary');
+    }
+
     /**
      * Test the web service when used to get a single course summary content item.
      */
@@ -266,10 +295,41 @@ class tool_ally_webservice_content_testcase extends tool_ally_abstract_testcase 
             'lesson_pages',
             'contents',
             null,
-            $page->timemodified,
+            $content->timemodified,
             $page->contentsformat,
             $pagecontents,
             $pagetitle
+        );
+        $this->assertEquals($expected, $content);
+    }
+
+    public function test_service_block_html_content() {
+        $this->resetAfterTest();
+
+        $this->setAdminUser();
+
+        $gen = $this->getDataGenerator();
+        $course = $gen->create_course();
+        $context = context_course::instance($course->id);
+
+        /** @var tool_ally_generator $blockgen */
+        $blockgen = $gen->get_plugin_generator('tool_ally');
+        $blocktitle = 'Some block';
+        $blockcontents = 'Some content';
+        $block = $blockgen->add_block($context, $blocktitle, $blockcontents);
+
+        $content = content::service($block->id, 'block_html', 'block_instances', 'configdata');
+        $content->contenturl = null; // We don't want to compare this.
+        $expected = new component_content(
+            $content->id,
+            'block_html',
+            'block_instances',
+            'configdata',
+            null,
+            $block->timemodified,
+            FORMAT_HTML,
+            $blockcontents,
+            $blocktitle
         );
         $this->assertEquals($expected, $content);
     }

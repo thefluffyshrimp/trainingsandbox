@@ -488,11 +488,10 @@ define('HOMEPAGE_USER', 2);
  */
 define('HUB_HUBDIRECTORYURL', "https://hubdirectory.moodle.org");
 
-
 /**
- * Moodle.net url (should be moodle.net)
+ * URL of the Moodle sites registration portal.
  */
-define('HUB_MOODLEORGHUBURL', "https://moodle.net");
+defined('HUB_MOODLEORGHUBURL') || define('HUB_MOODLEORGHUBURL', 'https://stats.moodle.org');
 define('HUB_OLDMOODLEORGHUBURL', "http://hub.moodle.org");
 
 /**
@@ -1404,6 +1403,14 @@ function set_config($name, $value, $plugin=null) {
                 $config->name  = $name;
                 $config->value = $value;
                 $DB->insert_record('config', $config, false);
+            }
+            // When setting config during a Behat test (in the CLI script, not in the web browser
+            // requests), remember which ones are set so that we can clear them later.
+            if (defined('BEHAT_TEST')) {
+                if (!property_exists($CFG, 'behat_cli_added_config')) {
+                    $CFG->behat_cli_added_config = [];
+                }
+                $CFG->behat_cli_added_config[$name] = true;
             }
         }
         if ($name === 'siteidentifier') {
@@ -2692,6 +2699,11 @@ function require_login($courseorid = null, $autologinguest = true, $cm = null, $
                 $authplugin = get_auth_plugin($authname);
                 $authplugin->pre_loginpage_hook();
                 if (isloggedin()) {
+                    if ($cm) {
+                        $modinfo = get_fast_modinfo($course);
+                        $cm = $modinfo->get_cm($cm->id);
+                    }
+                    set_access_log_user();
                     break;
                 }
             }
@@ -2756,6 +2768,13 @@ function require_login($courseorid = null, $autologinguest = true, $cm = null, $
 
     // Make sure the USER has a sesskey set up. Used for CSRF protection.
     sesskey();
+
+    if (\core\session\manager::is_loggedinas()) {
+        // During a "logged in as" session we should force all content to be cleaned because the
+        // logged in user will be viewing potentially malicious user generated content.
+        // See MDL-63786 for more details.
+        $CFG->forceclean = true;
+    }
 
     // Do not bother admins with any formalities, except for activities pending deletion.
     if (is_siteadmin() && !($cm && $cm->deletioninprogress)) {
@@ -4170,6 +4189,9 @@ function delete_user(stdClass $user) {
 
     // Now do a brute force cleanup.
 
+    // Remove user's calendar subscriptions.
+    $DB->delete_records('event_subscriptions', ['userid' => $user->id]);
+
     // Remove from all cohorts.
     $DB->delete_records('cohort_members', array('userid' => $user->id));
 
@@ -4760,18 +4782,38 @@ function update_internal_user_password($user, $password, $fasthash = false) {
  * @param string $field The user field to be checked for a given value.
  * @param string $value The value to match for $field.
  * @param int $mnethostid
+ * @param bool $throwexception If true, it will throw an exception when there's no record found or when there are multiple records
+ *                              found. Otherwise, it will just return false.
  * @return mixed False, or A {@link $USER} object.
  */
-function get_complete_user_data($field, $value, $mnethostid = null) {
+function get_complete_user_data($field, $value, $mnethostid = null, $throwexception = false) {
     global $CFG, $DB;
 
     if (!$field || !$value) {
         return false;
     }
 
+    // Change the field to lowercase.
+    $field = core_text::strtolower($field);
+
+    // List of case insensitive fields.
+    $caseinsensitivefields = ['email'];
+
+    // Username input is forced to lowercase and should be case sensitive.
+    if ($field == 'username') {
+        $value = core_text::strtolower($value);
+    }
+
     // Build the WHERE clause for an SQL query.
     $params = array('fieldval' => $value);
-    $constraints = "$field = :fieldval AND deleted <> 1";
+
+    // Do a case-insensitive query, if necessary.
+    if (in_array($field, $caseinsensitivefields)) {
+        $fieldselect = $DB->sql_equal($field, ':fieldval', false);
+    } else {
+        $fieldselect = "$field = :fieldval";
+    }
+    $constraints = "$fieldselect AND deleted <> 1";
 
     // If we are loading user data based on anything other than id,
     // we must also restrict our search based on mnet host.
@@ -4787,8 +4829,18 @@ function get_complete_user_data($field, $value, $mnethostid = null) {
     }
 
     // Get all the basic user data.
-    if (! $user = $DB->get_record_select('user', $constraints, $params)) {
-        return false;
+    try {
+        // Make sure that there's only a single record that matches our query.
+        // For example, when fetching by email, multiple records might match the query as there's no guarantee that email addresses
+        // are unique. Therefore we can't reliably tell whether the user profile data that we're fetching is the correct one.
+        $user = $DB->get_record_select('user', $constraints, $params, '*', MUST_EXIST);
+    } catch (dml_exception $exception) {
+        if ($throwexception) {
+            throw $exception;
+        } else {
+            // Return false when no records or multiple records were found.
+            return false;
+        }
     }
 
     // Get various settings and preferences.
@@ -5438,6 +5490,7 @@ function reset_course_userdata($data) {
             }
         }
 
+        $usersroles = enrol_get_course_users_roles($data->courseid);
         foreach ($data->unenrol_users as $withroleid) {
             if ($withroleid) {
                 $sql = "SELECT ue.*
@@ -5469,7 +5522,15 @@ function reset_course_userdata($data) {
                     continue;
                 }
 
-                $plugin->unenrol_user($instance, $ue->userid);
+                if ($withroleid && count($usersroles[$ue->userid]) > 1) {
+                    // If we don't remove all roles and user has more than one role, just remove this role.
+                    role_unassign($withroleid, $ue->userid, $context->id);
+
+                    unset($usersroles[$ue->userid][$withroleid]);
+                } else {
+                    // If we remove all roles or user has only one role, unenrol user from course.
+                    $plugin->unenrol_user($instance, $ue->userid);
+                }
                 $data->unenrolled[$ue->userid] = $ue->userid;
             }
             $rs->close();
@@ -5682,7 +5743,7 @@ function get_mailer($action='get') {
         } else {
             // Use SMTP directly.
             $mailer->isSMTP();
-            if (!empty($CFG->debugsmtp)) {
+            if (!empty($CFG->debugsmtp) && (!empty($CFG->debugdeveloper))) {
                 $mailer->SMTPDebug = 3;
             }
             // Specify main and backup servers.
@@ -6433,8 +6494,10 @@ function send_password_change_info($user) {
 function email_is_not_allowed($email) {
     global $CFG;
 
+    // Comparing lowercase domains.
+    $email = strtolower($email);
     if (!empty($CFG->allowemailaddresses)) {
-        $allowed = explode(' ', $CFG->allowemailaddresses);
+        $allowed = explode(' ', strtolower($CFG->allowemailaddresses));
         foreach ($allowed as $allowedpattern) {
             $allowedpattern = trim($allowedpattern);
             if (!$allowedpattern) {
@@ -6453,7 +6516,7 @@ function email_is_not_allowed($email) {
         return get_string('emailonlyallowed', '', $CFG->allowemailaddresses);
 
     } else if (!empty($CFG->denyemailaddresses)) {
-        $denied = explode(' ', $CFG->denyemailaddresses);
+        $denied = explode(' ', strtolower($CFG->denyemailaddresses));
         foreach ($denied as $deniedpattern) {
             $deniedpattern = trim($deniedpattern);
             if (!$deniedpattern) {
@@ -6964,19 +7027,10 @@ function current_language() {
  */
 function get_parent_language($lang=null) {
 
-    // Let's hack around the current language.
-    if (!empty($lang)) {
-        $oldforcelang = force_current_language($lang);
-    }
+    $parentlang = get_string_manager()->get_string('parentlanguage', 'langconfig', null, $lang);
 
-    $parentlang = get_string('parentlanguage', 'langconfig');
     if ($parentlang === 'en') {
         $parentlang = '';
-    }
-
-    // Let's hack around the current language.
-    if (!empty($lang)) {
-        force_current_language($oldforcelang);
     }
 
     return $parentlang;
@@ -7314,10 +7368,12 @@ class emoticon_manager {
     /**
      * Returns the currently enabled emoticons
      *
+     * @param boolean $selectable - If true, only return emoticons that should be selectable from a list.
      * @return array of emoticon objects
      */
-    public function get_emoticons() {
+    public function get_emoticons($selectable = false) {
         global $CFG;
+        $notselectable = ['martin', 'egg'];
 
         if (empty($CFG->emoticons)) {
             return array();
@@ -7329,6 +7385,14 @@ class emoticon_manager {
             // Something is wrong with the format of stored setting.
             debugging('Invalid format of emoticons setting, please resave the emoticons settings form', DEBUG_NORMAL);
             return array();
+        }
+        if ($selectable) {
+            foreach ($emoticons as $index => $emote) {
+                if (in_array($emote->altidentifier, $notselectable)) {
+                    // Skip this one.
+                    unset($emoticons[$index]);
+                }
+            }
         }
 
         return $emoticons;
@@ -8515,7 +8579,7 @@ function format_float($float, $decimalpoints=1, $localized=true, $stripzeros=fal
     $result = number_format($float, $decimalpoints, $separator, '');
     if ($stripzeros) {
         // Remove zeros and final dot if not needed.
-        $result = preg_replace('~(' . preg_quote($separator) . ')?0+$~', '', $result);
+        $result = preg_replace('~(' . preg_quote($separator, '~') . ')?0+$~', '', $result);
     }
     return $result;
 }
@@ -10230,4 +10294,29 @@ function get_callable_name($callable) {
     } else {
         return $name;
     }
+}
+
+/**
+ * Tries to guess if $CFG->wwwroot is publicly accessible or not.
+ * Never put your faith on this function and rely on its accuracy as there might be false positives.
+ * It just performs some simple checks, and mainly is used for places where we want to hide some options
+ * such as site registration when $CFG->wwwroot is not publicly accessible.
+ * Good thing is there is no false negative.
+ *
+ * @return bool
+ */
+function site_is_public() {
+    global $CFG;
+
+    $host = parse_url($CFG->wwwroot, PHP_URL_HOST);
+
+    if ($host === 'localhost' || preg_match('|^127\.\d+\.\d+\.\d+$|', $host)) {
+        $ispublic = false;
+    } else if (\core\ip_utils::is_ip_address($host) && !ip_is_public($host)) {
+        $ispublic = false;
+    } else {
+        $ispublic = true;
+    }
+
+    return $ispublic;
 }

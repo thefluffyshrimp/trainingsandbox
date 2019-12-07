@@ -1255,7 +1255,7 @@ class global_navigation extends navigation_node {
             // The home element should be my moodle because the root element is the site
             if (isloggedin() && !isguestuser()) {  // Makes no sense if you aren't logged in
                 $this->rootnodes['home'] = $this->add(get_string('myhome'), new moodle_url('/my/'),
-                    self::TYPE_SETTING, null, 'home', new pix_icon('i/dashboard', ''));
+                    self::TYPE_SETTING, null, 'myhome', new pix_icon('i/dashboard', ''));
                 $this->rootnodes['home']->showinflatnavigation = true;
             }
         } else {
@@ -1463,7 +1463,7 @@ class global_navigation extends navigation_node {
         foreach ($this->rootnodes as $node) {
             // Dont remove the home node
             /** @var navigation_node $node */
-            if ($node->key !== 'home' && !$node->has_children() && !$node->isactive) {
+            if (!in_array($node->key, ['home', 'myhome']) && !$node->has_children() && !$node->isactive) {
                 $node->remove();
             }
         }
@@ -4439,13 +4439,6 @@ class settings_navigation extends navigation_node {
         if ($adminoptions->import) {
             $url = new moodle_url('/backup/import.php', array('id'=>$course->id));
             $coursenode->add(get_string('import'), $url, self::TYPE_SETTING, null, 'import', new pix_icon('i/import', ''));
-        }
-
-        // Publish course on a hub
-        if ($adminoptions->publish) {
-            $url = new moodle_url('/course/publish/index.php', array('id'=>$course->id));
-            $coursenode->add(get_string('publish', 'core_hub'), $url, self::TYPE_SETTING, null, 'publish',
-                new pix_icon('i/publish', ''));
         }
 
         // Reset this course

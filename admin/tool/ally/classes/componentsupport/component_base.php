@@ -26,6 +26,7 @@ namespace tool_ally\componentsupport;
 use tool_ally\local;
 use tool_ally\role_assignments;
 use \context;
+use tool_ally\exceptions\component_validation_exception;
 
 defined ('MOODLE_INTERNAL') || die();
 
@@ -41,6 +42,8 @@ abstract class component_base {
     const TYPE_CORE = 'core';
 
     const TYPE_MOD = 'mod';
+
+    const TYPE_BLOCK = 'block';
 
     protected $tablefields = [];
 
@@ -78,10 +81,14 @@ abstract class component_base {
      */
     protected function validate_component_table_field($table, $field) {
         if (empty($this->tablefields[$table]) || !is_array($this->tablefields)) {
-            throw new \coding_exception('Table '.$table.' is not allowed for the requested component content');
+            throw new component_validation_exception(
+                'Table '.$table.' is not allowed for the requested component content'
+            );
         }
         if (!in_array($field, $this->tablefields[$table])) {
-            throw new \coding_exception('Field '.$field.' is not allowed for the table '.$table);
+            throw new component_validation_exception(
+                'Field '.$field.' is not allowed for the table '.$table
+            );
         }
     }
 
@@ -92,7 +99,12 @@ abstract class component_base {
     protected function get_component_name() {
         $reflect = new \ReflectionClass($this);
         $class = $reflect->getShortName();
-        return explode('_', $class)[0];
+        $matches = [];
+        if (!preg_match('/(.*)_component/', $class, $matches) || count($matches) < 2) {
+            throw new \coding_exception('Invalid component class '.$class);
+        }
+
+        return $matches[1];
     }
 
     /**
@@ -203,7 +215,7 @@ MSG;
 Unable to resolve component from subtable "$table" with id $id. A developer needs to override the method "$method" in the
 component $component so that it can cope with the table "$table".
 MSG;
-                throw coding_exception($msg);
+                throw new \coding_exception($msg);
             }
             $componentrecord = $DB->get_record($component, ['id' => $instanceid]);
             return $componentrecord->id;

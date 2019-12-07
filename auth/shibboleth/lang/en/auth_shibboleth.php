@@ -28,13 +28,13 @@ $string['auth_shib_auth_method_description'] = 'Provide a name for the Shibbolet
 $string['auth_shib_auth_logo'] = 'Authentication method logo';
 $string['auth_shib_auth_logo_description'] = 'Provide a logo for the Shibboleth authentication method that is familiar to your users. This could be the logo of your Shibboleth federation, e.g. <tt>SWITCHaai Login</tt> or <tt>InCommon Login</tt> or similar.';
 $string['auth_shib_contact_administrator'] = 'In case you are not associated with the given organizations and you need access to a course on this server, please contact the <a href="mailto:{$a}">Moodle Administrator</a>.';
-$string['auth_shibbolethdescription'] = 'Using this method users are created and authenticated using <a href="http://shibboleth.internet2.edu/">Shibboleth</a>.<br />Be sure to read the <a href="../auth/shibboleth/README.txt">README</a> for Shibboleth on how to set up your Moodle with Shibboleth';
+$string['auth_shibbolethdescription'] = 'Using this method users are created and authenticated using Shibboleth. For set-up details, see the <a href="../auth/shibboleth/README.txt">Shibboleth README</a>.';
 $string['auth_shibboleth_errormsg'] = 'Please select the organization you are member of!';
 $string['auth_shibboleth_login'] = 'Shibboleth login';
 $string['auth_shibboleth_login_long'] = 'Login to Moodle via Shibboleth';
 $string['auth_shibboleth_manual_login'] = 'Manual login';
 $string['auth_shibboleth_select_member'] = 'I\'m a member of ...';
-$string['auth_shibboleth_select_organization'] = 'For authentication via Shibboleth, please select your organization from the drop down list:';
+$string['auth_shibboleth_select_organization'] = 'For authentication via Shibboleth, please select your organisation from the drop-down menu:';
 $string['auth_shib_convert_data'] = 'Data modification API';
 $string['auth_shib_convert_data_description'] = 'You can use this API to further modify the data provided by Shibboleth. Read the <a href="../auth/shibboleth/README.txt">README</a> for further instructions.';
 $string['auth_shib_convert_data_warning'] = 'The file does not exist or is not readable by the webserver process!';

@@ -939,7 +939,6 @@ table.quizreviewsummary td.cell {
 }
 
 #page-mod-quiz-edit ul.slots .activityinstance img.activityicon {
-    float: left;
     margin: .2em 0 0;
     padding: 0;
 }
@@ -958,7 +957,7 @@ table.quizreviewsummary td.cell {
     background: #e4e4e4;
 }
 
-#categoryquestions > tbody > tr:nth-of-type(even).highlight {
+#categoryquestions > tbody > tr.highlight {
     background-color: #afa;
 }
 
@@ -966,6 +965,15 @@ table.quizreviewsummary td.cell {
     text-align: center;
     padding: 0 2px;
     border: 0 none;
+    vertical-align: top;
+}
+
+#categoryquestions .header.checkbox {
+    vertical-align: bottom;
+}
+
+#categoryquestions .header.qtype {
+    white-space: nowrap;
 }
 
 #categoryquestions th.modifiername .sorters,
@@ -1190,11 +1198,9 @@ table#categoryquestions {
     display: none;
 }
 
-#page-mod-quiz-edit.select-multiple .mod-quiz-edit-content .section-heading,
+#page-mod-quiz-edit.select-multiple .mod-quiz-edit-content .section-heading a,
 #page-mod-quiz-edit.select-multiple .mod-quiz-edit-content .section-heading form,
-#page-mod-quiz-edit.select-multiple .mod-quiz-edit-content .section-heading .instancesectioncontainer,
-#page-mod-quiz-edit.select-multiple .mod-quiz-edit-content .section-heading .instanceshufflequestions,
-#page-mod-quiz-edit.select-multiple .mod-quiz-edit-content .section-heading .instancesectioncontainer h3 {
+#page-mod-quiz-edit.select-multiple .mod-quiz-edit-content .section-heading .instanceshufflequestions {
     display: none;
 }
 

@@ -257,7 +257,7 @@ class manager {
                 'title' => get_string('importtour', 'tool_usertours'),
             ],
             (object) [
-                'link'  => new \moodle_url('https://moodle.net/tours'),
+                'link'  => new \moodle_url('https://archive.moodle.net/tours'),
                 'linkproperties' => [
                         'target' => '_blank',
                     ],
@@ -796,8 +796,7 @@ class manager {
         // the format filename => version. The version value needs to
         // be increased if the tour has been updated.
         $shippedtours = [
-            '36_dashboard.json' => 3,
-            '36_messaging.json' => 3,
+            '36_dashboard.json' => 3
         ];
 
         // These are tours that we used to ship but don't ship any longer.
@@ -806,6 +805,12 @@ class manager {
             'boost_administrator.json' => 1,
             'boost_course_view.json' => 1,
         ];
+
+        if ($CFG->messaging) {
+            $shippedtours['36_messaging.json'] = 3;
+        } else {
+            $unshippedtours['36_messaging.json'] = 3;
+        }
 
         $existingtourrecords = $DB->get_recordset('tool_usertours_tours');
 

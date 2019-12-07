@@ -1057,11 +1057,87 @@ function workshop_print_recent_mod_activity($activity, $courseid, $detail, $modn
 }
 
 /**
- * @deprecated since Moodle 3.8
+ * Regular jobs to execute via cron
+ *
+ * @return boolean true on success, false otherwise
  */
-function workshop_scale_used() {
-    throw new coding_exception('workshop_scale_used() can not be used anymore. Plugins can implement ' .
-        '<modname>_scale_used_anywhere, all implementations of <modname>_scale_used are now ignored');
+function workshop_cron() {
+    global $CFG, $DB;
+
+    $now = time();
+
+    mtrace(' processing workshop subplugins ...');
+    cron_execute_plugin_type('workshopallocation', 'workshop allocation methods');
+
+    // now when the scheduled allocator had a chance to do its job, check if there
+    // are some workshops to switch into the assessment phase
+    $workshops = $DB->get_records_select("workshop",
+        "phase = 20 AND phaseswitchassessment = 1 AND submissionend > 0 AND submissionend < ?", array($now));
+
+    if (!empty($workshops)) {
+        mtrace('Processing automatic assessment phase switch in '.count($workshops).' workshop(s) ... ', '');
+        require_once($CFG->dirroot.'/mod/workshop/locallib.php');
+        foreach ($workshops as $workshop) {
+            $cm = get_coursemodule_from_instance('workshop', $workshop->id, $workshop->course, false, MUST_EXIST);
+            $course = $DB->get_record('course', array('id' => $cm->course), '*', MUST_EXIST);
+            $workshop = new workshop($workshop, $cm, $course);
+            $workshop->switch_phase(workshop::PHASE_ASSESSMENT);
+
+            $params = array(
+                'objectid' => $workshop->id,
+                'context' => $workshop->context,
+                'courseid' => $workshop->course->id,
+                'other' => array(
+                    'workshopphase' => $workshop->phase
+                )
+            );
+            $event = \mod_workshop\event\phase_switched::create($params);
+            $event->trigger();
+
+            // disable the automatic switching now so that it is not executed again by accident
+            // if the teacher changes the phase back to the submission one
+            $DB->set_field('workshop', 'phaseswitchassessment', 0, array('id' => $workshop->id));
+
+            // todo inform the teachers
+        }
+        mtrace('done');
+    }
+
+    return true;
+}
+
+/**
+ * Is a given scale used by the instance of workshop?
+ *
+ * The function asks all installed grading strategy subplugins. The workshop
+ * core itself does not use scales. Both grade for submission and grade for
+ * assessments do not use scales.
+ *
+ * @param int $workshopid id of workshop instance
+ * @param int $scaleid id of the scale to check
+ * @return bool
+ */
+function workshop_scale_used($workshopid, $scaleid) {
+    global $CFG; // other files included from here
+
+    $strategies = core_component::get_plugin_list('workshopform');
+    foreach ($strategies as $strategy => $strategypath) {
+        $strategylib = $strategypath . '/lib.php';
+        if (is_readable($strategylib)) {
+            require_once($strategylib);
+        } else {
+            throw new coding_exception('the grading forms subplugin must contain library ' . $strategylib);
+        }
+        $classname = 'workshop_' . $strategy . '_strategy';
+        if (method_exists($classname, 'scale_used')) {
+            if (call_user_func_array(array($classname, 'scale_used'), array($scaleid, $workshopid))) {
+                // no need to include any other files - scale is used
+                return true;
+            }
+        }
+    }
+
+    return false;
 }
 
 /**
@@ -1797,179 +1873,6 @@ function mod_workshop_core_calendar_provide_event_action(calendar_event $event,
     );
 }
 
-/**
- * This function calculates the minimum and maximum cutoff values for the timestart of
- * the given event.
- *
- * It will return an array with two values, the first being the minimum cutoff value and
- * the second being the maximum cutoff value. Either or both values can be null, which
- * indicates there is no minimum or maximum, respectively.
- *
- * If a cutoff is required then the function must return an array containing the cutoff
- * timestamp and error string to display to the user if the cutoff value is violated.
- *
- * A minimum and maximum cutoff return value will look like:
- * [
- *     [1505704373, 'The date must be after this date'],
- *     [1506741172, 'The date must be before this date']
- * ]
- *
- * @param calendar_event $event The calendar event to get the time range for
- * @param stdClass $workshop The module instance to get the range from
- * @return array Returns an array with min and max date.
- */
-function mod_workshop_core_calendar_get_valid_event_timestart_range(\calendar_event $event, \stdClass $workshop) : array {
-    $mindate = null;
-    $maxdate = null;
-
-    $phasesubmissionend = max($workshop->submissionstart, $workshop->submissionend);
-    $phaseassessmentstart = min($workshop->assessmentstart, $workshop->assessmentend);
-    if ($phaseassessmentstart == 0) {
-        $phaseassessmentstart = max($workshop->assessmentstart, $workshop->assessmentend);
-    }
-
-    switch ($event->eventtype) {
-        case WORKSHOP_EVENT_TYPE_SUBMISSION_OPEN:
-            if (!empty($workshop->submissionend)) {
-                $maxdate = [
-                    $workshop->submissionend - 1,   // The submissionstart and submissionend cannot be exactly the same.
-                    get_string('submissionendbeforestart', 'mod_workshop')
-                ];
-            } else if ($phaseassessmentstart) {
-                $maxdate = [
-                    $phaseassessmentstart,
-                    get_string('phasesoverlap', 'mod_workshop')
-                ];
-            }
-            break;
-        case WORKSHOP_EVENT_TYPE_SUBMISSION_CLOSE:
-            if (!empty($workshop->submissionstart)) {
-                $mindate = [
-                    $workshop->submissionstart + 1, // The submissionstart and submissionend cannot be exactly the same.
-                    get_string('submissionendbeforestart', 'mod_workshop')
-                ];
-            }
-            if ($phaseassessmentstart) {
-                $maxdate = [
-                    $phaseassessmentstart,
-                    get_string('phasesoverlap', 'mod_workshop')
-                ];
-            }
-            break;
-        case WORKSHOP_EVENT_TYPE_ASSESSMENT_OPEN:
-            if ($phasesubmissionend) {
-                $mindate = [
-                    $phasesubmissionend,
-                    get_string('phasesoverlap', 'mod_workshop')
-                ];
-            }
-            if (!empty($workshop->assessmentend)) {
-                $maxdate = [
-                    $workshop->assessmentend - 1,   // The assessmentstart and assessmentend cannot be exactly the same.
-                    get_string('assessmentendbeforestart', 'mod_workshop')
-                ];
-            }
-            break;
-        case WORKSHOP_EVENT_TYPE_ASSESSMENT_CLOSE:
-            if (!empty($workshop->assessmentstart)) {
-                $mindate = [
-                    $workshop->assessmentstart + 1, // The assessmentstart and assessmentend cannot be exactly the same.
-                    get_string('assessmentendbeforestart', 'mod_workshop')
-                ];
-            } else if ($phasesubmissionend) {
-                $mindate = [
-                    $phasesubmissionend,
-                    get_string('phasesoverlap', 'mod_workshop')
-                ];
-            }
-            break;
-    }
-
-    return [$mindate, $maxdate];
-}
-
-/**
- * This function will update the workshop module according to the
- * event that has been modified.
- *
- * @param \calendar_event $event
- * @param stdClass $workshop The module instance to get the range from
- */
-function mod_workshop_core_calendar_event_timestart_updated(\calendar_event $event, \stdClass $workshop) : void {
-    global $DB;
-
-    $courseid = $event->courseid;
-    $modulename = $event->modulename;
-    $instanceid = $event->instance;
-
-    // Something weird going on. The event is for a different module so
-    // we should ignore it.
-    if ($modulename != 'workshop') {
-        return;
-    }
-
-    if ($workshop->id != $instanceid) {
-        return;
-    }
-
-    if (!in_array(
-            $event->eventtype,
-            [
-                WORKSHOP_EVENT_TYPE_SUBMISSION_OPEN,
-                WORKSHOP_EVENT_TYPE_SUBMISSION_CLOSE,
-                WORKSHOP_EVENT_TYPE_ASSESSMENT_OPEN,
-                WORKSHOP_EVENT_TYPE_ASSESSMENT_CLOSE
-            ]
-    )) {
-        return;
-    }
-
-    $coursemodule = get_fast_modinfo($courseid)->instances[$modulename][$instanceid];
-    $context = context_module::instance($coursemodule->id);
-
-    // The user does not have the capability to modify this activity.
-    if (!has_capability('moodle/course:manageactivities', $context)) {
-        return;
-    }
-
-    $modified = false;
-
-    switch ($event->eventtype) {
-        case WORKSHOP_EVENT_TYPE_SUBMISSION_OPEN:
-            if ($event->timestart != $workshop->submissionstart) {
-                $workshop->submissionstart = $event->timestart;
-                $modified = true;
-            }
-            break;
-        case WORKSHOP_EVENT_TYPE_SUBMISSION_CLOSE:
-            if ($event->timestart != $workshop->submissionend) {
-                $workshop->submissionend = $event->timestart;
-                $modified = true;
-            }
-            break;
-        case WORKSHOP_EVENT_TYPE_ASSESSMENT_OPEN:
-            if ($event->timestart != $workshop->assessmentstart) {
-                $workshop->assessmentstart = $event->timestart;
-                $modified = true;
-            }
-            break;
-        case WORKSHOP_EVENT_TYPE_ASSESSMENT_CLOSE:
-            if ($event->timestart != $workshop->assessmentend) {
-                $workshop->assessmentend = $event->timestart;
-                $modified = true;
-            }
-            break;
-    }
-
-    if ($modified) {
-        $workshop->timemodified = time();
-        // Persist the assign instance changes.
-        $DB->update_record('workshop', $workshop);
-        $event = \core\event\course_module_updated::create_from_cm($coursemodule, $context);
-        $event->trigger();
-    }
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 // Course reset API                                                           //
 ////////////////////////////////////////////////////////////////////////////////
@@ -2176,32 +2079,4 @@ function workshop_check_updates_since(cm_info $cm, $from, $filter = array()) {
         }
     }
     return $updates;
-}
-
-/**
- * Given an array with a file path, it returns the itemid and the filepath for the defined filearea.
- *
- * @param  string $filearea The filearea.
- * @param  array  $args The path (the part after the filearea and before the filename).
- * @return array|null The itemid and the filepath inside the $args path, for the defined filearea.
- */
-function mod_workshop_get_path_from_pluginfile(string $filearea, array $args) : ?array {
-    if ($filearea !== 'instructauthors' && $filearea !== 'instructreviewers' && $filearea !== 'conclusion') {
-        return null;
-    }
-
-    // Workshop only has empty itemid for some of the fileareas.
-    array_shift($args);
-
-    // Get the filepath.
-    if (empty($args)) {
-        $filepath = '/';
-    } else {
-        $filepath = '/' . implode('/', $args) . '/';
-    }
-
-    return [
-        'itemid' => 0,
-        'filepath' => $filepath,
-    ];
 }

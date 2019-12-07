@@ -23,6 +23,7 @@
 
 namespace tool_ally\componentsupport\traits;
 
+use tool_ally\local;
 use tool_ally\local_content;
 use tool_ally\models\component;
 use tool_ally\models\component_content;
@@ -49,12 +50,33 @@ trait html_content {
         }
 
         $component = $this->get_component_name();
-        $select = "course = ? AND introformat = ? AND intro !=''";
-        $rs = $DB->get_recordset_select($component, $select, [$courseid, FORMAT_HTML]);
+
+        if (!empty($this->tablefields) && !empty($this->tablefields[$component])) {
+            $fields = $this->tablefields[$component];
+        } else {
+            $fields = ['intro'];
+        }
+
+        $fieldselect = [];
+        $params = [$courseid];
+        foreach ($fields as $field) {
+            $params[] = FORMAT_HTML;
+            $fieldselect[] = "({$field}format = ? AND $field != '')";
+        }
+
+        $fieldselect = implode(' OR ', $fieldselect);
+        $select = "course = ? AND ($fieldselect)";
+
+        $rs = $DB->get_recordset_select($component, $select, $params);
         foreach ($rs as $row) {
-            $array[] = new component(
-                $row->id, $component, $component, 'intro', $courseid, $row->timemodified,
-                $row->introformat, $row->name);
+            foreach ($fields as $field) {
+                $formatfield = $field.'format';
+                if (!empty($row->$field) && $row->$formatfield === FORMAT_HTML) {
+                    $array[] = new component(
+                        $row->id, $component, $component, $field, $courseid, $row->timemodified,
+                        $row->$formatfield, $row->name);
+                }
+            }
         }
         $rs->close();
 
@@ -72,14 +94,22 @@ trait html_content {
      * @param string $titlefield
      * @param string $modifiedfield
      * @param callable $recordlambda - lambda to run on record once recovered.
-     * @param stdClass|null $record
+     * @param stdClass|null|bool $record
      * @return component_content | null;
      * @throws \coding_exception
      */
     protected function std_get_html_content($id, $table, $field, $courseid = null, $titlefield = 'name',
                                             $modifiedfield = 'timemodified', $recordlambda = null,
-                                            stdClass $record = null) {
+                                            $record = null) {
         global $DB;
+
+        static $prevrecord = null;
+        static $prevrecordkey = null;
+
+        if (local::duringtesting()) {
+            $prevrecord = null;
+            $prevrecordkey = null;
+        }
 
         if (!$this->module_installed()) {
             return null;
@@ -89,9 +119,28 @@ trait html_content {
 
         $this->validate_component_table_field($table, $field);
 
-        if ($record === null) {
+        // If we don't have a record, was the previous record we got the same as the one we need now?
+        // Note: This is an optimisation for where we want to build content for one record that has
+        // multiple content fields.
+        if (empty($record)) {
+            $newrecordkey = $table . '_' . $id;
+            if ($newrecordkey === $prevrecordkey && $prevrecord) {
+                $record = $prevrecord;
+            }
+        }
+
+        // Record is still null, let's get it.
+        if (empty($record)) {
             $record = $DB->get_record($table, ['id' => $id]);
         }
+        if (!$record) {
+            return null;
+        }
+
+        // Static cache the record.
+        $prevrecord = $record;
+        $prevrecordkey = $table . '_' . $id;
+
         if ($recordlambda) {
             $recordlambda($record);
             if ($courseid === null) {
@@ -103,12 +152,12 @@ trait html_content {
             }
         }
 
-        if (!$record) {
-            $ident = 'component='.$component.'&table='.$table.'&field='.$field.'&id='.$id;
-            throw new \moodle_exception('error:invalidcomponentident', 'tool_ally', null, $ident);
-        }
-
         $timemodified = $record->$modifiedfield;
+        if ($modifiedfield === 'timemodified' && empty($timemodified)) {
+            if (!empty($record->timecreated)) {
+                $timemodified = $record->timecreated;
+            }
+        }
         $content = $record->$field;
         $formatfield = $field.'format';
         $contentformat = $record->$formatfield;

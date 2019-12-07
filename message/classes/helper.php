@@ -589,6 +589,15 @@ class helper {
             }
         }
 
+        // Remove any userids not in $members. This can happen in the case of a user who has been deleted
+        // from the Moodle database table (which can happen in earlier versions of Moodle).
+        $userids = array_filter($userids, function($userid) use ($members) {
+            return isset($members[$userid]);
+        });
+
+        // Return member information in the same order as the userids originally provided.
+        $members = array_replace(array_flip($userids), $members);
+
         return $members;
     }
 
@@ -628,5 +637,38 @@ class helper {
             $tmp[$data->userid] = $data;
         }
         return $tmp;
+    }
+
+    /**
+     * Returns user details for a user, if they are visible to the current user in the message search.
+     *
+     * This method checks the visibility of a user specifically for the purpose of inclusion in the message search results.
+     * Visibility depends on the site-wide messaging setting 'messagingallusers':
+     * If enabled, visibility depends only on the core notion of visibility; a visible site or course profile.
+     * If disabled, visibility requires that the user be sharing a course with the searching user, and have a visible profile there.
+     * The current user is always returned.
+     *
+     * @param \stdClass $user
+     * @return array the array of userdetails, if visible, or an empty array otherwise.
+     */
+    public static function search_get_user_details(\stdClass $user) : array {
+        global $CFG, $USER;
+        require_once($CFG->dirroot . '/user/lib.php');
+
+        if ($CFG->messagingallusers || $user->id == $USER->id) {
+            return \user_get_user_details_courses($user) ?? []; // This checks visibility of site and course profiles.
+        } else {
+            // Messaging specific: user must share a course with the searching user AND have a visible profile there.
+            $sharedcourses = enrol_get_shared_courses($USER, $user);
+            foreach ($sharedcourses as $course) {
+                if (user_can_view_profile($user, $course)) {
+                    $userdetails = user_get_user_details($user, $course);
+                    if (!is_null($userdetails)) {
+                        return $userdetails;
+                    }
+                }
+            }
+        }
+        return [];
     }
 }

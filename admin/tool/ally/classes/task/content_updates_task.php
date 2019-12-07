@@ -124,7 +124,7 @@ class content_updates_task extends scheduled_task {
 
             // Check to see if we have our batch size or if we are at the last file.
             if (count($payload) >= $config->get_batch_size() || !$deletes->valid()) {
-                $sendsuccess = content_processor::push_update($this->updates, $payload, event_handlers::API_DELETED);
+                $sendsuccess = content_processor::push_update($this->updates, $payload, event_handlers::API_RICH_CNT_DELETED);
                 if (!$sendsuccess) {
                     // Send failures occurred, might as well switch on cli only mode to avoid slowness on front end.
                     set_config('push_cli_only', 1, 'tool_ally');
@@ -196,6 +196,9 @@ class content_updates_task extends scheduled_task {
                     $queuerow->comprowid, $queuerow->component, $queuerow->comptable, $queuerow->compfield,
                     $queuerow->courseid);
             } catch (moodle_exception $e) {
+                $content = null;
+            }
+            if ($content === null) {
                 if ($deleted === []) {
                     // There were too many deletion records to dump into an array so we need to get individual deletion
                     // records to check for deletion. This isn't great for performance but we should only need this when

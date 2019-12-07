@@ -133,6 +133,15 @@ $functions = [
         'type'         => 'read',
         'capabilities' => 'moodle/course:view, moodle/course:viewhiddenactivities, moodle/course:viewhiddencourses',
     ],
+    'tool_ally_get_logs' => [
+        'classname'    => 'tool_ally\\webservice\\log',
+        'methodname'   => 'service',
+        'description'  => 'Get Ally logs',
+        'type'         => 'read',
+        'capabilities' => 'tool/ally:viewlogs',
+        'ajax'          => true,
+        'loginrequired' => true
+    ]
 ];
 
 $services = [
@@ -141,6 +150,8 @@ $services = [
             'core_course_get_courses',
             'core_course_get_categories',
             'core_enrol_get_enrolled_users',
+            'core_user_agree_site_policy',
+            'core_user_get_users_by_field',
             'tool_ally_get_files',
             'tool_ally_get_course_files',
             'tool_ally_get_file',
@@ -156,6 +167,7 @@ $services = [
             'tool_ally_get_course_user_count',
             'tool_ally_get_invalid_files',
             'tool_ally_get_course_invalid_files',
+            'tool_ally_get_logs'
         ],
         'enabled'         => 0,
         'restrictedusers' => 0,

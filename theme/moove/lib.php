@@ -24,7 +24,6 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-
 /**
  * Inject additional SCSS.
  *
@@ -327,7 +326,6 @@ function theme_moove_rebuildcoursesections(\flat_navigation $flatnav) {
         return;
     }
 
-
     if ($PAGE->course->format != 'singleactivity') {
         $coursesectionsoptions = [
             'text' => get_string('coursesections', 'theme_moove'),
@@ -337,10 +335,7 @@ function theme_moove_rebuildcoursesections(\flat_navigation $flatnav) {
             'key' => 'course-sections',
             'parent' => $participantsitem->parent
         ];
-            
-            
-       //$createbadgespermission=require_capability('moodle/badges:createbadge', $PAGE->context);
-  
+
         $createbadges = [
             'text' => 'Badges',
             'text' => 'Badges',
@@ -398,9 +393,7 @@ function theme_moove_rebuildcoursesections(\flat_navigation $flatnav) {
         }
 
         $flatnav->add($coursesections, $participantsitem->key);
-        
         $flatnav->add($createbadges,$badges->key );
-        
         //$flatnav->add($managebadges,$badges->key );
         
 
@@ -409,10 +402,8 @@ function theme_moove_rebuildcoursesections(\flat_navigation $flatnav) {
 
     $mycourses = $flatnav->find('mycourses', \navigation_node::NODETYPE_LEAF);
 
-
     if ($mycourses) {
         $flatnav->remove($mycourses->key);
-
 
         $flatnav->add($mycourses, 'privatefiles');
     }

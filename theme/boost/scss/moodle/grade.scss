@@ -33,9 +33,11 @@
 
 .path-grade-report-grader {
     #region-main {
+        overflow-x: visible;
         min-width: 100%;
         width: auto;
         display: inline-flex;
+        flex-direction: column;
         & > .card {
             width: auto;
             overflow-x: initial;

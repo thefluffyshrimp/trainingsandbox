@@ -103,16 +103,6 @@ class block_badges extends block_base {
             $this->content->text .= get_string('nothingtodisplay', 'block_badges');
         }
 
-        $params = array('type' => 1);
-    $managebadgeurl = new moodle_url('/badges/index.php', $params);
-    $context = context_block::instance($this->instance->id);
-    if(has_capability('block/badges:addinstance', $context))
-    {
-        $this->content->text .= '<br><p><a href="'.$managebadgeurl.'">Manage badges</a></p>';
-        $createbadgeurl = new moodle_url('/badges/newbadge.php', $params);
-        $this->content->text .= '<a href="'.$createbadgeurl.'">Add a new badge</a>';
-    }
-
         return $this->content;
     }
 }

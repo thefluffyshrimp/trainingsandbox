@@ -226,11 +226,16 @@ class mod_lesson_lib_testcase extends advanced_testcase {
         $this->setAdminUser();
         // Create a course.
         $course = $this->getDataGenerator()->create_course();
+        // Create a teacher and enrol into the course.
+        $teacher = $this->getDataGenerator()->create_and_enrol($course, 'teacher');
         // Create a lesson activity.
         $lesson = $this->getDataGenerator()->create_module('lesson', array('course' => $course->id,
             'available' => time() - DAYSECS, 'deadline' => time() + DAYSECS));
         // Create a calendar event.
         $event = $this->create_action_event($course->id, $lesson->id, LESSON_EVENT_TYPE_OPEN);
+
+        // Log in as the teacher.
+        $this->setUser($teacher);
         // Create an action factory.
         $factory = new \core_calendar\action_factory();
         // Decorate action event.
@@ -346,6 +351,8 @@ class mod_lesson_lib_testcase extends advanced_testcase {
 
         // Create a course.
         $course = $this->getDataGenerator()->create_course();
+        // Create a teacher and enrol.
+        $teacher = $this->getDataGenerator()->create_and_enrol($course, 'teacher');
 
         // Create a lesson activity.
         $lesson = $this->getDataGenerator()->create_module('lesson', array('course' => $course->id,
@@ -354,6 +361,8 @@ class mod_lesson_lib_testcase extends advanced_testcase {
         // Create a calendar event.
         $event = $this->create_action_event($course->id, $lesson->id, LESSON_EVENT_TYPE_OPEN);
 
+        // Now, log in as teacher.
+        $this->setUser($teacher);
         // Create an action factory.
         $factory = new \core_calendar\action_factory();
 
@@ -411,7 +420,8 @@ class mod_lesson_lib_testcase extends advanced_testcase {
 
         // Create a course.
         $course = $this->getDataGenerator()->create_course();
-
+        // Create a teacher and enrol into the course.
+        $teacher = $this->getDataGenerator()->create_and_enrol($course, 'teacher');
         // Create a lesson activity.
         $lesson = $this->getDataGenerator()->create_module('lesson', array('course' => $course->id,
             'available' => time() + DAYSECS));
@@ -419,6 +429,8 @@ class mod_lesson_lib_testcase extends advanced_testcase {
         // Create a calendar event.
         $event = $this->create_action_event($course->id, $lesson->id, LESSON_EVENT_TYPE_OPEN);
 
+        // Now, log in as teacher.
+        $this->setUser($teacher);
         // Create an action factory.
         $factory = new \core_calendar\action_factory();
 
@@ -476,13 +488,15 @@ class mod_lesson_lib_testcase extends advanced_testcase {
 
         // Create a course.
         $course = $this->getDataGenerator()->create_course();
-
+        // Create a teacher and enrol into the course.
+        $teacher = $this->getDataGenerator()->create_and_enrol($course, 'teacher');
         // Create a lesson activity.
         $lesson = $this->getDataGenerator()->create_module('lesson', array('course' => $course->id));
 
         // Create a calendar event.
         $event = $this->create_action_event($course->id, $lesson->id, LESSON_EVENT_TYPE_OPEN);
-
+        // Now, log in as teacher.
+        $this->setUser($teacher);
         // Create an action factory.
         $factory = new \core_calendar\action_factory();
 
@@ -632,6 +646,71 @@ class mod_lesson_lib_testcase extends advanced_testcase {
 
         // Confirm there was no action for the user.
         $this->assertNull($action);
+    }
+
+    public function test_lesson_core_calendar_provide_event_action_already_completed() {
+        $this->resetAfterTest();
+        set_config('enablecompletion', 1);
+        $this->setAdminUser();
+
+        // Create the activity.
+        $course = $this->getDataGenerator()->create_course(array('enablecompletion' => 1));
+        $lesson = $this->getDataGenerator()->create_module('lesson', array('course' => $course->id),
+            array('completion' => 2, 'completionview' => 1, 'completionexpected' => time() + DAYSECS));
+
+        // Get some additional data.
+        $cm = get_coursemodule_from_instance('lesson', $lesson->id);
+
+        // Create a calendar event.
+        $event = $this->create_action_event($course->id, $lesson->id,
+            \core_completion\api::COMPLETION_EVENT_TYPE_DATE_COMPLETION_EXPECTED);
+
+        // Mark the activity as completed.
+        $completion = new completion_info($course);
+        $completion->set_module_viewed($cm);
+
+        // Create an action factory.
+        $factory = new \core_calendar\action_factory();
+
+        // Decorate action event.
+        $actionevent = mod_lesson_core_calendar_provide_event_action($event, $factory);
+
+        // Ensure result was null.
+        $this->assertNull($actionevent);
+    }
+
+    public function test_lesson_core_calendar_provide_event_action_already_completed_for_user() {
+        $this->resetAfterTest();
+        set_config('enablecompletion', 1);
+        $this->setAdminUser();
+
+        // Create the activity.
+        $course = $this->getDataGenerator()->create_course(array('enablecompletion' => 1));
+        $lesson = $this->getDataGenerator()->create_module('lesson', array('course' => $course->id),
+            array('completion' => 2, 'completionview' => 1, 'completionexpected' => time() + DAYSECS));
+
+        // Enrol a student in the course.
+        $student = $this->getDataGenerator()->create_and_enrol($course, 'student');
+
+        // Get some additional data.
+        $cm = get_coursemodule_from_instance('lesson', $lesson->id);
+
+        // Create a calendar event.
+        $event = $this->create_action_event($course->id, $lesson->id,
+            \core_completion\api::COMPLETION_EVENT_TYPE_DATE_COMPLETION_EXPECTED);
+
+        // Mark the activity as completed for the student.
+        $completion = new completion_info($course);
+        $completion->set_module_viewed($cm, $student->id);
+
+        // Create an action factory.
+        $factory = new \core_calendar\action_factory();
+
+        // Decorate action event for the student.
+        $actionevent = mod_lesson_core_calendar_provide_event_action($event, $factory, $student->id);
+
+        // Ensure result was null.
+        $this->assertNull($actionevent);
     }
 
     /**

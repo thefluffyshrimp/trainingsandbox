@@ -38,7 +38,7 @@ class files_iterator implements \Iterator {
      * Number of records to fetch at a time.
      * @var int
      */
-    private $pagesize = 5000;
+    private $pagesize;
 
     /**
      * @var file_validator
@@ -141,19 +141,15 @@ class files_iterator implements \Iterator {
     private $resultcount = 0;
 
     /**
-     * Flag for validating if the section in which the file is located exists.
-     *
-     * @var bool
-     */
-    private $checksection = true;
-
-    /**
      * @param file_validator $validator
      * @param \file_storage|null $storage
      */
     public function __construct(file_validator $validator, \file_storage $storage = null) {
+        global $CFG;
         $this->validator = $validator;
         $this->storage   = $storage ?: get_file_storage();
+        $this->pagesize  = !empty($CFG->tool_ally_optimize_iteration_for_db) ?
+            10000 : 5000;
     }
 
     /**
@@ -187,11 +183,15 @@ class files_iterator implements \Iterator {
                 }
             }
 
+            if ($row->filename === '.') {
+                continue;
+            }
+
             $context = $this->extract_context($row);
             $file    = $this->storage->get_file_instance($row);
 
             if (!empty($this->validfilter)) {
-                $filevalidation = $this->validator->validate_stored_file($file, $context, $this->checksection);
+                $filevalidation = $this->validator->validate_stored_file($file, $context);
                 if (($this->retrievevalid && !$filevalidation) || (!$this->retrievevalid && $filevalidation)) {
                     continue;
                 }
@@ -233,18 +233,21 @@ class files_iterator implements \Iterator {
     }
 
     private function next_page() {
-        global $DB;
+        global $DB, $CFG;
 
         $contextsql = \context_helper::get_preload_record_columns_sql('c');
         $params     = ['usr' => CONTEXT_USER, 'cat' => CONTEXT_COURSECAT, 'sys' => CONTEXT_SYSTEM];
-        $filtersql  = '';
+        $filtersql  = '1 = 1';
 
+        if (empty($CFG->tool_ally_optimize_iteration_for_db)) {
+            $filtersql .= ' AND f.filename <> \'.\'';
+        }
         if (!empty($this->since)) {
             $filtersql .= ' AND f.timemodified > :since';
             $params['since'] = $this->since;
         }
         if ($this->context instanceof \context) {
-            $filtersql .= ' AND '.$DB->sql_like('c.path', ':path');
+            $filtersql .= ' AND c.path LIKE :path ';
             $params['path'] = $this->context->path.'%';
         }
         if (!empty($this->component)) {
@@ -272,7 +275,7 @@ class files_iterator implements \Iterator {
             SELECT f.*, $contextsql
               FROM {files} f
               JOIN {context} c ON c.id = f.contextid
-             WHERE f.filename <> '.'$filtersql
+             WHERE $filtersql
                AND c.contextlevel NOT IN(:usr, :cat, :sys) {$this->sort}
         ", $params, $this->page * $this->pagesize, $this->pagesize);
 
@@ -428,19 +431,5 @@ class files_iterator implements \Iterator {
         } else {
             return $this->resultcount >= $this->stopatcount;
         }
-    }
-
-
-
-    /**
-     * Set if section should be checked when scanning course files.
-     *
-     * @param boolean $checksection
-     * @return self
-     */
-    public function with_check_section($checksection) {
-        $this->checksection = $checksection;
-
-        return $this;
     }
 }

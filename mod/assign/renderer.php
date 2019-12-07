@@ -230,19 +230,13 @@ class mod_assign_renderer extends plugin_renderer_base {
 
         if ($header->subpage) {
             $this->page->navbar->add($header->subpage);
-            $args = ['contextname' => $header->context->get_context_name(false, true), 'subpage' => $header->subpage];
-            $title = get_string('subpagetitle', 'assign', $args);
-        } else {
-            $title = $header->context->get_context_name(false, true);
         }
-        $courseshortname = $header->context->get_course_context()->get_context_name(false, true);
-        $title = $courseshortname . ': ' . $title;
-        $heading = format_string($header->assign->name, false, array('context' => $header->context));
 
-        $this->page->set_title($title);
+        $this->page->set_title(get_string('pluginname', 'assign'));
         $this->page->set_heading($this->page->course->fullname);
 
         $o .= $this->output->header();
+        $heading = format_string($header->assign->name, false, array('context' => $header->context));
         $o .= $this->output->heading($heading);
         if ($header->preface) {
             $o .= $header->preface;
@@ -290,10 +284,8 @@ class mod_assign_renderer extends plugin_renderer_base {
 
         // Status.
         if ($summary->teamsubmission) {
-            if ($summary->warnofungroupedusers === assign_grading_summary::WARN_GROUPS_REQUIRED) {
+            if ($summary->warnofungroupedusers) {
                 $o .= $this->output->notification(get_string('ungroupedusers', 'assign'));
-            } else if ($summary->warnofungroupedusers === assign_grading_summary::WARN_GROUPS_OPTIONAL) {
-                $o .= $this->output->notification(get_string('ungroupedusersoptional', 'assign'));
             }
             $cell1content = get_string('numberofteams', 'assign');
         } else {
@@ -326,48 +318,31 @@ class mod_assign_renderer extends plugin_renderer_base {
         $time = time();
         if ($summary->duedate) {
             // Due date.
-            $cell1content = get_string('duedate', 'assign');
             $duedate = $summary->duedate;
-            if ($summary->courserelativedatesmode) {
-                // Returns a formatted string, in the format '10d 10h 45m'.
-                $diffstr = get_time_interval_string($duedate, $summary->coursestartdate);
-                if ($duedate >= $summary->coursestartdate) {
-                    $cell2content = get_string('relativedatessubmissionduedateafter', 'mod_assign',
-                        ['datediffstr' => $diffstr]);
-                } else {
-                    $cell2content = get_string('relativedatessubmissionduedatebefore', 'mod_assign',
-                        ['datediffstr' => $diffstr]);
-                }
-            } else {
-                $cell2content = userdate($duedate);
-            }
-
+            $cell1content = get_string('duedate', 'assign');
+            $cell2content = userdate($duedate);
             $this->add_table_row_tuple($t, $cell1content, $cell2content);
 
             // Time remaining.
             $cell1content = get_string('timeremaining', 'assign');
-            if ($summary->courserelativedatesmode) {
-                $cell2content = get_string('relativedatessubmissiontimeleft', 'mod_assign');
+            if ($duedate - $time <= 0) {
+                $cell2content = get_string('assignmentisdue', 'assign');
             } else {
-                if ($duedate - $time <= 0) {
-                    $cell2content = get_string('assignmentisdue', 'assign');
-                } else {
-                    $cell2content = format_time($duedate - $time);
-                }
+                $cell2content = format_time($duedate - $time);
             }
 
             $this->add_table_row_tuple($t, $cell1content, $cell2content);
 
             if ($duedate < $time) {
-                $cell1content = get_string('latesubmissions', 'assign');
                 $cutoffdate = $summary->cutoffdate;
                 if ($cutoffdate) {
+                    $cell1content = get_string('latesubmissions', 'assign');
                     if ($cutoffdate > $time) {
-                        $cell2content = get_string('latesubmissionsaccepted', 'assign', userdate($summary->cutoffdate));
+                        $cell2content = get_string('latesubmissionsaccepted', 'assign',
+                            userdate($cutoffdate));
                     } else {
                         $cell2content = get_string('nomoresubmissionsaccepted', 'assign');
                     }
-
                     $this->add_table_row_tuple($t, $cell1content, $cell2content);
                 }
             }
@@ -949,9 +924,6 @@ class mod_assign_renderer extends plugin_renderer_base {
                     $urlparams = array('id' => $status->coursemoduleid, 'action' => 'editsubmission');
                     $o .= $this->output->single_button(new moodle_url('/mod/assign/view.php', $urlparams),
                                                        get_string('editsubmission', 'assign'), 'get');
-                    $urlparams = array('id' => $status->coursemoduleid, 'action' => 'removesubmissionconfirm');
-                    $o .= $this->output->single_button(new moodle_url('/mod/assign/view.php', $urlparams),
-                                                       get_string('removesubmission', 'assign'), 'get');
                     $o .= $this->output->box_start('boxaligncenter submithelp');
                     $o .= get_string('editsubmission_help', 'assign');
                     $o .= $this->output->box_end();
@@ -1233,7 +1205,6 @@ class mod_assign_renderer extends plugin_renderer_base {
         $this->page->requires->string_for_js('nousersselected', 'assign');
         $this->page->requires->string_for_js('batchoperationconfirmgrantextension', 'assign');
         $this->page->requires->string_for_js('batchoperationconfirmlock', 'assign');
-        $this->page->requires->string_for_js('batchoperationconfirmremovesubmission', 'assign');
         $this->page->requires->string_for_js('batchoperationconfirmreverttodraft', 'assign');
         $this->page->requires->string_for_js('batchoperationconfirmunlock', 'assign');
         $this->page->requires->string_for_js('batchoperationconfirmaddattempt', 'assign');

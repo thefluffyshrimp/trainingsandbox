@@ -24,6 +24,7 @@
  */
 
 $string['filtername'] = 'Multi-Embed Filter';
+$string['pluginname'] = 'Multi-Embed Filter';
 $string['privacy:metadata'] = 'The Multi-Embed filter plugin does not store any personal data.';
 
 // General filter settings.
@@ -125,5 +126,11 @@ $string['ted_desc'] = 'Embed TED Videos';
 $string['thinglink'] = 'ThingLink';
 $string['thinglink_desc'] = 'Embed ThingLink Images';
 
+$string['trello'] = 'Trello';
+$string['trello_desc'] = 'Embed Trello Boards or Cards';
+
 $string['youtube'] = 'YouTube';
 $string['youtube_desc'] = 'Embed YouTube Videos';
+
+$string['vimeo'] = 'Vimeo';
+$string['vimeo_desc'] = 'Embed Vimeo Videos';

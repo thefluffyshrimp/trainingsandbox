@@ -65,7 +65,7 @@ class edit_details_form extends moodleform {
         $mform->addRule('description', null, 'required');
 
         $str = $action == 'new' ? get_string('badgeimage', 'badges') : get_string('newimage', 'badges');
-        $imageoptions = array('maxbytes' => 180000,'maxheight'=>300, 'maxwidth'=>300,'accepted_types' => array('web_image'));
+        $imageoptions = array('maxbytes' => 262144, 'accepted_types' => array('web_image'));
         $mform->addElement('filepicker', 'image', $str, null, $imageoptions);
 
         if ($action == 'new') {
@@ -194,6 +194,9 @@ class edit_details_form extends moodleform {
             $errors['expirydategr'] = get_string('error:invalidexpiredate', 'badges');
         }
 
+        if ($data['imageauthoremail'] && !validate_email($data['imageauthoremail'])) {
+            $errors['imageauthoremail'] = get_string('invalidemail');
+        }
         if ($data['imageauthoremail'] && !validate_email($data['imageauthoremail'])) {
             $errors['imageauthoremail'] = get_string('invalidemail');
         }

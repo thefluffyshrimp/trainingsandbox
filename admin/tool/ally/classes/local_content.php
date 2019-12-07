@@ -29,6 +29,8 @@ defined('MOODLE_INTERNAL') || die();
 use tool_ally\componentsupport\component_base;
 use tool_ally\componentsupport\interfaces\annotation_map;
 use tool_ally\componentsupport\interfaces\html_content;
+use tool_ally\exceptions\component_validation_exception;
+use tool_ally\logging\logger;
 use tool_ally\models\component;
 use tool_ally\models\component_content;
 
@@ -102,7 +104,7 @@ class local_content {
 
             if (self::component_supports_html_content($component)) {
                 $type = local::get_component_support_type($component);
-                if ($type != component_base::TYPE_CORE) {
+                if ($type === component_base::TYPE_MOD) {
                     $fullcomponent = $type . '_' . $component;
                 } else {
                     $fullcomponent = $component;
@@ -130,10 +132,12 @@ class local_content {
                     $maps = array_merge($maps, [$component => $instance->get_annotation_maps($courseid)]);
                 } catch (\moodle_exception $ex) {
                     // Component not identified correctly.
-                    $msg = $ex->getMessage();
-                    $msg .= '<br> Component: '.$component;
-                    $msg .= '<br> Course ID: '.$courseid;
-                    \tool_ally\event\annotation_module_error::create_from_msg($msg)->trigger();
+                    $msg = 'Component: '.$component.', Course ID: '.$courseid;
+                    logger::get()->info('logger:annotationmoderror', [
+                        'content' => $msg,
+                        '_explanation' => 'logger:annotationmoderror_exp',
+                        '_exception' => $ex
+                    ]);
                 }
             }
         }
@@ -211,7 +215,7 @@ class local_content {
                                             $courseid = null, $includeembeddedfiles = false) {
         $component = self::component_instance($component);
         if (empty($component)) {
-            return false;
+            throw new component_validation_exception('Component '.$component.' does not exist');
         }
         /** @var component_content $content */
         $content = $component->get_html_content($id, $table, $field, $courseid);
@@ -219,6 +223,18 @@ class local_content {
             $content = self::apply_embedded_file_map($content);
         }
         return $content;
+    }
+
+    /**
+     * Create url param identifier for component, table field and id
+     * @param string $component
+     * @param string $table
+     * @param string $field
+     * @param string $id
+     * @return string
+     */
+    public static function urlident($component, $table, $field, $id) {
+        return 'component='.$component.'&table='.$table.'&field='.$field.'&id='.$id;
     }
 
     /**
@@ -288,10 +304,12 @@ class local_content {
                 }
             } catch (\moodle_exception $ex) {
                 // Component not identified correctly.
-                $msg = $ex->getMessage();
-                $msg .= '<br> Context: '.$context->path;
-                $msg .= '<br> Instance ID: '.$context->instanceid;
-                \tool_ally\event\annotation_module_error::create_from_msg($msg)->trigger();
+                $msg = 'Context: '.$context->path.', Instance ID: '.$context->instanceid;
+                logger::get()->info('logger:annotationmoderror', [
+                    'content' => $msg,
+                    '_explanation' => 'logger:annotationmoderror_exp',
+                    '_exception' => $ex
+                ]);
                 return '';
             }
         }

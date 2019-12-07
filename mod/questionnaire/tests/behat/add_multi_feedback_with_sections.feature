@@ -45,7 +45,8 @@ Feature: In questionnaire, personality tests can be constructed using feedback o
       | Nb of scale items | 4 |
       | Type of rate scale | Normal |
       | Question Text | Rate these |
-      | Possible answers | 1=One,2=Two,3=Three,4=Four,Cheese,Bread,Meat,Fruit |
+      | Possible answers | Cheese,Bread,Meat,Fruit |
+      | Named degrees    | 1=One,2=Two,3=Three,4=Four |
     Then I should see "[Rate (scale 1..5)] (Q3)"
     And I add a "Yes/No" question and I fill the form with:
       | Question Name | Q4 |
@@ -58,49 +59,54 @@ Feature: In questionnaire, personality tests can be constructed using feedback o
       | Nb of scale items | 5 |
       | Type of rate scale | Normal |
       | Question Text | Rate these |
-      | Possible answers | 0=Zero,2=Two,4=Four,8=Eight,16=Sixteen,Clubs,Diamonds,Hearts,Spades |
+      | Possible answers | Clubs,Diamonds,Hearts,Spades |
+      | Named degrees    | 0=Zero,2=Two,4=Four,8=Eight,16=Sixteen |
     Then I should see "[Rate (scale 1..5)] (Q5)"
-    And I follow "Advanced settings"
+    And I follow "Feedback"
     And I should see "Feedback options"
-    And I follow "Feedback options"
-    And I set the field "id_feedbacksections" to "2 Feedback sections"
+    And I set the field "id_feedbacksections" to "Feedback sections"
     And I set the field "id_feedbackscores" to "Yes"
     And I set the field "id_feedbacknotes" to "These are the main Feedback notes"
     And I press "Save settings and edit Feedback Sections"
-    Then I should see "Sections:"
-    And I should see "[Q1]"
-    And I should see "[Q2]"
-    And I should see "[Q3]"
-    And I should see "[Q4]"
-    And I should see "[Q5]"
-    And I set the field "1_1" to "checked"
-    And I set the field "1_2" to "checked"
-    And I set the field "weightQ1_2" to "0.1"
-    And I set the field "2_1" to "checked"
-    And I set the field "2_2" to "checked"
-    And I set the field "weightQ2_2" to "0.1"
-    And I set the field "3_2" to "checked"
-    And I set the field "4_2" to "checked"
-    And I set the field "5_1" to "checked"
-    And I press "Save Sections settings and edit Feedback Messages"
-    And I should see "Feedback heading for section 1/2"
+    Then I should see "[New section] section questions"
+    And I follow "[New section] section questions"
+    And I set the field "addquestionselect" to "Q1"
+    And I press "Add question..."
+    And I set the field "addquestionselect" to "Q2"
+    And I press "Add question..."
+    And I set the field "addquestionselect" to "Q5"
+    And I press "Add question..."
     And I set the field "id_sectionlabel" to "Section 1 label"
     And I set the field "id_sectionheading" to "Section 1 heading"
+    And I follow "[New section] section messages"
     And I set the field "id_feedbacktext_0" to "Feedback 1 100%"
     And I set the field "id_feedbackboundaries_0" to "50"
     And I set the field "id_feedbacktext_1" to "Feedback 1 50%"
     And I set the field "id_feedbackboundaries_1" to "20"
     And I set the field "id_feedbacktext_2" to "Feedback 1 20%"
-    And I press "Next section (2/2)"
-    And I should see "Feedback heading for section 2/2"
-    And I set the field "id_sectionlabel" to "Section 2 label"
+    And I press "Save changes"
+    And I set the field "newsectionlabel" to "Section 2 label"
+    And I press "Add new section"
+    Then I should see "Section 2 label section questions"
+    And I follow "Section 2 label section questions"
+    And I set the field "addquestionselect" to "Q1"
+    And I press "Add question..."
+    And I set the field "weight1" to "0.1"
+    And I set the field "addquestionselect" to "Q2"
+    And I press "Add question..."
+    And I set the field "weight1" to "0.1"
+    And I set the field "addquestionselect" to "Q3"
+    And I press "Add question..."
+    And I set the field "addquestionselect" to "Q4"
+    And I press "Add question..."
     And I set the field "id_sectionheading" to "Section 2 heading"
+    And I follow "Section 2 label section messages"
     And I set the field "id_feedbacktext_0" to "Feedback 2 100%"
     And I set the field "id_feedbackboundaries_0" to "50"
     And I set the field "id_feedbacktext_1" to "Feedback 2 50%"
     And I set the field "id_feedbackboundaries_1" to "20"
     And I set the field "id_feedbacktext_2" to "Feedback 2 20%"
-    And I press "Save settings"
+    And I press "Save changes"
     And I log out
 
 #  Scenario: Student completes feedback questions.
@@ -122,7 +128,7 @@ Feature: In questionnaire, personality tests can be constructed using feedback o
     And I click on "Choice Sixteen for row Spades" "radio"
     And I press "Submit questionnaire"
     Then I should see "Thank you for completing this Questionnaire."
-    And I follow "Continue"
+    And I press "Continue"
     Then I should see "Your response"
     And I should see "These are the main Feedback notes"
     And I should see "Section 1 label"
@@ -152,7 +158,7 @@ Feature: In questionnaire, personality tests can be constructed using feedback o
     And I click on "Choice Eight for row Spades" "radio"
     And I press "Submit questionnaire"
     Then I should see "Thank you for completing this Questionnaire."
-    And I follow "Continue"
+    And I press "Continue"
     And I should see "These are the main Feedback notes"
     And I should see "Section 1 label"
     And I should see "22%"

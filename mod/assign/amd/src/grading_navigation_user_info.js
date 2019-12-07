@@ -48,7 +48,7 @@ define(['jquery', 'core/notification', 'core/ajax', 'core/templates'], function(
     /** @type {JQuery} JQuery node for the page region containing the user navigation. */
     UserInfo.prototype._region = null;
 
-    /** @type {Integer} Remember the last user id to prevent unnecessary reloads. */
+    /** @type {Integer} Remember the last user id to prevent unnessecary reloads. */
     UserInfo.prototype._lastUserId = 0;
 
     /**
@@ -93,13 +93,11 @@ define(['jquery', 'core/notification', 'core/ajax', 'core/templates'], function(
             if (userid < 0) {
                 // Render the template.
                 templates.render('mod_assign/grading_navigation_no_users', {}).done(function(html, js) {
-                    if (userid == this._lastUserId) {
-                        // Update the page.
-                        this._region.fadeOut("fast", function() {
-                            templates.replaceNodeContents(this._region, html, js);
-                            this._region.fadeIn("fast");
-                        }.bind(this));
-                    }
+                    // Update the page.
+                    this._region.fadeOut("fast", function() {
+                        templates.replaceNodeContents(this._region, html, js);
+                        this._region.fadeIn("fast");
+                    }.bind(this));
                 }.bind(this)).fail(notification.exception);
                 return;
             }
@@ -152,12 +150,10 @@ define(['jquery', 'core/notification', 'core/ajax', 'core/templates'], function(
 
                 templates.render('mod_assign/grading_navigation_user_summary', context).done(function(html, js) {
                     // Update the page.
-                    if (userid == this._lastUserId) {
-                        this._region.fadeOut("fast", function() {
-                            templates.replaceNodeContents(this._region, html, js);
-                            this._region.fadeIn("fast");
-                        }.bind(this));
-                    }
+                    this._region.fadeOut("fast", function() {
+                        templates.replaceNodeContents(this._region, html, js);
+                        this._region.fadeIn("fast");
+                    }.bind(this));
                 }.bind(this)).fail(notification.exception);
             }.bind(this)).fail(function() {
                 // Render the template.
