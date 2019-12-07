@@ -314,7 +314,7 @@ function theme_moove_delete_menuitems(\flat_navigation $flatnav) {
  * @param flat_navigation $flatnav
  */
 function theme_moove_rebuildcoursesections(\flat_navigation $flatnav) {
-    global $PAGE,$COURSE,$DB;
+    global $PAGE,$COURSE,$DB,$CFG;
 
     $participantsitem = $flatnav->find('participants', \navigation_node::TYPE_CONTAINER);
     $badges = $flatnav->find('participants',\navigation_node::TYPE_CONTAINER);
@@ -359,7 +359,7 @@ function theme_moove_rebuildcoursesections(\flat_navigation $flatnav) {
                 //'type' => $item->type,
                 'key' => 'addbadges',
                 'parent' => $createbadges,
-                'action' => 'https://miss.moe/training/badges/newbadge.php?type='.$categoryid .''
+                'action' => $CGF->wwwroot.'/badges/newbadge.php?type='.$categoryid .''
             ] ));
 
         $managebadges->add_node(new \navigation_node([
@@ -370,7 +370,7 @@ function theme_moove_rebuildcoursesections(\flat_navigation $flatnav) {
                 //'type' => $item->type,
                 'key' => 'badges',
                 'parent' => $createbadges,
-                'action' => 'https://miss.moe/training/badges/index.php?type='.$categoryid .'&id='.$COURSE->id.''
+                'action' => $CGF->wwwroot.'/badges/index.php?type='.$categoryid .'&id='.$COURSE->id.''
             ]));
 
         
