@@ -5,6 +5,7 @@
     require_once('../config.php');
     require_once('lib.php');
     require_once($CFG->libdir.'/completionlib.php');
+    require_once($CFG->libdir . "/badgeslib.php");
 
     $id          = optional_param('id', 0, PARAM_INT);
     $name        = optional_param('name', '', PARAM_TEXT);
