@@ -147,3 +147,59 @@ if (isloggedin()) {
 
     echo $OUTPUT->render_from_template('theme_moove/frontpage_guest', $templatecontext);
 }
+
+
+?>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+
+<script>
+
+jQuery(document).ready(function() {
+    var showChar = 150;
+    var ellipsestext = "...";
+    var moretext = "Read More";
+    var lesstext = "Read Less";
+    jQuery('.no-overflow').each(function() {
+        var content = jQuery(this).text();
+      
+        if(content.length > showChar) {
+
+            var c = content.substr(0, showChar);
+            var h = content.substr(showChar-1, content.length - showChar);
+
+            var html = c + '<span class="moreellipses">' + ellipsestext+ '&nbsp;</span><span class=" morecontent"><span>' + h + '</span>&nbsp;&nbsp;<a href="" class="btn btn-primary morelink">' + moretext + '</a></span>';
+
+            jQuery(this).html(html);
+        }
+
+    });
+
+    jQuery(".morelink").click(function(){
+        if(jQuery(this).hasClass("less")) {
+            jQuery(this).removeClass("less");
+            jQuery(this).html(moretext);
+        } else {
+            jQuery(this).addClass("less");
+            jQuery(this).html(lesstext);
+        }
+        jQuery(this).parent().prev().toggle();
+        jQuery(this).prev().toggle();
+        return false;
+    });
+});
+
+</script>
+<style type="text/css">
+  
+a.morelink {  
+    text-decoration:none;  
+    outline: none;  
+}  
+.morecontent span {  
+    display: none;  
+}  
+.frontpage-course-list-all .card {  
+    height: auto;  
+} 
+</style>

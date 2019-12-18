@@ -1,3 +1,49 @@
-.metismenu li[data-key="calendar"] {
+/*.metismenu li[data-key="calendar"] {
    display: none;
+}*/
+
+.pagelayout-admin .page-header-headings h1{
+	display: none;
+}
+
+.pagelayout-frontpage .page-header-headings h1{
+	display: none;
+}
+
+.mobilefooter.mb-2 {
+    display: none;
+}
+
+.tool_dataprivacy{
+	display: none;
+}
+
+.box.py-3.generalbox.adminerror {
+    display: none;
+}
+#nav-drawer .list-group .list-group-item[data-key="addbadges"] a:before {
+    content: "\e060";
+}
+
+.coursesearchbox{
+    font-size: 1.2rem;
+}
+
+.coursesearchbox input#shortsearchbox{
+
+    width: 20em !important;
+
+}
+
+.coursesearchbox button.btn.btn-secondary{
+	color: #fff;
+    background-color: #1abc9c;
+    border-color: #1abc9c;
+}
+
+#page-site-index .frontpage-numbers {
+   margin-top: 2em !important;
+    padding: 6em 0 !important;
+    margin-bottom: : 0em !important;
+ 
 }

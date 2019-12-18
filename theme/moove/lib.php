@@ -317,11 +317,22 @@ function theme_moove_rebuildcoursesections(\flat_navigation $flatnav) {
     global $PAGE,$COURSE,$DB,$CFG;
 
     $participantsitem = $flatnav->find('participants', \navigation_node::TYPE_CONTAINER);
-    $badges = $flatnav->find('participants',\navigation_node::TYPE_CONTAINER);
+    $badgesview=$flatnav->find('badgesview', \navigation_node::TYPE_SETTING);
+    $grades=$flatnav->find('grades', \navigation_node::TYPE_SETTING);
+   
     $course = $DB->get_record('course', array('id' => $COURSE->id), 'id, category');
     $categoryid = $course->category;
     //die();
+   $context = context_course::instance($COURSE->id);
 
+   $roles = get_user_roles($context, $USER->id);
+
+   foreach ($roles as $role) {
+    //echo $role->roleid.'<br />';
+    }
+
+    $role->roleid;
+    
     if (!$participantsitem) {
         return;
     }
@@ -334,46 +345,15 @@ function theme_moove_rebuildcoursesections(\flat_navigation $flatnav) {
             'type' => \navigation_node::COURSE_CURRENT,
             'key' => 'course-sections',
             'parent' => $participantsitem->parent
+           
         ];
 
-        $createbadges = [
-            'text' => 'Badges',
-            'text' => 'Badges',
-            'shorttext' => 'Badges',
-            'icon' => new pix_icon('t/passwordunmask-edit', ''),
-            'type' => \navigation_node::COURSE_CURRENT,
-            'key' => 'badgesview',
-            'parent' => $badges->parent
-        ];
+
+       $newnode = navigation_node::create('Manage Badgees', $CGF->wwwroot.'/badges/index.php?type=2&id='.$COURSE->id.'', navigation_node::TYPE_SETTING, null, 'addbadges', new pix_icon('i/badge', ''));
        
-        $coursesections = new \flat_navigation_node($coursesectionsoptions, 0);
-        $createbadges = new \flat_navigation_node($createbadges, 0);
-        $managebadges = new \flat_navigation_node($createbadges, 0);
+      $coursesections = new \flat_navigation_node($coursesectionsoptions, 0);
         
-
-       $createbadges->add_node(new \navigation_node([
-                'text' => 'Add Badges',
-                'shorttext' => 'Add Badges',
-                'icon' => new pix_icon('t/editinline', ''),
-                //'icon' => $item->icon,
-                //'type' => $item->type,
-                'key' => 'addbadges',
-                'parent' => $createbadges,
-                'action' => $CGF->wwwroot.'/badges/newbadge.php?type='.$categoryid .''
-            ] ));
-
-        $managebadges->add_node(new \navigation_node([
-                'text' => 'Manage Badges',
-                'shorttext' => 'Manage Badges',
-                'icon' => new pix_icon('t/editinline', ''),
-                //'icon' => $item->icon,
-                //'type' => $item->type,
-                'key' => 'badges',
-                'parent' => $createbadges,
-                'action' => $CGF->wwwroot.'/badges/view.php?type=2&id='.$COURSE->id.''
-            ]));
-
-        
+       
 
         foreach ($flatnav as $item) {
             if ($item->type == \navigation_node::TYPE_SECTION) {
@@ -391,20 +371,25 @@ function theme_moove_rebuildcoursesections(\flat_navigation $flatnav) {
 
             
         }
+       if($participantsitem){
 
-        $flatnav->add($coursesections, $participantsitem->key);
-        $flatnav->add($createbadges,$badges->key );
+         $flatnav->add($coursesections, $participantsitem->key);
+        }
+        else{
+            
+            $flatnav->add($coursesections, $grades->key);
+        }
+        if ($role->roleid !='5'){
+         $flatnav->add($newnode,$grades->key );
+     }
         //$flatnav->add($managebadges,$badges->key );
-        
-
 
     }
 
     $mycourses = $flatnav->find('mycourses', \navigation_node::NODETYPE_LEAF);
 
     if ($mycourses) {
-        $flatnav->remove($mycourses->key);
-
-        $flatnav->add($mycourses, 'privatefiles');
+       $flatnav->remove($mycourses->key);
+       $flatnav->add($mycourses, 'privatefiles');
     }
 }

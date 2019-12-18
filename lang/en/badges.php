@@ -348,8 +348,8 @@ $string['expirydate'] = 'Expiry date';
 $string['expirydate_help'] = 'Optionally, badges can expire on a specific date, or the date can be calculated based on the date when the badge was issued to a user. ';
 $string['existsinbackpack'] = 'Badge already exists in backpack';
 $string['externalconnectto'] = 'To display external badges you need to <a href="{$a}">connect to a backpack</a>.';
-$string['externalbadges'] = 'My badges from other web sites';
-$string['externalbadgesp'] = 'Badges from other web sites:';
+$string['externalbadges'] = 'My Badges from Other Websites';
+$string['externalbadgesp'] = 'Badges from Other Websites:';
 $string['externalbadges_help'] = 'This area displays badges from your external backpack.';
 $string['fixed'] = 'Fixed date';
 $string['hidden'] = 'Hidden';
@@ -367,6 +367,7 @@ $string['issuerdetails'] = 'Issuer details';
 $string['issueremail'] = 'Email';
 $string['issueremail_help'] = 'A contact email address of the organisation issuing the endorsement.';
 $string['issuername'] = 'Issuer name';
+$string['issuedate'] = 'Issue Date';
 $string['issuername_help'] = 'Name of the issuing agent or authority.';
 $string['issuername_endorsement'] = 'Endorser name';
 $string['issuername_endorsement_help'] = 'The name of the endorser.';
@@ -376,7 +377,7 @@ $string['language'] = 'Language';
 $string['language_help'] = 'The language used on the badge page.';
 $string['listbackpacks'] = 'List of backpacks';
 $string['localconnectto'] = 'To share these badges outside this web site you need to <a href="{$a}">connect to a backpack</a>.';
-$string['localbadges'] = 'My badges from {$a} web site';
+$string['localbadges'] = 'My Badges from {$a} ';
 $string['localbadgesh'] = 'My badges from this web site';
 $string['localbadgesh_help'] = 'All badges earned within this web site by completing courses, course activities, and other requirements.
 

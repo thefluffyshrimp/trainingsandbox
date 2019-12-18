@@ -31,6 +31,7 @@ $string['choosereadme'] = 'Moove is a modern highly-customisable theme. This the
 $string['currentinparentheses'] = '(current)';
 $string['region-side-pre'] = 'Right';
 $string['login'] = 'Already have an account?';
+
 $string['prev_section'] = 'Previous section';
 $string['next_section'] = 'Next section';
 $string['search_site'] = 'Search on site';
@@ -158,6 +159,7 @@ $string['frontpagenumbernumbers'] = 'Numbers';
 $string['frontpagenumberusers'] = 'Users';
 $string['frontpagenumbercourses'] = 'Courses';
 $string['frontpagenumberactivities'] = 'Activities';
+$string['frontpagenumberbadges'] = 'Badges';
 
 $string['sponsorstitledefault'] = 'Sponsors';
 $string['sponsorssubtitledefault'] = 'Companies and institutions that believe in us';
@@ -226,7 +228,7 @@ $string['forumhtmlemailfooterdesc'] = 'Configure the email footer for the forum 
 $string['forumcustomtemplate'] = 'Use a pretty template for forum mails';
 $string['forumcustomtemplatedesc'] = 'Enable that in order to use a pretty template when sending forum messages via email. If not enabled standard formatting of forum mails will be used.';
 
-$string['coursesections'] = 'Course sections';
+$string['coursesections'] = 'Course Sections';
 
 // Mypublic page.
 $string['userprofile'] = 'User profile';

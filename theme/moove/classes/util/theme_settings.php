@@ -168,6 +168,7 @@ class theme_settings {
         $templatecontext['numberusers'] = $DB->count_records('user', array('deleted' => 0, 'suspended' => 0)) - 1;
         $templatecontext['numbercourses'] = $DB->count_records('course', array('visible' => 1)) - 1;
         $templatecontext['numberactivities'] = $DB->count_records('course_modules');
+        $templatecontext['numberbadges'] = $DB->count_records('badge');
 
         return $templatecontext;
     }

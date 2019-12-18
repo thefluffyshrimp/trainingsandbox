@@ -20,7 +20,7 @@ $CFG->dboptions = array (
 );
 
 $CFG->wwwroot   = 'https://miss.moe/missmoesandbox/trainingsandbox';
-$CFG->dataroot  = '/home/admin/web/miss.moe/public_html/missmoesandbox/moodledatasandboxnew';
+$CFG->dataroot  = '/home/admin/web/miss.moe/public_html/moodledatasandbox';
 //$CFG->dataroot  = '/home/admin/web/miss.moe/moodledata11123';
 $CFG->admin     = 'admin';
 
