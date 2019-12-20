@@ -349,7 +349,7 @@ function theme_moove_rebuildcoursesections(\flat_navigation $flatnav) {
         ];
 
 
-       $newnode = navigation_node::create('Manage Badgees', $CGF->wwwroot.'/badges/index.php?type=2&id='.$COURSE->id.'', navigation_node::TYPE_SETTING, null, 'addbadges', new pix_icon('i/badge', ''));
+       $newnode = navigation_node::create('Manage Badges', $CGF->wwwroot.'/badges/index.php?type=2&id='.$COURSE->id.'', navigation_node::TYPE_SETTING, null, 'addbadges', new pix_icon('i/badge', ''));
        
       $coursesections = new \flat_navigation_node($coursesectionsoptions, 0);
         
