@@ -1319,7 +1319,6 @@ class core_course_management_renderer extends plugin_renderer_base {
         $output .= html_writer::end_tag('form');
         $output .= html_writer::end_div();
         $output .= html_writer::end_div();
-
         return $output;
     }
 

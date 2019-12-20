@@ -2317,6 +2317,8 @@ class core_course_renderer extends plugin_renderer_base {
                     if (!empty($mycourseshtml)) {
                         $output .= $this->frontpage_part('skipmycourses', 'frontpage-course-list',
                             get_string('mycourses'), $mycourseshtml);
+                        $output .= '<hr>';
+
                     }
                     break;
 
@@ -2324,6 +2326,7 @@ class core_course_renderer extends plugin_renderer_base {
                     $availablecourseshtml = $this->frontpage_available_courses();
                     $output .= $this->frontpage_part('skipavailablecourses', 'frontpage-available-course-list',
                         get_string('availablecourses'), $availablecourseshtml);
+
                     break;
 
                 case FRONTPAGECATEGORYNAMES:
@@ -2338,6 +2341,7 @@ class core_course_renderer extends plugin_renderer_base {
 
                 case FRONTPAGECOURSESEARCH:
                     $output .= $this->box($this->course_search_form('', 'short'), 'mdl-align');
+                    $output .= '<hr>';
                     break;
 
             }
