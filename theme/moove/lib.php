@@ -326,6 +326,7 @@ function theme_moove_rebuildcoursesections(\flat_navigation $flatnav) {
    $context = context_course::instance($COURSE->id);
 
    $roles = get_user_roles($context, $USER->id);
+   $capabilities= has_capability('moodle/course:update', $context);
 
    foreach ($roles as $role) {
     //echo $role->roleid.'<br />';
@@ -379,7 +380,7 @@ function theme_moove_rebuildcoursesections(\flat_navigation $flatnav) {
             
             $flatnav->add($coursesections, $grades->key);
         }
-        if ($role->roleid !='5'){
+        if ($role->roleid !='5' && $capabilities){
          $flatnav->add($newnode,$grades->key );
      }
         //$flatnav->add($managebadges,$badges->key );

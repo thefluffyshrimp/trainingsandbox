@@ -279,7 +279,9 @@ class core_calendar_renderer extends plugin_renderer_base {
                 context_helper::preload_from_record($contextrecords[$course->id]);
             }
             $coursecontext = context_course::instance($course->id);
+            if (has_capability('moodle/course:update', $coursecontext)) {
             $courseoptions[$course->id] = format_string($course->shortname, true, array('context' => $coursecontext));
+           }
         }
 
         if ($courseid) {

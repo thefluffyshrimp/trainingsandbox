@@ -2330,6 +2330,7 @@ class core_course_renderer extends plugin_renderer_base {
                     break;
 
                 case FRONTPAGECATEGORYNAMES:
+                    $output .= '<hr>'; 
                     $output .= $this->frontpage_part('skipcategories', 'frontpage-category-names',
                         get_string('categories'), $this->frontpage_categories_list());
                     break;
