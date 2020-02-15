@@ -386,7 +386,7 @@ You can download all of your badges or each badge separately and save them on yo
 $string['localbadgesp'] = 'Badges from {$a}:';
 $string['makeprivate'] = 'Make private';
 $string['makepublic'] = 'Make public';
-$string['managebadges'] = 'Manage badges';
+$string['managebadges'] = 'Manage Badges';
 $string['managebackpacks'] = 'Manage backpacks';
 $string['message'] = 'Message body';
 $string['messagebody'] = '<p>You have been awarded the badge "%badgename%"!</p>
@@ -396,7 +396,7 @@ $string['messagesubject'] = 'Congratulations! You just earned a badge!';
 $string['method'] = 'This criterion is complete when...';
 $string['mingrade'] = 'Minimum grade required';
 $string['month'] = 'Month(s)';
-$string['mybadges'] = 'My badges';
+$string['mybadges'] = 'My Badges';
 $string['mybackpack'] = 'My backpack settings';
 $string['never'] = 'Never';
 $string['newbadge'] = 'Add a new badge';
