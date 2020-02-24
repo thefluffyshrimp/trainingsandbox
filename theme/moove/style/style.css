@@ -379,6 +379,9 @@ li.contentnode.ICQ.number {
     display: none;
 }
 
+#page-site-index.notloggedin #page-header #loginbox #intro h1{
+      color: #4ce0c3 !important;
+}
 
 @media only screen and (max-width: 991px) {
 #page-site-index.notloggedin #page-header #loginbox #intro h2{
