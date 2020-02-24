@@ -38,8 +38,8 @@ $string['defaultperiod_help'] = 'Default length of time that the enrolment is va
 $string['deleteselectedusers'] = 'Delete selected user enrolments';
 $string['editselectedusers'] = 'Edit selected user enrolments';
 $string['enrolledincourserole'] = 'Enrolled in "{$a->course}" as "{$a->role}"';
-$string['enrolusers'] = 'Enrol users';
-$string['enroluserscohorts'] = 'Enrol selected users and cohorts';
+$string['enrolusers'] = 'Enroll users';
+$string['enroluserscohorts'] = 'Enroll selected users and cohorts';
 $string['expiredaction'] = 'Enrolment expiry action';
 $string['expiredaction_help'] = 'Select action to carry out when user enrolment expires. Please note that some user data and settings are purged from course during course unenrolment.';
 $string['expirymessageenrollersubject'] = 'Enrolment expiry notification';
@@ -55,7 +55,7 @@ This is a notification that your enrolment in the course \'{$a->course}\' is due
 
 If you need help, please contact {$a->enroller}.';
 $string['manual:config'] = 'Configure manual enrol instances';
-$string['manual:enrol'] = 'Enrol users';
+$string['manual:enrol'] = 'Enroll users';
 $string['manual:manage'] = 'Manage user enrolments';
 $string['manual:unenrol'] = 'Unenrol users from the course';
 $string['manual:unenrolself'] = 'Unenrol self from the course';

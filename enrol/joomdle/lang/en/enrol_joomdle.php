@@ -1,12 +1,12 @@
 <?php
-$string['enrol_message'] = 'Enrol message to show when the user has not yet bought the course';
-$string['enrol_message_desc'] = 'Enrol message to show when the user has not yet bought the course';
+$string['enrol_message'] = 'Enroll message to show when the user has not yet bought the course';
+$string['enrol_message_desc'] = 'Enroll message to show when the user has not yet bought the course';
 $string['enrolname'] = 'Joomdle';
 $string['pluginname'] = 'Joomdle';
 $string['pluginname_desc'] = 'Shows a message to the user to tell them they should buy the course through Joomla.\nVersion 1.0.6';
 
 $string['assignrole'] = 'Assign role';
-$string['cost'] = 'Enrol Cost';
+$string['cost'] = 'Enroll Cost';
 $string['costerror'] = 'The enrolment cost is not numeric';
 $string['costorkey'] = 'Please choose one of the following methods of enrolment.';
 $string['currency'] = 'Currency';
@@ -30,7 +30,7 @@ $string['sendpaymentbutton'] = 'Send payment via PayPal';
 $string['status'] = 'Allow Joodmle enrolments';
 $string['status_desc'] = 'Allow users to buy courses through Joomla e-commerce.';
 $string['unenrolselfconfirm'] = 'Do you really want to unenrol yourself from course "{$a}"?';
-$string['guest_enrol_message'] = 'Enrol message to show to guests';
+$string['guest_enrol_message'] = 'Enroll message to show to guests';
 
 $string['joomdle:unenrol'] = 'Unenrol users';
 $string['joomdle:config'] = 'Configure Joomdle enrol method';

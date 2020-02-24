@@ -22,7 +22,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-$string['canntenrol'] = 'Enrolment is disabled or inactive';
+$string['canntenrol'] = 'Enrollment is disabled or inactive';
 $string['canntenrolearly'] = 'You cannot enrol yet; enrolment starts on {$a}.';
 $string['canntenrollate'] = 'You cannot enrol any more, since enrolment ended on {$a}.';
 $string['cohortnonmemberinfo'] = 'Only members of cohort \'{$a}\' can self-enrol.';
@@ -44,14 +44,14 @@ $string['deleteselectedusers'] = 'Delete selected user enrolments';
 $string['editselectedusers'] = 'Edit selected user enrolments';
 $string['enrolenddate'] = 'End date';
 $string['enrolenddate_help'] = 'If enabled, users can enrol themselves until this date only.';
-$string['enrolenddaterror'] = 'Enrolment end date cannot be earlier than start date';
-$string['enrolme'] = 'Enrol me';
-$string['enrolperiod'] = 'Enrolment duration';
+$string['enrolenddaterror'] = 'Enrollment end date cannot be earlier than start date';
+$string['enrolme'] = 'Enroll me';
+$string['enrolperiod'] = 'Enrollment duration';
 $string['enrolperiod_desc'] = 'Default length of time that the enrolment is valid. If set to zero, the enrolment duration will be unlimited by default.';
 $string['enrolperiod_help'] = 'Length of time that the enrolment is valid, starting with the moment the user enrols themselves. If disabled, the enrolment duration will be unlimited.';
 $string['enrolstartdate'] = 'Start date';
 $string['enrolstartdate_help'] = 'If enabled, users can enrol themselves from this date onward only.';
-$string['expiredaction'] = 'Enrolment expiry action';
+$string['expiredaction'] = 'Enrollment expiry action';
 $string['expiredaction_help'] = 'Select action to carry out when user enrolment expires. Please note that some user data and settings are purged from course during course unenrolment.';
 $string['expirymessageenrollersubject'] = 'Self enrolment expiry notification';
 $string['expirymessageenrollerbody'] = 'Self enrolment in the course \'{$a->course}\' will expire within the next {$a->threshold} for the following users:
@@ -83,7 +83,7 @@ $string['newenrols'] = 'Allow new enrolments';
 $string['newenrols_desc'] = 'Allow users to self enrol into new courses by default.';
 $string['newenrols_help'] = 'This setting determines whether a user can enrol into this course.';
 $string['nopassword'] = 'No enrolment key required.';
-$string['password'] = 'Enrolment key';
+$string['password'] = 'Enrollment key';
 $string['password_help'] = 'An enrolment key enables access to the course to be restricted to only those who know the key.
 
 If the field is left blank, any user may enrol in the course.

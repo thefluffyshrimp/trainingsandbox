@@ -379,8 +379,8 @@ li.contentnode.ICQ.number {
     display: none;
 }
 
-#page-site-index.notloggedin #page-header #loginbox #intro h1{
-      color: #4ce0c3 !important;
+#page-site-index.notloggedin #page-header #loginbox #intro h1 {
+    color: #4ce0c3 !important;
 }
 
 @media only screen and (max-width: 991px) {
@@ -415,5 +415,12 @@ li.contentnode.ICQ.number {
  #page-login-index.moove-login .logo img {
     width: 100% !important;
 }
-
+#page-site-index.notloggedin #page-header {
+    background-size: 200% !important;
+    background-position: right 96% bottom 95% !important;
+    max-height: 500px !important;
+}
+#region-main .card .card-body {
+    overflow-x: scroll;
+}
 }
