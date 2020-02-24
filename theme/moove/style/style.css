@@ -427,7 +427,10 @@ li.contentnode.ICQ.number {
 @media only screen and (max-width: 480px) {
   #page-site-index.notloggedin #page-header {
     background-size: 300% !important;
-    background-position: right 96% bottom 95% !important;
+    background-position: right 74% bottom 100% !important;
     max-height: 500px !important;
+}
+#page-site-index.notloggedin #page-header{
+    padding: 0 2rem !important;
 }
 }
