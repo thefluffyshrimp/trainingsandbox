@@ -416,7 +416,7 @@ li.contentnode.ICQ.number {
     width: 100% !important;
 }
 #page-site-index.notloggedin #page-header {
-    background-size: 200% !important;
+    background-size: 150% !important;
     background-position: right 96% bottom 95% !important;
     max-height: 500px !important;
 }
@@ -424,11 +424,11 @@ li.contentnode.ICQ.number {
     overflow-x: scroll;
 }
 }
-@media only screen and (max-width: 480px) {
+@media only screen and (max-width: 580px) {
   #page-site-index.notloggedin #page-header {
     background-size: 300% !important;
     background-position: right 74% bottom 100% !important;
-    max-height: 500px !important;
+    min-height: 420px !important;
 }
 #page-site-index.notloggedin #page-header{
     padding: 0 2rem !important;
