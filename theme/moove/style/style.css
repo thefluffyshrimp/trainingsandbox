@@ -424,3 +424,10 @@ li.contentnode.ICQ.number {
     overflow-x: scroll;
 }
 }
+@media only screen and (max-width: 480px) {
+  #page-site-index.notloggedin #page-header {
+    background-size: 300% !important;
+    background-position: right 96% bottom 95% !important;
+    max-height: 500px !important;
+}
+}
