@@ -49,6 +49,7 @@ if (isloggedin()) {
     }
 
     $bodyattributes = $OUTPUT->body_attributes($extraclasses);
+    $capability=has_capability('moodle/course:create');
     $regionmainsettingsmenu = $OUTPUT->region_main_settings_menu();
     $templatecontext = [
         'sitename' => format_string($SITE->shortname, true, ['context' => context_course::instance(SITEID), "escape" => false]),
@@ -61,7 +62,8 @@ if (isloggedin()) {
         'draweropenright' => $draweropenright,
         'regionmainsettingsmenu' => $regionmainsettingsmenu,
         'hasregionmainsettingsmenu' => !empty($regionmainsettingsmenu),
-        'addcourseurl' => new moodle_url('/course/edit.php')
+        'addcourseurl' => new moodle_url('/course/edit.php'),
+        'capability'=>$capability
     ];
 
     // Improve boost navigation.
