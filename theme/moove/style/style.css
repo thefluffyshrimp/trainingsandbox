@@ -382,6 +382,13 @@ li.contentnode.ICQ.number {
 #page-site-index.notloggedin #page-header #loginbox #intro h1 {
     color: #4ce0c3 !important;
 }
+.createnewclass{
+  position: absolute;
+  right: 150px;
+  width: 200px;
+  padding-top: 5px;
+  padding-bottom: 15px;
+}
 
 @media only screen and (max-width: 991px) {
 #page-site-index.notloggedin #page-header #loginbox #intro h2{
