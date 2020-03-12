@@ -50,6 +50,7 @@ if (isloggedin()) {
 
     $bodyattributes = $OUTPUT->body_attributes($extraclasses);
     $context = get_context_instance(CONTEXT_SYSTEM, SITEID);
+    
     $capability=has_capability('moodle/course:create',$context);
     $regionmainsettingsmenu = $OUTPUT->region_main_settings_menu();
     $templatecontext = [
