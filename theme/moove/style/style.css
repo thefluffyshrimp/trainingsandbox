@@ -383,11 +383,12 @@ li.contentnode.ICQ.number {
     color: #4ce0c3 !important;
 }
 .createnewclass{
-  position: absolute;
-  right: 150px;
-  width: 200px;
-  padding-top: 5px;
-  padding-bottom: 15px;
+    position: absolute;
+    right: 0px;
+    width: 200px;
+    padding-top: 50px;
+    padding-bottom: 15px;
+
 }
 
 @media only screen and (max-width: 991px) {
