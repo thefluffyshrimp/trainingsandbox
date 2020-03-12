@@ -49,7 +49,8 @@ if (isloggedin()) {
     }
 
     $bodyattributes = $OUTPUT->body_attributes($extraclasses);
-    $capability=has_capability('moodle/course:create');
+    $context = get_context_instance(CONTEXT_SYSTEM, SITEID);
+    $capability=has_capability('moodle/course:create',$context);
     $regionmainsettingsmenu = $OUTPUT->region_main_settings_menu();
     $templatecontext = [
         'sitename' => format_string($SITE->shortname, true, ['context' => context_course::instance(SITEID), "escape" => false]),
