@@ -60,7 +60,8 @@ if (isloggedin()) {
         'navdraweropen' => $navdraweropen,
         'draweropenright' => $draweropenright,
         'regionmainsettingsmenu' => $regionmainsettingsmenu,
-        'hasregionmainsettingsmenu' => !empty($regionmainsettingsmenu)
+        'hasregionmainsettingsmenu' => !empty($regionmainsettingsmenu),
+        'addcourseurl' => new moodle_url('/course/edit.php')
     ];
 
     // Improve boost navigation.
@@ -126,6 +127,7 @@ if (isloggedin()) {
         'clientsfrontpage' => $clientsfrontpage,
         'logintoken' => \core\session\manager::get_login_token(),
         'addcourseurl' => new moodle_url('/course/edit.php')
+        
     ];
 
     $templatecontext = array_merge($templatecontext, $themesettings->footer_items(), $themesettings->marketing_items());

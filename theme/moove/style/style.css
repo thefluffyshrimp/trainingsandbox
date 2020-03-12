@@ -431,6 +431,14 @@ li.contentnode.ICQ.number {
 #region-main .card .card-body {
     overflow-x: scroll;
 }
+.createnewclass{
+    position: absolute;
+    right: 50px;
+    width: 200px;
+    padding-top: 10px;
+    padding-bottom: 15px;
+
+}
 }
 @media only screen and (max-width: 580px) {
   #page-site-index.notloggedin #page-header {
@@ -440,5 +448,13 @@ li.contentnode.ICQ.number {
 }
 #page-site-index.notloggedin #page-header{
     padding: 0 2rem !important;
+}
+.createnewclass{
+    position: absolute;
+    right: 50px;
+    width: 200px;
+    padding-top: 10px;
+    padding-bottom: 15px;
+
 }
 }
