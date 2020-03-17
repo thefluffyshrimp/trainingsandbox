@@ -6226,10 +6226,10 @@ class auth_plugin_joomdle extends auth_plugin_manual {
         $gs = array ();
         foreach ($courselist as $course) {
             $b = array ();
-            $id=$course->$courseid;
-            $b['id'] = $course->$courseid;
-            $course = $DB->get_record('course', array('id' => $course->$courseid));
-            $b['fullname']=$course->fullname;
+            $id=$course->courseid;
+            $b['id'] = $course->courseid;
+            $coursname = $DB->get_record('course', array('id' => $course->courseid));
+            $b['fullname']=$coursname->fullname;
             //$b['hash'] = $badge->uniquehash;
             $gs[] = $b;
         }
