@@ -4025,39 +4025,6 @@ class joomdle_helpers_external extends external_api {
         return $return;
     }
 
-
-    /* group_course */
-    public static function group_course_parameters() {
-        return new external_function_parameters(
-                        array(
-                            'groupid' => new external_value(PARAM_INT, 'Groupid'),
-                        )
-        );
-    }
-
-    public static function group_course_returns() {
-        return new external_multiple_structure(
-            new external_single_structure(
-                array(
-                    'fullname' => new external_value(PARAM_TEXT, 'course name'),
-                    'id' => new external_value(PARAM_TEXT, 'course id'),
-                    'image_url' => new external_value(PARAM_TEXT, 'image url'),
-                )
-            )
-        );
-    }
-
-    public static function group_course($groupid) {
-        global $CFG, $DB;
-
-        $params = self::validate_parameters(self::group_course_parameters(), array('groupid' => $groupid));
-
-        $auth = new  auth_plugin_joomdle ();
-        $return = $auth->group_course ($groupid);
-
-        return $return;
-    }
-
     /* get_course_grades */
     public static function get_course_grades_parameters() {
         return new external_function_parameters(

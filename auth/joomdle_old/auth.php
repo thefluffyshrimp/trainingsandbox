@@ -6211,31 +6211,6 @@ class auth_plugin_joomdle extends auth_plugin_manual {
 
         return $bs;
     }
-    public function group_courses ($groupid) {
-        global $CFG;
-        //require_once($CFG->libdir . "/badgeslib.php");
-
-        //$username = strtolower ($username);
-
-        //$user = get_complete_user_data ('username', $username);
-
-        if (!$groupid)
-            return array ();
-
-        $courselist = $DB->get_records('block_course_joomsocial',array('groupid'=>$groupid));
-        $gs = array ();
-        foreach ($courselist as $course) {
-            $b = array ();
-            $id=$course->$courseid;
-            $b['id'] = $course->$courseid;
-            $course = $DB->get_record('course', array('id' => $course->$courseid));
-            $b['fullname']=$course->fullname;
-            //$b['hash'] = $badge->uniquehash;
-            $gs[] = $b;
-        }
-        
-        return $gs;
-    }
 
     public function get_certificates_credits ($courses) {
         global $CFG, $DB;
