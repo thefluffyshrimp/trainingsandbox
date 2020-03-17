@@ -814,7 +814,7 @@ $functions = array(
         'description' => 'Get user badges',
         'type'        => 'read',
     ),
-   '' => array(
+   'joomdle_group_courses' => array(
         'classname'   => 'joomdle_helpers_external',
         'methodname'  => 'group_courses',
         'classpath'   => 'auth/joomdle/helpers/externallib.php',
