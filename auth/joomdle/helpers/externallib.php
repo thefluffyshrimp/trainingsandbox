@@ -4027,7 +4027,7 @@ class joomdle_helpers_external extends external_api {
 
 
     /* group_course */
-    public static function group_course_parameters() {
+    public static function group_courses_parameters() {
         return new external_function_parameters(
                         array(
                             'groupid' => new external_value(PARAM_INT, 'Groupid'),
@@ -4035,7 +4035,7 @@ class joomdle_helpers_external extends external_api {
         );
     }
 
-    public static function group_course_returns() {
+    public static function group_courses_returns() {
         return new external_multiple_structure(
             new external_single_structure(
                 array(
@@ -4047,13 +4047,13 @@ class joomdle_helpers_external extends external_api {
         );
     }
 
-    public static function group_course($groupid) {
+    public static function group_courses($groupid) {
         global $CFG, $DB;
 
-        $params = self::validate_parameters(self::group_course_parameters(), array('groupid' => $groupid));
+        $params = self::validate_parameters(self::group_courses_parameters(), array('groupid' => $groupid));
 
         $auth = new  auth_plugin_joomdle ();
-        $return = $auth->group_course ($groupid);
+        $return = $auth->group_courses ($groupid);
 
         return $return;
     }
