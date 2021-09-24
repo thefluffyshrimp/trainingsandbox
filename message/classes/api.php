@@ -94,6 +94,11 @@ class api {
     const MESSAGE_CONVERSATION_DISABLED = 0;
 
     /**
+     * The max message length.
+     */
+    const MESSAGE_MAX_LENGTH = 4096;
+
+    /**
      * Handles searching for messages in the message area.
      *
      * @param int $userid The user id doing the searching
@@ -2010,6 +2015,10 @@ class api {
 
         $messageid = message_send($eventdata);
 
+        if (!$messageid) {
+            throw new \moodle_exception('messageundeliveredbynotificationsettings', 'moodle');
+        }
+
         $messagerecord = $DB->get_record('messages', ['id' => $messageid], 'id, useridfrom, fullmessage,
                 timecreated, fullmessagetrust');
         $message = (object) [
@@ -2659,8 +2668,10 @@ class api {
         $userto = \core_user::get_user($requesteduserid);
         $url = new \moodle_url('/message/pendingcontactrequests.php');
 
-        $subject = get_string('messagecontactrequestsnotificationsubject', 'core_message', $userfromfullname);
-        $fullmessage = get_string('messagecontactrequestsnotification', 'core_message', $userfromfullname);
+        $subject = get_string_manager()->get_string('messagecontactrequestsnotificationsubject', 'core_message', $userfromfullname,
+            $userto->lang);
+        $fullmessage = get_string_manager()->get_string('messagecontactrequestsnotification', 'core_message', $userfromfullname,
+            $userto->lang);
 
         $message = new \core\message\message();
         $message->courseid = SITEID;

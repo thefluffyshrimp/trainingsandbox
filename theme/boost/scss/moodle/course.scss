@@ -330,24 +330,23 @@ body:not(.editing)  .sitetopic ul.section {
 .course-content ul.topics,
 .course-content ul.weeks {
     padding: 0;
+    margin: 0;
+    list-style: none;
 
     li.section {
         margin-top: $spacer;
         padding-bottom: $spacer;
-
-        .content {
-            margin: 0;
-            padding: 0;
-        }
 
         .summary,
         .content > .availabilityinfo {
             margin-left: 25px;
         }
 
-        .left {
-            padding-top: 0;
+        .left,
+        .right {
+            padding: 0 6px 0;
             text-align: right;
+            width: auto;
         }
     }
 }
@@ -516,13 +515,15 @@ span.editinstructions {
     margin-left: 30px;
     font-size: $font-size-sm;
     padding: .1em .4em;
-    background-color: $state-info-bg;
-    color: $state-info-text;
     text-decoration: none;
     z-index: 9999;
+    border: $alert-border-width solid transparent;
 
-    @include box-shadow(2px 2px 5px 1px #ccc);
-    border: 1px solid $state-info-border;
+    @include alert-variant(
+        theme-color-level('info', $alert-bg-level),
+        theme-color-level('info', $alert-border-level),
+        theme-color-level('info', $alert-color-level)
+    );
 }
 
 /* Course drag and drop upload styles */
@@ -532,14 +533,15 @@ span.editinstructions {
     width: 40%;
     margin: 0 30%;
     padding: 6px;
-    border: 1px solid $state-info-border;
     text-align: center;
-    background: $state-info-bg;
-    color: $state-info-text;
     z-index: 1; // Required in order to have this above relatively positioned course content@mixin
+    border: $alert-border-width solid transparent;
 
-    @include box-shadow(2px 2px 5px 1px #ccc);
-    @include border-radius(8px);
+    @include alert-variant(
+        theme-color-level('info', $alert-bg-level),
+        theme-color-level('info', $alert-border-level),
+        theme-color-level('info', $alert-color-level)
+    );
 }
 
 .dndupload-preview {
@@ -569,7 +571,7 @@ span.editinstructions {
 
 #coursesearch {
     margin-top: 1em;
-    text-align: center;
+    text-align: left;
 }
 
 #page-course-pending .pendingcourserequests {
@@ -849,10 +851,8 @@ span.editinstructions {
     .listitem {
 
         &[data-selected='1'] {
-            background-color: $table-bg-accent;
-            &:hover {
-                background-color: $table-bg-hover;
-            }
+            border-left: calc(#{$list-group-border-width} + 5px) solid map-get($theme-colors, 'primary');
+            padding-left: calc(#{$list-group-item-padding-x} - 5px);
         }
     }
 
@@ -899,7 +899,6 @@ span.editinstructions {
             }
 
             .idnumber {
-                color: #a1a1a8;
                 margin-right: 2em;
             }
         }
@@ -964,25 +963,6 @@ span.editinstructions {
         }
 
         .listitem {
-            > div {
-                > .ba-checkbox {
-                    width: 2.2em;
-                    text-align: center;
-                    margin: -1px 0.5em 0 0;
-                    padding-top: 2px;
-                }
-            }
-
-            &.highlight > div > .ba-checkbox {
-                background-color: $table-bg-hover;
-            }
-
-            &[data-selected='1'] > div > .ba-checkbox {
-                margin: 0 0.5em 0 0;
-                padding: 0;
-                background-color: inherit;
-            }
-
             &:first-child > div .item-actions .action-moveup,
             &:last-child > div .item-actions .action-movedown {
                 display: none;

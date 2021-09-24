@@ -47,7 +47,8 @@
             <tr>
                 {{# daynames }}
                 <th class="header text-xs-center">
-                    {{shortname}}
+                    <span class="sr-only">{{fullname}}</span>
+                    <span aria-hidden="true">{{shortname}}</span>
                 </th>
                 {{/ daynames }}
             </tr>
@@ -71,14 +72,15 @@
                         data-region="day"
                         data-new-event-timestamp="{{neweventtimestamp}}">
                         <div class="d-none d-md-block hidden-phone text-xs-center">
+                            <span class="sr-only">{{daytitle}}</span>
                             {{#hasevents}}
-                                <a data-action="view-day-link" href="#" class="day" title="{{viewdaylinktitle}}"
+                                <a data-action="view-day-link" href="#" class="day" aria-label="{{viewdaylinktitle}}"
                                     data-year="{{date.year}}" data-month="{{date.mon}}" data-day="{{mday}}"
                                     data-courseid="{{courseid}}" data-categoryid="{{categoryid}}"
                                     data-timestamp="{{timestamp}}">{{mday}}</a>
                             {{/hasevents}}
                             {{^hasevents}}
-                                {{mday}}
+                                <span aria-hidden="true">{{mday}}</span>
                             {{/hasevents}}
                             {{#hasevents}}
                                 <div data-region="day-content">
@@ -108,7 +110,7 @@
                                                 {{/draggable}}>
 
                                                 <a data-action="view-event" data-event-id="{{id}}" href="{{url}}" title="{{name}}">
-                                                    <span class="badge badge-circle calendar_event_{{normalisedeventtype}}">
+                                                    <span class="calendar-circle calendar_event_{{normalisedeventtype}}">
                                                         &nbsp;
                                                     </span>
                                                     {{> core_calendar/event_icon}}
@@ -122,16 +124,15 @@
                             {{/hasevents}}
                         </div>
                         <div class="d-md-none hidden-desktop hidden-tablet">
+                            <span class="sr-only">{{daytitle}}</span>
                             {{#hasevents}}
-                                <a data-action="view-day-link" href="#" class="day" title="{{viewdaylinktitle}}"
+                                <a data-action="view-day-link" href="#" class="day" aria-label="{{viewdaylinktitle}}"
                                     data-year="{{date.year}}" data-month="{{date.mon}}" data-day="{{mday}}"
                                     data-courseid="{{courseid}}" data-categoryid="{{categoryid}}"
                                     data-timestamp="{{timestamp}}">{{mday}}</a>
                             {{/hasevents}}
                             {{^hasevents}}
-                                <div data-region="day-content">
-                                    {{mday}}
-                                </div>
+                                <span aria-hidden="true">{{mday}}</span>
                             {{/hasevents}}
                         </div>
                     </td>

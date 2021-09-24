@@ -44,9 +44,7 @@ class renderer extends \plugin_renderer_base {
         $return = \html_writer::start_tag('div', array('class' => 'profile_tree'));
         $categories = $tree->categories;
         foreach ($categories as $category) {
-           if ($category->name !== 'privacyandpolicies' && $category->name !== 'reports' && $category->name !== 'mobile' && $category->name !== 'miscellaneous' ) {
-                     $return .= $this->render($category);
-              }
+            $return .= $this->render($category);
         }
         $return .= \html_writer::end_tag('div');
         return $return;
@@ -100,10 +98,7 @@ class renderer extends \plugin_renderer_base {
             $header .= $this->render($icon);
         }
         $content = $node->content;
-        $classes = $node->classes .$header;
-        if ($header !='ICQ number') {
-            $classes = $node->classes;
-        }
+        $classes = $node->classes;
         if (!empty($content)) {
             if ($header) {
                 // There is some content to display below this make this a header.

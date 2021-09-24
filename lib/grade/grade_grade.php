@@ -252,6 +252,10 @@ class grade_grade extends grade_object {
             $this->grade_item = grade_item::fetch(array('id'=>$this->itemid));
         }
 
+        if (empty($this->grade_item)) {
+            debugging("Missing grade item id $this->itemid", DEBUG_DEVELOPER);
+        }
+
         return $this->grade_item;
     }
 
@@ -1111,14 +1115,17 @@ class grade_grade extends grade_object {
      * @return bool Returns true if the deletion was successful, false otherwise.
      */
     public function delete($source = null) {
+        global $DB;
+
+        $transaction = $DB->start_delegated_transaction();
         $success = parent::delete($source);
 
         // If the grade was deleted successfully trigger a grade_deleted event.
-        if ($success) {
-            $this->load_grade_item();
+        if ($success && !empty($this->grade_item)) {
             \core\event\grade_deleted::create_from_grade($this)->trigger();
         }
 
+        $transaction->allow_commit();
         return $success;
     }
 
@@ -1153,8 +1160,10 @@ class grade_grade extends grade_object {
             return;
         }
 
-        // Load information about grade item
-        $this->load_grade_item();
+        // Load information about grade item, exit if the grade item is missing.
+        if (!$this->load_grade_item()) {
+            return;
+        }
 
         // Only course-modules have completion data
         if ($this->grade_item->itemtype!='mod') {

@@ -139,12 +139,27 @@ class manager {
     const CONFIG_SHIPPED_VERSION = 'shipped_version';
 
     /**
+     * Helper method to initialize admin page, setting appropriate extra URL parameters
+     *
+     * @param string $action
+     */
+    protected function setup_admin_externalpage(string $action): void {
+        admin_externalpage_setup('tool_usertours/tours', '', array_filter([
+            'action' => $action,
+            'id' => optional_param('id', 0, PARAM_INT),
+            'tourid' => optional_param('tourid', 0, PARAM_INT),
+            'direction' => optional_param('direction', 0, PARAM_INT),
+        ]));
+    }
+
+    /**
      * This is the entry point for this controller class.
      *
      * @param   string  $action     The action to perform.
      */
     public function execute($action) {
-        admin_externalpage_setup('tool_usertours/tours');
+        $this->setup_admin_externalpage($action);
+
         // Add the main content.
         switch($action) {
             case self::ACTION_NEWTOUR:
@@ -762,6 +777,13 @@ class manager {
      * @param   int     $direction
      */
     protected static function _move_tour(tour $tour, $direction) {
+        // We can't move the first tour higher, nor the last tour any lower.
+        if (($tour->is_first_tour() && $direction == helper::MOVE_UP) ||
+                ($tour->is_last_tour() && $direction == helper::MOVE_DOWN)) {
+
+            return;
+        }
+
         $currentsortorder   = $tour->get_sortorder();
         $targetsortorder    = $currentsortorder + $direction;
 
@@ -889,6 +911,9 @@ class manager {
             }
         }
         $existingtourrecords->close();
+
+        // Ensure we correct the sortorder in any existing tours, prior to adding latest shipped tours.
+        helper::reset_tour_sortorder();
 
         foreach (array_reverse($shippedtours) as $filename => $version) {
             $filepath = $CFG->dirroot . "/{$CFG->admin}/tool/usertours/tours/" . $filename;

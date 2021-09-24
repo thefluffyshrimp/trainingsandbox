@@ -885,6 +885,11 @@ class flexible_table {
      * build_table which calls this method.
      */
     function other_cols($column, $row) {
+        if (isset($row->$column) && ($column === 'email' || $column === 'idnumber') && !$this->is_downloading()) {
+            // Columns email and idnumber may potentially contain malicious characters, escape them by default.
+            // This function will not be executed if the child class implements col_email() or col_idnumber().
+            return s($row->$column);
+        }
         return NULL;
     }
 
@@ -1523,7 +1528,6 @@ class table_sql extends flexible_table {
     function __construct($uniqueid) {
         parent::__construct($uniqueid);
         // some sensible defaults
-        $this->set_attribute('cellspacing', '0');
         $this->set_attribute('class', 'generaltable generalbox');
     }
 

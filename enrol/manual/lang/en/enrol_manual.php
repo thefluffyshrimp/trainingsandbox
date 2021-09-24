@@ -38,8 +38,8 @@ $string['defaultperiod_help'] = 'Default length of time that the enrolment is va
 $string['deleteselectedusers'] = 'Delete selected user enrolments';
 $string['editselectedusers'] = 'Edit selected user enrolments';
 $string['enrolledincourserole'] = 'Enrolled in "{$a->course}" as "{$a->role}"';
-$string['enrolusers'] = 'Enroll users';
-$string['enroluserscohorts'] = 'Enroll selected users and cohorts';
+$string['enrolusers'] = 'Enrol users';
+$string['enroluserscohorts'] = 'Enrol selected users and cohorts';
 $string['expiredaction'] = 'Enrolment expiry action';
 $string['expiredaction_help'] = 'Select action to carry out when user enrolment expires. Please note that some user data and settings are purged from course during course unenrolment.';
 $string['expirymessageenrollersubject'] = 'Enrolment expiry notification';
@@ -55,7 +55,7 @@ This is a notification that your enrolment in the course \'{$a->course}\' is due
 
 If you need help, please contact {$a->enroller}.';
 $string['manual:config'] = 'Configure manual enrol instances';
-$string['manual:enrol'] = 'Enroll users';
+$string['manual:enrol'] = 'Enrol users';
 $string['manual:manage'] = 'Manage user enrolments';
 $string['manual:unenrol'] = 'Unenrol users from the course';
 $string['manual:unenrolself'] = 'Unenrol self from the course';
@@ -80,6 +80,6 @@ $string['unenroluser'] = 'Do you really want to unenrol "{$a->user}" from course
 $string['unenrolusers'] = 'Unenrol users';
 $string['wscannotenrol'] = 'Plugin instance cannot manually enrol a user in the course id = {$a->courseid}';
 $string['wsnoinstance'] = 'Manual enrolment plugin instance doesn\'t exist or is disabled for the course (id = {$a->courseid})';
-$string['wsusercannotassign'] = 'You don\'t have the permission to assign this role ({$a->roleid}) to this user ({$a->userid}) in this course({$a->courseid}).';
+$string['wsusercannotassign'] = 'You don\'t have the permission to assign this role ({$a->roleid}) to this user ({$a->userid}) in this course ({$a->courseid}).';
 $string['manualpluginnotinstalled'] = 'The "Manual" plugin has not yet been installed';
 $string['privacy:metadata'] = 'The Manual enrolments plugin does not store any personal data.';

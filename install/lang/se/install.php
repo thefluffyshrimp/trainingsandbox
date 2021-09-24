@@ -1,6 +1,5 @@
 <?php
-
-// This file is part of Moodle - http://moodle.org/
+// This file is part of Moodle - https://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -13,7 +12,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 /**
  * Automatically generated strings for Moodle installer
@@ -30,10 +29,13 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+$string['admindirname'] = 'Adminmáhppa';
 $string['availablelangs'] = 'Giellapáhkat mat leat gávdnamis';
 $string['chooselanguagehead'] = 'Vállje giela';
 $string['chooselanguagesub'] = 'Vállje giela (dušše installašuvdnjii). Don sáhtát válljet neahttabáikki ja geavaheaddji giela šearbmagovas maŋŋelaš.';
 $string['clialreadyconfigured'] = 'Fiila config.php gávdno jo. Geavat admin/cli/install_database.php jus áiggut installeret dán portála.';
 $string['clialreadyinstalled'] = 'Fiila config.php gávdno jo. Geavat admin/cli/install_database.php jus háliidat ođasmahttit Moodle dán portálas.';
+$string['databasename'] = 'Diehtovuođđonamma';
 $string['langdownloaderror'] = 'Dađibahábut ii installerejuvvon giellapáhkka "{$a}". Installašuvdnaproseassa joatká eaŋgalsgillii.';
 $string['phpextension'] = '{$a} PHP gilkor';
+$string['welcomep70'] = 'Coahkkal "Boahtte"-boalu joatkit<strong>Moodle</strong>-installašuvnnain';

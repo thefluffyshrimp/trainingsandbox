@@ -70,7 +70,7 @@ class badge extends moodleform {
         $mform->addRule('description', null, 'required');
 
         $str = $action == 'new' ? get_string('badgeimage', 'badges') : get_string('newimage', 'badges');
-        $imageoptions = array('maxbytes' => 262144, 'accepted_types' => array('web_image'));
+        $imageoptions = array('maxbytes' => 262144, 'accepted_types' => array('optimised_image'));
         $mform->addElement('filepicker', 'image', $str, null, $imageoptions);
 
         if ($action == 'new') {
@@ -229,13 +229,6 @@ class badge extends moodleform {
         if ($data['imageauthoremail'] && !validate_email($data['imageauthoremail'])) {
             $errors['imageauthoremail'] = get_string('invalidemail');
         }
-
-        $draftitemid = $data['image'];
-        $fileinfo = file_get_draft_area_info($draftitemid);
-
-             if ($fileinfo['filesize'] > 262144) {
-                 $errors['image'] = get_string('userquotalimit', 'error');
-             }
 
         // Check for duplicate badge names.
         if ($data['action'] == 'new') {

@@ -1397,6 +1397,8 @@ body#page-lib-editor-tinymce-plugins-moodlemedia-preview {
     text-transform: uppercase;
     padding-top: 1.2em;
     padding-bottom: 0.4em;
+    margin-bottom: 0.5rem;
+    font-size: 100%;
 }
 
 .choosercontainer #chooseform .option .typename,
@@ -1934,6 +1936,7 @@ h3.sectionname .inplaceeditable.inplaceeditingon .editinstructions {
 // Reset for ul.
 ul {
     padding-left: 1rem;
+    -webkit-margin-start: 0.2rem;  /* stylelint-disable-line */
 }
 
 /* YUI 2 Tree View */
@@ -2114,12 +2117,6 @@ $footer-link-color: $bg-inverse-link-color !default;
     }
 }
 
-.open.atto_menu > .dropdown-menu {
-    display: block;
-}
-div.editor_atto_toolbar button .icon {
-    color: $gray-700;
-}
 .w-auto {
     width: auto;
 }
@@ -2177,7 +2174,7 @@ $switch-thumb-size-half: $switch-height-half !default;
 $switch-focus-box-shadow: 0 0 0 ($input-btn-focus-width * 2) rgba(map-get($theme-colors, 'primary'), .25);
 $switch-transition: .2s all !default;
 
-.switch {
+body:not(.behat-site) .switch {
     position: relative;
     display: inline-block;
 
@@ -2419,3 +2416,14 @@ $picker-emojis-per-row: 7 !default;
         margin-top: $spacer;
     }
 }
+
+@each $color, $value in $theme-colors {
+    .alert-#{$color} a {
+        color: darken(theme-color-level($color, $alert-color-level), 10%);
+    }
+}
+
+.alert a {
+    font-weight: $font-weight-bold;
+}
+

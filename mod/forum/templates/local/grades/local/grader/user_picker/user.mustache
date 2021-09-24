@@ -42,11 +42,10 @@
 <img
     class="rounded-circle userpicture mr-2"
     src="{{.}}"
-    alt="{{#str}}pictureof, moodle, {{fullname}}{{/str}}"
-    title="{{#str}}pictureof, moodle, {{fullname}}{{/str}}"
+    aria-hidden="true"
 >
 {{/profileimage}}
-<div>
+<div class="overflow-hidden">
     <h5
         class="mb-0 font-weight-bold user-full-name text-truncate"
         data-region="name"

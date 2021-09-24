@@ -3215,21 +3215,23 @@ class H5PCore {
    * @return string
    */
   private static function hashToken($action, $time_factor) {
-    if (!isset($_SESSION['h5p_token'])) {
+    global $SESSION;
+
+    if (!isset($SESSION->h5p_token)) {
       // Create an unique key which is used to create action tokens for this session.
       if (function_exists('random_bytes')) {
-        $_SESSION['h5p_token'] = base64_encode(random_bytes(15));
+        $SESSION->h5p_token = base64_encode(random_bytes(15));
       }
       else if (function_exists('openssl_random_pseudo_bytes')) {
-        $_SESSION['h5p_token'] = base64_encode(openssl_random_pseudo_bytes(15));
+        $SESSION->h5p_token = base64_encode(openssl_random_pseudo_bytes(15));
       }
       else {
-        $_SESSION['h5p_token'] = uniqid('', TRUE);
+        $SESSION->h5p_token = uniqid('', TRUE);
       }
     }
 
     // Create hash and return
-    return substr(hash('md5', $action . $time_factor . $_SESSION['h5p_token']), -16, 13);
+    return substr(hash('md5', $action . $time_factor . $SESSION->h5p_token), -16, 13);
   }
 
   /**
@@ -4277,7 +4279,7 @@ class H5PContentValidator {
       return '&lt;';
     }
 
-    if (!preg_match('%^<\s*(/\s*)?([a-zA-Z0-9\-]+)([^>]*)>?|(<!--.*?-->)$%', $string, $matches)) {
+    if (!preg_match('%^<\s*(/\s*)?([a-zA-Z0-9\-]+)\s*([^>]*)>?|(<!--.*?-->)$%', $string, $matches)) {
       // Seriously malformed.
       return '';
     }
@@ -4339,7 +4341,13 @@ class H5PContentValidator {
           // Attribute name, href for instance.
           if (preg_match('/^([-a-zA-Z]+)/', $attr, $match)) {
             $attrName = strtolower($match[1]);
-            $skip = ($attrName == 'style' || substr($attrName, 0, 2) == 'on');
+            $skip = (
+              $attrName == 'style' ||
+              substr($attrName, 0, 2) == 'on' ||
+              substr($attrName, 0, 1) == '-' ||
+              // Ignore long attributes to avoid unnecessary processing overhead.
+              strlen($attrName) > 96
+            );
             $working = $mode = 1;
             $attr = preg_replace('/^[-a-zA-Z]+/', '', $attr);
           }

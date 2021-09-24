@@ -76,6 +76,7 @@ M.mod_assign.init_grading_table = function(Y) {
         var batchform = Y.one('form.gradingbatchoperationsform');
         if (batchform) {
             batchform.on('submit', function(e) {
+                M.util.js_pending('mod_assign/module.js:batch:submit');
                 checkboxes = Y.all('td.c0 input');
                 var selectedusers = [];
                 checkboxes.each(function(node) {
@@ -102,8 +103,10 @@ M.mod_assign.init_grading_table = function(Y) {
                         confirmmessage = M.util.get_string('batchoperationconfirm' + operation.get('value'), 'assign');
                     }
                     if (!confirm(confirmmessage)) {
+                        M.util.js_complete('mod_assign/module.js:batch:submit');
                         e.preventDefault();
                     }
+                    // Note: Do not js_complete. The page being reloaded will empty it.
                 }
             });
         }
@@ -169,7 +172,7 @@ M.mod_assign.init_plugin_summary = function(Y, subtype, type, submissionid) {
     if (contract) {
         contract.on('click', function(e) {
             e.preventDefault();
-            var link = e.target;
+            var link = e.currentTarget || e.target;
             var linkclasses = link.getAttribute('class').split(' ');
             var thissuffix = '';
             for (var i = 0; i < linkclasses.length; i++) {
@@ -202,7 +205,7 @@ M.mod_assign.init_plugin_summary = function(Y, subtype, type, submissionid) {
     if (expand) {
         expand.on('click', function(e) {
             e.preventDefault();
-            var link = e.target;
+            var link = e.currentTarget || e.target;
             var linkclasses = link.getAttribute('class').split(' ');
             var thissuffix = '';
             for (var i = 0; i < linkclasses.length; i++) {

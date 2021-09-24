@@ -49,6 +49,8 @@ class api {
     const LOGIN_VIA_EMBEDDED_BROWSER = 3;
     /** @var int seconds an auto-login key will expire. */
     const LOGIN_KEY_TTL = 60;
+    /** @var string URL of the Moodle Apps Portal */
+    const MOODLE_APPS_PORTAL_URL = 'https://apps.moodle.com';
 
     /**
      * Returns a list of Moodle plugins supporting the mobile app.
@@ -357,6 +359,7 @@ class api {
      */
     public static function get_features_list() {
         global $CFG;
+        require_once($CFG->libdir . '/authlib.php');
 
         $general = new lang_string('general');
         $mainmenu = new lang_string('mainmenu', 'tool_mobile');
@@ -366,6 +369,7 @@ class api {
         $user = new lang_string('user');
         $files = new lang_string('files');
         $remoteaddons = new lang_string('remoteaddons', 'tool_mobile');
+        $identityproviders = new lang_string('oauth2identityproviders', 'tool_mobile');
 
         $availablemods = core_plugin_manager::instance()->get_plugins_of_type('mod');
         $coursemodules = array();
@@ -433,6 +437,8 @@ class api {
                 '$mmLoginEmailSignup' => new lang_string('startsignup'),
                 'NoDelegate_ForgottenPassword' => new lang_string('forgotten'),
                 'NoDelegate_ResponsiveMainMenuItems' => new lang_string('responsivemainmenuitems', 'tool_mobile'),
+                'NoDelegate_H5POffline' => new lang_string('h5poffline', 'tool_mobile'),
+                'NoDelegate_DarkMode' => new lang_string('darkmode', 'tool_mobile'),
             ),
             "$mainmenu" => array(
                 '$mmSideMenuDelegate_mmaFrontpage' => new lang_string('sitehome'),
@@ -445,6 +451,7 @@ class api {
                 '$mmSideMenuDelegate_mmaCompetency' => new lang_string('myplans', 'tool_lp'),
                 'CoreMainMenuDelegate_AddonBlog' => new lang_string('blog', 'blog'),
                 '$mmSideMenuDelegate_mmaFiles' => new lang_string('files'),
+                'CoreMainMenuDelegate_CoreTag' => new lang_string('tags'),
                 '$mmSideMenuDelegate_website' => new lang_string('webpage'),
                 '$mmSideMenuDelegate_help' => new lang_string('help'),
             ),
@@ -485,6 +492,31 @@ class api {
             $features["$remoteaddons"] = $remoteaddonslist;
         }
 
+        // Display OAuth 2 identity providers.
+        if (is_enabled_auth('oauth2')) {
+            $identityproviderslist = array();
+            $idps = \auth_plugin_base::get_identity_providers(['oauth2']);
+
+            foreach ($idps as $idp) {
+                // Only add identity providers that have an ID.
+                $id = isset($idp['url']) ? $idp['url']->get_param('id') : null;
+                if ($id != null) {
+                    $identityproviderslist['NoDelegate_IdentityProvider_' . $id] = $idp['name'];
+                }
+            }
+
+            if (!empty($identityproviderslist)) {
+                $features["$identityproviders"] = array();
+
+                if (count($identityproviderslist) > 1) {
+                    // Include an option to disable them all.
+                    $features["$identityproviders"]['NoDelegate_IdentityProviders'] = new lang_string('all');
+                }
+
+                $features["$identityproviders"] = array_merge($features["$identityproviders"], $identityproviderslist);
+            }
+        }
+
         return $features;
     }
 
@@ -521,8 +553,21 @@ class api {
                 $timenow = time();
                 $expectedissuer = null;
                 foreach ($info['certinfo'] as $cert) {
+
+                    // Due to a bug in certain curl/openssl versions the signature algorithm isn't always correctly parsed.
+                    // See https://github.com/curl/curl/issues/3706 for reference.
+                    if (!array_key_exists('Signature Algorithm', $cert)) {
+                        // The malformed field that does contain the algorithm we're looking for looks like the following:
+                        // <WHITESPACE>Signature Algorithm: <ALGORITHM><CRLF><ALGORITHM>.
+                        preg_match('/\s+Signature Algorithm: (?<algorithm>[^\s]+)/', $cert['Public Key Algorithm'], $matches);
+
+                        $signaturealgorithm = $matches['algorithm'] ?? '';
+                    } else {
+                        $signaturealgorithm = $cert['Signature Algorithm'];
+                    }
+
                     // Check if the signature algorithm is weak (Android won't work with SHA-1).
-                    if ($cert['Signature Algorithm'] == 'sha1WithRSAEncryption' || $cert['Signature Algorithm'] == 'sha1WithRSA') {
+                    if ($signaturealgorithm == 'sha1WithRSAEncryption' || $signaturealgorithm == 'sha1WithRSA') {
                         $warnings[] = ['insecurealgorithmwarning', 'tool_mobile'];
                     }
                     // Check certificate start date.

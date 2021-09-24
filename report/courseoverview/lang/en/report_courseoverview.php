@@ -24,5 +24,5 @@
  */
 
 $string['courseoverview:view'] = 'View course overview report';
-$string['pluginname'] = 'Course Overview';
+$string['pluginname'] = 'Course overview';
 $string['privacy:metadata'] = 'The Course overview plugin does not store any personal data.';

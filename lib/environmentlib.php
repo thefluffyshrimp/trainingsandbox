@@ -140,6 +140,7 @@ function environment_get_errors($environment_results) {
         $type = $environment_result->getPart();
         $info = $environment_result->getInfo();
         $status = $environment_result->getStatus();
+        $plugin = $environment_result->getPluginName();
         $error_code = $environment_result->getErrorCode();
 
         $a = new stdClass();
@@ -209,7 +210,13 @@ function environment_get_errors($environment_results) {
         // Append the restrict if there is some
         $feedbacktext .= $environment_result->strToReport($environment_result->getRestrictStr(), 'error');
 
-        $report .= html_to_text($feedbacktext);
+        if ($plugin === '') {
+            $report = '[' . get_string('coresystem') . '] ' . $report;
+        } else {
+            $report = '[' . $plugin . '] ' . $report;
+        }
+
+        $report .= ' - ' . html_to_text($feedbacktext);
 
         if ($environment_result->getPart() == 'custom_check'){
             $errors[] = array($info, $report);
@@ -1638,4 +1645,15 @@ function restrict_php_version_73(&$result) {
  */
 function restrict_php_version_74(&$result) {
     return restrict_php_version($result, '7.4');
+}
+
+/**
+ * Check if the current PHP version is greater than or equal to
+ * PHP version 8.0
+ *
+ * @param object $result an environment_results instance
+ * @return bool result of version check
+ */
+function restrict_php_version_80($result) {
+    return restrict_php_version($result, '8.0');
 }

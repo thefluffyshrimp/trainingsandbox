@@ -71,8 +71,7 @@ class behat_qtype_ddmarker extends behat_base {
         // DOM node so that its centre is over the centre of anothe DOM node.
         // Therefore to make it drag to the specified place, we have to add
         // a target div.
-        $session = $this->getSession();
-        $session->executeScript("
+        $this->execute_script("
                 (function() {
                     if (document.getElementById('target-{$x}-{$y}')) {
                         return;
@@ -90,7 +89,8 @@ class behat_qtype_ddmarker extends behat_base {
                     target.style.setProperty('top', yadjusted + 'px');
                     target.style.setProperty('width', '1px');
                     target.style.setProperty('height', '1px');
-                }())");
+                }())"
+        );
 
         $generalcontext = behat_context_helper::get('behat_general');
         $generalcontext->i_drag_and_i_drop_it_in($this->marker_xpath($marker, $item),
@@ -107,19 +107,12 @@ class behat_qtype_ddmarker extends behat_base {
      * @Given /^I type "(?P<direction>up|down|left|right)" "(?P<repeats>\d+)" times on marker "(?P<marker>[^"]*)" in the drag and drop markers question$/
      */
     public function i_type_on_marker_in_the_drag_and_drop_markers_question($direction, $repeats, $marker) {
-        $keycodes = array(
-            'up'    => chr(38),
-            'down'  => chr(40),
-            'left'  => chr(37),
-            'right' => chr(39),
-        );
         list($marker, $item) = $this->parse_marker_name($marker);
         $node = $this->get_selected_node('xpath_element', $this->marker_xpath($marker, $item));
         $this->ensure_node_is_visible($node);
+        $node->focus();
         for ($i = 0; $i < $repeats; $i++) {
-            $node->keyDown($keycodes[$direction]);
-            $node->keyPress($keycodes[$direction]);
-            $node->keyUp($keycodes[$direction]);
+            $this->execute('behat_general::i_press_named_key', ['', $direction]);
         }
     }
 }

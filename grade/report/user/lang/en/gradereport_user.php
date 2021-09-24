@@ -23,7 +23,7 @@
  */
 
 $string['eventgradereportviewed'] = 'Grade user report viewed';
-$string['pluginname'] = 'User Report';
+$string['pluginname'] = 'User report';
 $string['user:view'] = 'View your own grade report';
 $string['myself'] = 'Myself';
 $string['otheruser'] = 'User';

@@ -62,9 +62,7 @@ function core_myprofile_navigation(core_user\output\myprofile\tree $tree, $user,
     // Add core nodes.
     // Full profile node.
     if (!empty($course)) {
-        if (empty($CFG->forceloginforprofiles) || $iscurrentuser ||
-            has_capability('moodle/user:viewdetails', $usercontext)
-            || has_coursecontact_role($user->id)) {
+        if (user_can_view_profile($user, null, $usercontext)) {
             $url = new moodle_url('/user/profile.php', array('id' => $user->id));
             $node = new core_user\output\myprofile\node('miscellaneous', 'fullprofile', get_string('fullprofile'), null, $url);
             $tree->add_node($node);
@@ -205,7 +203,7 @@ function core_myprofile_navigation(core_user\output\myprofile\tree $tree, $user,
 
     if (isset($identityfields['idnumber']) && $user->idnumber) {
         $node = new core_user\output\myprofile\node('contact', 'idnumber', get_string('idnumber'), null, null,
-            $user->idnumber);
+            s($user->idnumber));
         $tree->add_node($node);
     }
 
